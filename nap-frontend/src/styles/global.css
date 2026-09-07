@@ -25,6 +25,7 @@
   --nap-radius-sm: 6px;
   --nap-radius-md: 10px;
   --nap-radius-lg: 14px;
+  --nap-radius-xl: 18px;
 }
 
 *, *::before, *::after {

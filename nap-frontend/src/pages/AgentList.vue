@@ -2,19 +2,13 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-nap-text">智能体</h1>
         <p class="text-sm text-nap-text-secondary mt-1">管理你的 AI 智能体</p>
       </div>
       <t-space :size="12">
-        <t-input
-          v-model="searchQuery"
-          placeholder="搜索智能体..."
-          clearable
-          class="w-64"
-        >
+        <t-input v-model="searchQuery" placeholder="搜索智能体..." clearable class="w-64">
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
-        <t-button theme="primary" @click="$router.push('/agents/builder')">
+        <t-button @click="$router.push('/agents/builder')">
           <template #icon><t-icon name="add" /></template>
           新建智能体
         </t-button>
@@ -22,36 +16,25 @@
     </div>
 
     <t-radio-group v-model="activeFilter" variant="default-filled">
-      <t-radio-button
-        v-for="filter in filters"
-        :key="filter.value"
-        :value="filter.value"
-      >
+      <t-radio-button v-for="filter in filters" :key="filter.value" :value="filter.value">
         {{ filter.label }}
       </t-radio-button>
     </t-radio-group>
 
     <t-row :gutter="[16, 16]">
-      <t-col
-        v-for="agent in filteredAgents"
-        :key="agent.id"
-        :xs="24"
-        :sm="12"
-        :md="8"
-      >
-        <t-card
-          class="card-hover cursor-pointer group"
-          :bordered="true"
-          @click="$router.push(`/agents/builder/${agent.id}`)"
-        >
+      <t-col v-for="agent in filteredAgents" :key="agent.id" :xs="12" :sm="12" :md="6">
+        <t-card class="card-hover cursor-pointer group" :bordered="true"
+          @click="$router.push(`/agents/builder/${agent.id}`)">
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                   :class="agent.status === 'active' ? 'bg-emerald-50' : 'bg-amber-50'">
-                <t-icon name="robot" :size="20" :class="agent.status === 'active' ? 'text-nap-success' : 'text-nap-warning'" />
+                :class="agent.status === 'active' ? 'bg-emerald-50' : 'bg-amber-50'">
+                <t-icon name="robot" size="20"
+                  :class="agent.status === 'active' ? 'text-nap-success' : 'text-nap-warning'" />
               </div>
               <div>
-                <h3 class="font-semibold text-nap-text group-hover:text-nap-primary transition-colors">{{ agent.name }}</h3>
+                <h3 class="font-semibold text-nap-text group-hover:text-nap-primary transition-colors">{{ agent.name }}
+                </h3>
                 <p class="text-sm text-nap-text-secondary">{{ agent.model }}</p>
               </div>
             </div>
@@ -61,15 +44,10 @@
           <p class="text-sm text-nap-text-secondary mt-4 line-clamp-2">{{ agent.description }}</p>
 
           <t-space :size="8" class="mt-4">
-            <t-tag
-              v-for="tool in agent.tools.slice(0, 3)"
-              :key="tool"
-              size="small"
-              variant="light-outline"
-            >
+            <t-tag v-for="tool in agent.tools.slice(0, 3)" :key="tool" size="small" variant="light-outline">
               {{ tool }}
             </t-tag>
-            <t-tag v-if="agent.tools.length > 3" size="small" theme="primary" variant="light">
+            <t-tag v-if="agent.tools.length > 3" size="small" variant="light">
               +{{ agent.tools.length - 3 }}
             </t-tag>
           </t-space>
@@ -77,7 +55,7 @@
           <div class="flex items-center justify-between mt-4 pt-4 border-t border-nap-border">
             <span class="text-xs text-nap-text-secondary">{{ formatDate(agent.updatedAt) }}</span>
             <t-space :size="4" class="opacity-0 group-hover:opacity-100 transition-opacity">
-              <t-button theme="default" size="small" variant="text" @click.stop="handleChat()">
+              <t-button size="small" variant="text" @click.stop="handleChat()">
                 <template #icon><t-icon name="chat" /></template>
               </t-button>
               <t-button theme="danger" size="small" variant="text" @click.stop="handleDelete(agent)">
@@ -93,12 +71,12 @@
       <template #description>
         <p class="text-nap-text">未找到智能体</p>
         <p class="text-sm text-nap-text-secondary mt-1">创建你的第一个智能体开始使用</p>
-        <t-button theme="primary" size="small" class="mt-4" @click="$router.push('/agents/builder')">
+        <t-button size="small" class="mt-4" @click="$router.push('/agents/builder')">
           创建智能体
         </t-button>
       </template>
       <template #image>
-        <t-icon name="robot" :size="48" class="text-nap-text-tertiary" />
+        <t-icon name="robot" size="48" class="text-nap-text-tertiary" />
       </template>
     </t-empty>
   </div>

@@ -2,7 +2,7 @@
   <div>
     <div class="flex items-center justify-between mb-6">
       <t-space :size="12">
-        <t-button theme="default" variant="outline" @click="$router.back()">
+        <t-button variant="outline" @click="$router.back()">
           <template #icon><t-icon name="arrow-left" /></template>
         </t-button>
         <div>
@@ -12,13 +12,13 @@
       </t-space>
       <t-space :size="12">
         <t-button @click="handleSave('draft')">保存草稿</t-button>
-        <t-button theme="primary" @click="handleSave('active')">发布</t-button>
+        <t-button @click="handleSave('active')">发布</t-button>
       </t-space>
     </div>
 
     <t-row :gutter="[24, 24]">
       <t-col :xs="24" :lg="16">
-        <t-space direction="vertical" :size="24" style="width: 100%">
+        <t-space direction="vertical" size="24" style="width: 100%">
           <t-card :bordered="true" class="settings-card">
             <template #title><span class="text-nap-text">基本信息</span></template>
             <t-row :gutter="16">
@@ -40,12 +40,8 @@
 
           <t-card :bordered="true" class="settings-card">
             <template #title><span class="text-nap-text">系统提示词</span></template>
-            <t-textarea
-              v-model="form.systemPrompt"
-              :autosize="{ minRows: 10, maxRows: 20 }"
-              placeholder="你是一位乐于助人的助理..."
-              class="font-mono text-sm"
-            />
+            <t-textarea v-model="form.systemPrompt" :autosize="{ minRows: 10, maxRows: 20 }"
+              placeholder="你是一位乐于助人的助理..." class="font-mono text-sm" />
             <p class="text-xs text-nap-text-secondary mt-2">定义智能体的性格、知识和行为规则。</p>
           </t-card>
 
@@ -68,18 +64,15 @@
       </t-col>
 
       <t-col :xs="24" :lg="8">
-        <t-space direction="vertical" :size="24" style="width: 100%">
+        <t-space direction="vertical" size="24" style="width: 100%">
           <t-card :bordered="true" class="settings-card">
             <template #title><span class="text-nap-text">工具</span></template>
             <template #description><span class="text-nap-text-secondary">选择这个智能体可以使用的工具</span></template>
             <t-space direction="vertical" :size="8" style="width: 100%">
-              <div
-                v-for="tool in availableTools"
-                :key="tool.id"
+              <div v-for="tool in availableTools" :key="tool.id"
                 class="flex items-center justify-between p-3 rounded-lg border border-nap-border hover:border-nap-primary/30 transition-colors cursor-pointer"
                 :class="form.tools.includes(tool.id) ? 'border-nap-primary/50 bg-nap-primary/5' : ''"
-                @click="toggleTool(tool.id)"
-              >
+                @click="toggleTool(tool.id)">
                 <div class="flex items-center gap-3">
                   <t-icon :name="tool.icon" class="text-nap-text-secondary" />
                   <div>
@@ -95,12 +88,7 @@
           <t-card :bordered="true" class="settings-card">
             <template #title><span class="text-nap-text">知识库</span></template>
             <template #description><span class="text-nap-text-secondary">关联知识源</span></template>
-            <t-select
-              v-model="form.knowledgeBaseIds"
-              multiple
-              :options="knowledgeOptions"
-              placeholder="选择知识库"
-            />
+            <t-select v-model="form.knowledgeBaseIds" multiple :options="knowledgeOptions" placeholder="选择知识库" />
           </t-card>
         </t-space>
       </t-col>

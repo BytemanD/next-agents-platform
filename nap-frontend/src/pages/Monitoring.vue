@@ -2,7 +2,6 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-nap-text">监控中心</h1>
         <p class="text-nap-text-secondary mt-1">跟踪智能体运行与用量</p>
       </div>
       <t-select v-model="timeRange" :options="timeOptions" size="small" class="w-36" />
@@ -12,14 +11,15 @@
       <t-col v-for="stat in stats" :key="stat.label" :xs="12" :sm="6" :lg="3">
         <t-card :bordered="true" class="settings-card">
           <p class="text-sm text-nap-text-secondary">{{ stat.label }}</p>
-          <p class="text-2xl font-bold text-nap-text mt-1 tabular" style="font-family: var(--font-display)">{{ stat.value }}</p>
+          <p class="text-2xl font-bold text-nap-text mt-1 tabular" style="font-family: var(--font-display)">{{
+            stat.value }}</p>
           <p class="text-xs mt-2" :class="stat.changeClass">{{ stat.change }}</p>
         </t-card>
       </t-col>
     </t-row>
 
     <t-row :gutter="[16, 16]">
-      <t-col :xs="24" :lg="12">
+      <t-col :xs="24" :lg="6">
         <t-card :bordered="true" class="settings-card">
           <template #title><span class="text-nap-text">Token 使用量</span></template>
           <div class="h-64">
@@ -27,7 +27,7 @@
           </div>
         </t-card>
       </t-col>
-      <t-col :xs="24" :lg="12">
+      <t-col :xs="24" :lg="6">
         <t-card :bordered="true" class="settings-card">
           <template #title><span class="text-nap-text">延迟分布</span></template>
           <div class="h-64">
@@ -42,12 +42,7 @@
       <template #actions>
         <t-input v-model="searchQuery" placeholder="搜索追踪..." size="small" clearable class="w-64" />
       </template>
-      <t-table
-        :data="traces"
-        :columns="traceColumns"
-        :pagination="{ pageSize: 10 }"
-        hover
-      />
+      <t-table :data="traces" :columns="traceColumns" :pagination="{ pageSize: 10 }" hover />
     </t-card>
   </div>
 </template>
@@ -89,19 +84,25 @@ const traces = ref([
 const traceColumns = [
   { colKey: 'id', title: 'ID', width: 100 },
   { colKey: 'agent', title: '智能体' },
-  { colKey: 'status', title: '状态', width: 100, cell: (_row: any, rowIndex: number) => {
-    const trace = traces.value[rowIndex]
-    return trace ? h(StatusBadge, { status: trace.status }) : ''
-  }},
+  {
+    colKey: 'status', title: '状态', width: 100, cell: (_row: any, rowIndex: number) => {
+      const trace = traces.value[rowIndex]
+      return trace ? h(StatusBadge, { status: trace.status }) : ''
+    }
+  },
   { colKey: 'tokens', title: 'Token 数', width: 100 },
-  { colKey: 'cost', title: '成本', width: 100, cell: (_row: any, rowIndex: number) => {
-    const trace = traces.value[rowIndex]
-    return trace ? `$${trace.cost.toFixed(3)}` : ''
-  }},
-  { colKey: 'duration', title: '耗时', width: 100, cell: (_row: any, rowIndex: number) => {
-    const trace = traces.value[rowIndex]
-    return trace ? `${trace.duration}ms` : ''
-  }},
+  {
+    colKey: 'cost', title: '成本', width: 100, cell: (_row: any, rowIndex: number) => {
+      const trace = traces.value[rowIndex]
+      return trace ? `$${trace.cost.toFixed(3)}` : ''
+    }
+  },
+  {
+    colKey: 'duration', title: '耗时', width: 100, cell: (_row: any, rowIndex: number) => {
+      const trace = traces.value[rowIndex]
+      return trace ? `${trace.duration}ms` : ''
+    }
+  },
   { colKey: 'createdAt', title: '时间', width: 120 }
 ]
 

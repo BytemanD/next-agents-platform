@@ -2,34 +2,20 @@
   <t-layout class="h-full w-full">
     <t-aside width="304px" class="border-r border-nap-border bg-nap-surface flex flex-col">
       <div class="p-4 pb-3">
-        <t-button
-          theme="primary"
-          size="large"
-          block
-          :style="{ borderRadius: '9999px' }"
-          @click="newConversation"
-        >
+        <t-button size="large" block :style="{ borderRadius: '9999px' }" @click="newConversation">
           <template #icon><t-icon name="add" /></template>
           新建会话
         </t-button>
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
         <p class="px-1 pb-2 text-xs text-nap-text-tertiary select-none">最近会话</p>
-        <div
-          v-for="conv in conversations"
-          :key="conv.id"
-          class="conversation-item"
-          :class="currentConvId === conv.id ? 'conversation-item-active' : ''"
-          @click="selectConversation(conv.id)"
-        >
-          <t-icon name="chat" :size="15" />
+        <div v-for="conv in conversations" :key="conv.id" class="conversation-item"
+          :class="currentConvId === conv.id ? 'conversation-item-active' : ''" @click="selectConversation(conv.id)">
+          <t-icon name="chat" size="15" />
           <span class="flex-1 truncate text-sm font-medium">{{ conv.title }}</span>
-          <t-icon v-if="currentConvId === conv.id" name="check" :size="14" class="flex-shrink-0" />
+          <t-icon v-if="currentConvId === conv.id" name="check" size="14" class="flex-shrink-0" />
         </div>
-        <t-empty
-          v-if="conversations.length === 0"
-          class="py-10"
-        >
+        <t-empty v-if="conversations.length === 0" class="py-10">
           <template #description>
             <p class="text-sm text-nap-text-secondary">还没有会话</p>
           </template>
@@ -40,20 +26,14 @@
     <t-layout>
       <t-header class="h-14 border-b border-nap-border flex items-center justify-between px-6 bg-nap-surface">
         <t-space :size="12">
-          <t-select
-            v-model="selectedAgentId"
-            :options="agentOptions"
-            placeholder="选择智能体"
-            class="w-48"
-            size="small"
-          />
+          <t-select v-model="selectedAgentId" :options="agentOptions" placeholder="选择智能体" class="w-48" size="small" />
           <StatusBadge v-if="selectedAgent" :status="selectedAgent.status" />
         </t-space>
         <t-space :size="8">
-          <t-button theme="default" size="small" variant="text" @click="showActivity = !showActivity">
+          <t-button size="small" variant="text" @click="showActivity = !showActivity">
             <template #icon><t-icon name="list" /></template>
           </t-button>
-          <t-button theme="default" size="small" variant="text" @click="clearChat">
+          <t-button size="small" variant="text" @click="clearChat">
             <template #icon><t-icon name="delete" /></template>
           </t-button>
         </t-space>
@@ -62,23 +42,12 @@
       <t-layout>
         <t-content class="chat-content">
           <div class="flex-1 overflow-y-auto p-6 space-y-4">
-            <t-space
-              v-for="msg in messages"
-              :key="msg.id"
-              class="w-full"
-              :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
-              :style="{ 'display': 'flex' }"
-            >
-              <t-avatar
-                v-if="msg.role !== 'user'"
-                :icon="'robot'"
-                size="small"
-                class="bg-nap-primary/20 text-nap-primary"
-              />
-              <div
-                class="max-w-[70%] rounded-2xl px-4 py-3 text-sm"
-                :class="msg.role === 'user' ? 'bg-nap-primary text-white rounded-br-md' : 'bg-nap-surface border border-nap-border text-nap-text rounded-bl-md'"
-              >
+            <t-space v-for="msg in messages" :key="msg.id" class="w-full"
+              :class="msg.role === 'user' ? 'justify-end' : 'justify-start'" :style="{ 'display': 'flex' }">
+              <t-avatar v-if="msg.role !== 'user'" :icon="'robot'" size="small"
+                class="bg-nap-primary/20 text-nap-primary" />
+              <div class="max-w-[70%] rounded-2xl px-4 py-3 text-sm"
+                :class="msg.role === 'user' ? 'bg-nap-primary text-white rounded-br-md' : 'bg-nap-surface border border-nap-border text-nap-text rounded-bl-md'">
                 <div v-html="renderMarkdown(msg.content)" />
                 <div v-if="msg.toolCalls && msg.toolCalls.length > 0" class="mt-3 space-y-2">
                   <ToolCallCard v-for="tc in msg.toolCalls" :key="tc.id" :tool-call="tc" />
@@ -86,61 +55,43 @@
               </div>
             </t-space>
 
-            <t-space
-              v-if="chatStore.isStreaming"
-              class="w-full"
-              :style="{ 'display': 'flex' }"
-            >
+            <t-space v-if="chatStore.isStreaming" class="w-full" :style="{ 'display': 'flex' }">
               <t-avatar :icon="'robot'" size="small" class="bg-nap-primary/20 text-nap-primary" />
-              <div class="bg-nap-surface border border-nap-border rounded-2xl rounded-bl-md px-4 py-3 text-sm text-nap-text">
+              <div
+                class="bg-nap-surface border border-nap-border rounded-2xl rounded-bl-md px-4 py-3 text-sm text-nap-text">
                 <div v-if="chatStore.streamingContent" v-html="renderMarkdown(chatStore.streamingContent)" />
                 <span v-else class="inline-block w-2 h-4 bg-nap-primary animate-pulse" />
               </div>
             </t-space>
 
-            <t-empty
-              v-if="messages.length === 0 && !chatStore.isStreaming"
-              class="py-20"
-            >
+            <t-empty v-if="messages.length === 0 && !chatStore.isStreaming" class="py-20">
               <template #description>
                 <h3 class="text-lg font-medium text-nap-text">开始一段对话</h3>
                 <p class="text-sm text-nap-text-secondary mt-1">选择一个智能体并发送消息</p>
               </template>
               <template #image>
-                <t-icon name="chat" :size="48" class="text-nap-primary" />
+                <t-icon name="chat" size="48" class="text-nap-primary" />
               </template>
             </t-empty>
           </div>
 
           <div class="p-4 border-t border-nap-border">
             <div class="flex items-end gap-3">
-              <t-textarea
-                v-model="inputMessage"
-                :autosize="{ minRows: 1, maxRows: 5 }"
-                placeholder="输入你的消息..."
-                class="flex-1"
-                @keydown.enter.exact.prevent="sendMessage"
-              />
-              <t-button
-                theme="primary"
-                :disabled="!inputMessage.trim() || chatStore.isStreaming"
-                :loading="chatStore.isStreaming"
-                @click="sendMessage"
-              >
+              <t-textarea v-model="inputMessage" :autosize="{ minRows: 1, maxRows: 5 }" placeholder="输入你的消息..."
+                class="flex-1" @keydown.enter.exact.prevent="sendMessage" />
+              <t-button :disabled="!inputMessage.trim() || chatStore.isStreaming" :loading="chatStore.isStreaming"
+                @click="sendMessage">
                 <template #icon><t-icon :name="chatStore.isStreaming ? 'stop' : 'send'" /></template>
               </t-button>
             </div>
           </div>
         </t-content>
 
-        <t-aside
-          v-if="showActivity"
-          width="320px"
-          class="border-l border-nap-border bg-nap-surface overflow-y-auto activity-panel"
-        >
+        <t-aside v-if="showActivity" width="320px"
+          class="border-l border-nap-border bg-nap-surface overflow-y-auto activity-panel">
           <t-card :bordered="false" size="small">
             <template #title><span class="text-nap-text">执行活动</span></template>
-            <t-space direction="vertical" :size="16" style="width: 100%">
+            <t-space direction="vertical" size="16" style="width: 100%">
               <div v-for="span in traceSpans" :key="span.id" class="space-y-2">
                 <div class="flex items-center gap-2 text-sm">
                   <t-icon :name="getSpanIcon(span.type)" class="text-nap-text-secondary" />

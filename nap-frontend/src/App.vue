@@ -1,5 +1,5 @@
 <template>
-  <t-config-provider :global-config="globalConfig" theme="light">
+  <t-config-provider :global-config="globalConfig">
     <router-view />
   </t-config-provider>
 </template>

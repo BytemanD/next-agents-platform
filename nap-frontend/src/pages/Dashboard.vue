@@ -2,24 +2,13 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between nap-rise">
       <div>
-        <p class="text-xs text-nap-text-tertiary tracking-wide mb-1.5">概览</p>
-        <h1 class="text-2xl font-bold text-nap-text">
-          仪表盘
-        </h1>
         <p class="text-sm text-nap-text-secondary mt-1.5">把所有重复劳动交给智能体，你只负责决策</p>
       </div>
-      <t-button theme="primary" @click="$router.push('/agents/builder')">
-        <template #icon><t-icon name="add" /></template>
-        新建智能体
-      </t-button>
     </div>
 
     <t-row :gutter="[16, 16]">
-      <t-col :xs="24" :sm="12" :xl="6">
-        <div
-          class="hero-stat nap-rise"
-          :style="{ animationDelay: '0ms' }"
-        >
+      <t-col :xs="24" :sm="12" :xl="4">
+        <t-card class="hero-stat nap-rise" size="small" :style="{ animationDelay: '0ms' }">
           <div class="flex items-start justify-between relative z-10">
             <div>
               <p class="text-sm text-white/75">{{ stats[0].label }}</p>
@@ -40,37 +29,22 @@
                   <stop offset="100%" stop-color="white" stop-opacity="0" />
                 </linearGradient>
               </defs>
-              <path
-                d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4 V48 H0 Z"
-                fill="url(#heroSpark)"
-              />
-              <path
-                d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4"
-                stroke="white"
-                stroke-width="1.6"
-                stroke-linecap="round"
-              />
+              <path d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4 V48 H0 Z"
+                fill="url(#heroSpark)" />
+              <path d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4" stroke="white"
+                stroke-width="1.6" stroke-linecap="round" />
             </svg>
           </div>
-        </div>
+        </t-card>
       </t-col>
 
-      <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="6" :xl="6">
-        <t-card :bordered="true" class="metric-card nap-rise" :style="{ animationDelay: `${(i + 1) * 60}ms` }">
-          <div class="flex items-start justify-between">
-            <div>
-              <p class="text-sm text-nap-text-secondary">{{ stat.label }}</p>
-              <p class="text-3xl font-bold text-nap-text mt-2 tabular" style="font-family: var(--font-display)">
-                {{ stat.value }}
-              </p>
-            </div>
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                 :class="stat.tint">
-              <t-icon :name="stat.icon" :size="20" :class="stat.iconClass" />
-            </div>
-          </div>
+      <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="6" :xl="2">
+        <t-card :bordered="false" class="metric-card nap-rise" size="large"
+          :style="{ animationDelay: `${(i + 1) * 60}ms` }"
+          style="min-height: 150px; border-radius: var(--nap-radius-lg)">
+          <t-statistic :title="stat.label" :value="stat.value" />
           <div class="mt-3 flex items-center gap-1 text-xs" :class="stat.changeClass">
-            <t-icon :name="stat.change >= 0 ? 'trend-up' : 'trend-down'" :size="14" />
+            <t-icon :name="stat.change >= 0 ? 'trend-up' : 'trend-down'" size="14" />
             <span class="tabular">较上周 {{ stat.change >= 0 ? '+' : '' }}{{ stat.change }}%</span>
           </div>
         </t-card>
@@ -85,22 +59,18 @@
               <h2 class="text-base font-semibold text-nap-text leading-none">最近智能体</h2>
               <p class="text-xs text-nap-text-secondary mt-1.5">团队的智能体运行状态</p>
             </div>
-            <t-button theme="primary" variant="text" size="small" @click="$router.push('/agents')">
+            <t-button variant="text" size="small" @click="$router.push('/agents')">
               查看全部
-              <t-icon name="arrow-right" :size="14" class="ml-1" />
+              <t-icon name="arrow-right" size="14" class="ml-1" />
             </t-button>
           </div>
 
           <div class="divide-y divide-nap-border">
-            <div
-              v-for="agent in recentAgents"
-              :key="agent.id"
+            <div v-for="agent in recentAgents" :key="agent.id"
               class="agent-row flex items-center gap-4 py-3.5 -mx-3 px-3 rounded-xl cursor-pointer"
-              @click="$router.push(`/agents/builder/${agent.id}`)"
-            >
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                   :class="agent.avatarClass">
-                <t-icon name="robot" :size="18" :class="agent.avatarColor" />
+              @click="$router.push(`/agents/builder/${agent.id}`)">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" :class="agent.avatarClass">
+                <t-icon name="robot" size="18" :class="agent.avatarColor" />
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
@@ -110,22 +80,25 @@
                 <p class="text-xs text-nap-text-secondary mt-0.5 truncate">{{ agent.description }}</p>
               </div>
               <div class="hidden md:flex items-center gap-2 flex-shrink-0">
-                <span class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
+                <span
+                  class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
                   <t-icon name="cpu" :size="12" />
                   {{ agent.model }}
                 </span>
-                <span class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
+                <span
+                  class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
                   <t-icon name="tools" :size="12" />
                   {{ agent.tools.length }} 个工具
                 </span>
               </div>
-              <t-icon name="chevron-right" :size="16" class="text-nap-text-tertiary flex-shrink-0 transition-transform group-hover:translate-x-1" />
+              <t-icon name="chevron-right" size="16"
+                class="text-nap-text-tertiary flex-shrink-0 transition-transform group-hover:translate-x-1" />
             </div>
           </div>
         </t-card>
       </t-col>
 
-      <t-col :xs="24" :xl="8">
+      <t-col :xs="24" :xl="4">
         <div class="space-y-4">
           <t-card :bordered="true" class="nap-rise" :style="{ animationDelay: '300ms' }">
             <div class="flex items-center justify-between mb-4">
@@ -135,10 +108,9 @@
               <t-col v-for="template in templates" :key="template.name" :xs="12">
                 <div
                   class="template-tile flex items-center gap-3 rounded-xl border border-nap-border p-3 cursor-pointer"
-                  @click="createFromTemplate(template)"
-                >
+                  @click="createFromTemplate(template)">
                   <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :class="template.tint">
-                    <t-icon :name="template.icon" :size="16" :class="template.iconClass" />
+                    <t-icon :name="template.icon" size="16" :class="template.iconClass" />
                   </div>
                   <div class="min-w-0">
                     <h3 class="font-medium text-nap-text text-[13px] leading-none">{{ template.name }}</h3>
@@ -149,20 +121,22 @@
             </t-row>
           </t-card>
 
-          <t-card :bordered="true" class="nap-rise" :style="{ animationDelay: '360ms' }">
-            <h2 class="text-base font-semibold text-nap-text leading-none mb-4">动态</h2>
-            <div class="activity-list">
-              <div v-for="(activity, i) in activities" :key="i" class="relative flex gap-3 activity-item">
-                <div v-if="i < activities.length - 1" class="absolute left-[3px] top-3 bottom-0 w-px bg-nap-border" />
-                <div class="w-[7px] h-[7px] rounded-full mt-1.5 flex-shrink-0 relative z-10" :class="activity.dotClass" />
-                <div class="pb-4">
-                  <p class="text-sm text-nap-text">{{ activity.text }}</p>
-                  <p class="text-xs text-nap-text-secondary mt-0.5">{{ activity.time }}</p>
-                </div>
+        </div>
+      </t-col>
+      <t-col :xs="24" :xl="4">
+        <t-card :bordered="true" class="nap-rise" :style="{ animationDelay: '360ms' }">
+          <h2 class="text-base font-semibold text-nap-text leading-none mb-4">动态</h2>
+          <div class="activity-list">
+            <div v-for="(activity, i) in activities" :key="i" class="relative flex gap-3 activity-item">
+              <div v-if="i < activities.length - 1" class="absolute left-[3px] top-3 bottom-0 w-px bg-nap-border" />
+              <div class="w-[7px] h-[7px] rounded-full mt-1.5 flex-shrink-0 relative z-10" :class="activity.dotClass" />
+              <div class="pb-4">
+                <p class="text-sm text-nap-text">{{ activity.text }}</p>
+                <p class="text-xs text-nap-text-secondary mt-0.5">{{ activity.time }}</p>
               </div>
             </div>
-          </t-card>
-        </div>
+          </div>
+        </t-card>
       </t-col>
     </t-row>
   </div>
@@ -176,9 +150,9 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 const router = useRouter()
 
 const stats = ref([
-  { label: '智能体总数', value: '12', change: 20 },
-  { label: '会话数', value: '1,284', change: 15, icon: 'chat', tint: 'bg-nap-accent-soft', iconClass: 'text-nap-primary', changeClass: 'text-nap-success' },
   { label: '知识文档', value: '48', change: 8, icon: 'book', tint: 'bg-emerald-50', iconClass: 'text-nap-success', changeClass: 'text-nap-success' },
+  { label: '会话数', value: '1,284', change: 15, icon: 'chat', tint: 'bg-nap-accent-soft', iconClass: 'text-nap-primary', changeClass: 'text-nap-success' },
+  { label: '智能体总数', value: '12', change: 20 },
   { label: '总 Token 数', value: '2.4M', change: -5, icon: 'bolt', tint: 'bg-amber-50', iconClass: 'text-nap-warning', changeClass: 'text-nap-error' }
 ])
 
@@ -212,8 +186,6 @@ function createFromTemplate(_template: any) {
 .hero-stat {
   position: relative;
   border-radius: var(--nap-radius-lg);
-  padding: 20px;
-  min-height: 150px;
   overflow: hidden;
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   box-shadow: 0 12px 32px rgba(79, 70, 229, 0.28);

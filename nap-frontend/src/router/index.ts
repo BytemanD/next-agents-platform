@@ -8,7 +8,7 @@ const routes: RouteRecordRaw[] = [
     component: MainLayout,
     children: [
       {
-        path: '',
+        path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/pages/Dashboard.vue'),
         meta: { title: '仪表盘', icon: 'home' }
@@ -23,7 +23,7 @@ const routes: RouteRecordRaw[] = [
         path: 'agents/builder',
         name: 'AgentBuilder',
         component: () => import('@/pages/AgentBuilder.vue'),
-        meta: { title: '智能体构建器', icon: 'edit' }
+        meta: { title: '智能体构建', icon: 'edit' }
       },
       {
         path: 'agents/builder/:id',

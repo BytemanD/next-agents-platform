@@ -1,51 +1,30 @@
 <template>
-  <t-aside
-    :width="collapsed ? '76px' : '256px'"
-    :class="collapsed ? 'sidebar-collapsed' : ''"
-    class="h-full transition-all duration-300 sidebar-aside"
-  >
-    <div class="h-16 flex items-center px-4 border-b border-nap-border overflow-hidden">
-      <div
-        class="w-8 h-8 rounded-[10px] bg-nap-gradient flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-[0_4px_12px_rgba(79,70,229,0.35)]"
-        style="font-family: var(--font-display)"
-      >
-        N
-      </div>
-      <transition name="fade">
-        <div v-if="!collapsed" class="ml-3 overflow-hidden whitespace-nowrap">
+  <t-aside :width="uiStore.collapsed ? '64px' : '232px'" style="height: 100vh;">
+    <t-menu :collapsed="uiStore.collapsed" @change="handleMenuChange" class='border-r'>
+      <template #logo>
+        <div
+          class="w-8 h-8 rounded-[10px] bg-nap-gradient flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-[0_4px_12px_rgba(79,70,229,0.35)]">
+          N
+        </div>
+        <t-space direction="vertical" size="" v-if="!uiStore.collapsed">
           <div class="text-sm font-semibold text-nap-text leading-none" style="font-family: var(--font-display)">
             NAP
           </div>
-          <div class="text-xs text-nap-text-secondary mt-1">Next Agents Platform</div>
-        </div>
-      </transition>
-    </div>
+          <div class="text-xs text-nap-text-secondary mt-1">Take a NAP</div>
+        </t-space>
+      </template>
 
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-1 custom-menu">
-      <t-menu
-        :collapsed="collapsed"
-        :value="activeMenu"
-        :collapsed-width="76"
-        :width="256"
-        theme="light"
-        class="border-0"
-        @change="handleMenuChange"
-      >
-        <t-menu-item
-          v-for="item in navItems"
-          :key="item.path"
-          :value="item.path"
-          :class="item.featured ? 'nav-featured' : ''"
-        >
-          <template #icon><t-icon :name="item.icon" /></template>
-          {{ item.label }}
-        </t-menu-item>
-      </t-menu>
-    </div>
+      <t-button block shape="round" @click="handleMenuChange('/playground')" style="margin-bottom: 20px;">
+        <template #icon><chat-icon /></template>
+        <span v-if="!uiStore.collapsed">对话</span>
+      </t-button>
 
-    <div class="p-3 border-t border-nap-border sidebar-footer">
-      <transition name="fade">
-        <div v-if="!collapsed" class="rounded-xl border border-nap-border bg-nap-surface-hover p-3 mb-2">
+      <t-menu-item v-for="item in navItems" :key="item.path" :value="item.path" class="nav-featured">
+        <template #icon><t-icon :name="item.icon" /></template>
+        {{ item.label }}
+      </t-menu-item>
+      <template #operations>
+        <t-card size="small" v-if="!uiStore.collapsed">
           <div class="flex items-center justify-between">
             <span class="text-xs font-medium text-nap-text">本月 Token 额度</span>
             <span class="text-xs text-nap-text-secondary tabular">68%</span>
@@ -56,43 +35,35 @@
           <p class="mt-2 text-xs text-nap-text-secondary">
             已使用 <span class="tabular text-nap-text">1.6M</span> / 2.4M
           </p>
-        </div>
-      </transition>
-      <t-button theme="default" variant="text" block @click="collapsed = !collapsed">
-        <template #icon>
-          <t-icon :name="collapsed ? 'chevron-right' : 'chevron-left'" :size="20" />
-        </template>
-        <span v-if="!collapsed" class="text-sm">收起导航</span>
-      </t-button>
-    </div>
+        </t-card>
+      </template>
+    </t-menu>
   </t-aside>
 </template>
 
 <script setup lang="ts">
+import { ChatIcon } from 'tdesign-icons-vue-next';
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { NavItem } from '@/types'
+import { useUIStore } from '@/stores/ui';
 
 const route = useRoute()
 const router = useRouter()
-const collapsed = ref(false)
+
+const uiStore = useUIStore()
 
 const navItems: NavItem[] = [
-  { label: '对话工作台', path: '/playground', icon: 'chat', featured: true },
-  { label: '仪表盘', path: '/', icon: 'home' },
-  { label: '智能体', path: '/agents', icon: 'robot' },
   { label: '知识库', path: '/knowledge', icon: 'book' },
+  { label: '仪表盘', path: '/dashboard', icon: 'dashboard' },
+  { label: '智能体', path: '/agents', icon: 'robot' },
   { label: '监控中心', path: '/monitoring', icon: 'chart-bar' },
   { label: '设置', path: '/settings', icon: 'setting' }
 ]
 
-const activeMenu = computed(() => {
-  if (route.path === '/') return '/'
-  return navItems.find(item => item.path !== '/' && route.path.startsWith(item.path))?.path || '/'
-})
 
 function handleMenuChange(value: any) {
-  router.push(value)
+  router.push(value);
 }
 </script>
 

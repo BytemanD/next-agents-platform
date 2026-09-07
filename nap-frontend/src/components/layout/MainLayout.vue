@@ -1,18 +1,10 @@
 <template>
-  <t-layout class="h-full w-full">
+  <t-layout class="h-full">
     <Sidebar />
     <t-layout>
       <TopBar />
-      <t-content class="overflow-auto">
-        <main class="px-8 py-7 h-full">
-          <div class="max-w-[1500px] mx-auto">
-            <router-view v-slot="{ Component }">
-              <transition name="fade" mode="out-in">
-                <component :is="Component" />
-              </transition>
-            </router-view>
-          </div>
-        </main>
+      <t-content class="px-6 pt-4 overflow-y-auto">
+        <router-view />
       </t-content>
     </t-layout>
   </t-layout>

@@ -2,7 +2,7 @@
   <div class="h-16 flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors" :class="borderClass">
     <t-icon :name="getStatusIconName()" :class="statusIconClass" />
     <span class="text-xs font-medium truncate">{{ toolCall.name }}</span>
-    <t-button theme="default" size="extra-small" variant="text" @click="expanded = !expanded">
+    <t-button size="extra-small" variant="text" @click="expanded = !expanded">
       <template #icon>
         <t-icon :name="expanded ? 'chevron-up' : 'chevron-down'" />
       </template>
@@ -13,11 +13,13 @@
     <div v-if="expanded" class="mt-2 ml-6 space-y-2 text-xs">
       <div>
         <span class="text-nap-text-secondary">Input:</span>
-        <pre class="mt-1 bg-nap-bg rounded p-2 overflow-x-auto text-nap-text">{{ JSON.stringify(toolCall.input, null, 2) }}</pre>
+        <pre class="mt-1 bg-nap-bg rounded p-2 overflow-x-auto text-nap-text">{{ JSON.stringify(toolCall.input, null, 2)
+        }}</pre>
       </div>
       <div>
         <span class="text-nap-text-secondary">Output:</span>
-        <pre class="mt-1 bg-nap-bg rounded p-2 overflow-x-auto text-nap-text">{{ JSON.stringify(toolCall.output, null, 2) }}</pre>
+        <pre class="mt-1 bg-nap-bg rounded p-2 overflow-x-auto text-nap-text">{{ JSON.stringify(toolCall.output, null, 2)
+        }}</pre>
       </div>
       <div class="text-nap-text-secondary">Duration: {{ toolCall.duration }}ms</div>
     </div>

@@ -1,52 +1,30 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-nap-text">知识库</h1>
-        <p class="text-nap-text-secondary mt-1">管理文档与知识源</p>
-      </div>
-      <t-button theme="primary" @click="showUpload = true">
-        <template #icon><t-icon name="upload" /></template>
-        上传文档
-      </t-button>
-    </div>
-
-    <t-row :gutter="[16, 16]">
-      <t-col :xs="24" :sm="8">
-        <t-card :bordered="true" class="settings-card">
-          <t-space :size="12" align="center">
-            <t-icon name="file" :size="24" class="text-nap-primary" />
-            <div>
-              <p class="text-2xl font-bold text-nap-text">{{ documents.length }}</p>
-              <p class="text-sm text-nap-text-secondary">文档总数</p>
-            </div>
-          </t-space>
+  <t-row>
+    <t-col :span="6">
+      <t-space direction="vertical">
+        <p>管理文档与知识源</p>
+        <t-button @click="showUpload = true">
+          <template #icon><t-icon name="upload" /></template>
+          上传文档
+        </t-button>
+      </t-space>
+    </t-col>
+    <t-col :span="6">
+      <t-space>
+        <t-card size="small">
+          <t-statistic title="文档总数" :value="documents.length" unit="个" trend="increase" />
         </t-card>
-      </t-col>
-      <t-col :xs="24" :sm="8">
-        <t-card :bordered="true" class="settings-card">
-          <t-space :size="12" align="center">
-            <t-icon name="check-circle-filled" :size="24" class="text-nap-success" />
-            <div>
-              <p class="text-2xl font-bold text-nap-text">{{ readyCount }}</p>
-              <p class="text-sm text-nap-text-secondary">处理完成</p>
-            </div>
-          </t-space>
+        <t-card size="small">
+          <t-statistic title="处理完成" :value="readyCount" unit="个" trend="increase" />
         </t-card>
-      </t-col>
-      <t-col :xs="24" :sm="8">
-        <t-card :bordered="true" class="settings-card">
-          <t-space :size="12" align="center">
-            <t-icon name="database" :size="24" class="text-nap-secondary" />
-            <div>
-              <p class="text-2xl font-bold text-nap-text">{{ totalChunks }}</p>
-              <p class="text-sm text-nap-text-secondary">文档分块数</p>
-            </div>
-          </t-space>
+        <t-card size="small">
+          <t-statistic title="文档分块数" :value="readyCount" unit="块" />
         </t-card>
-      </t-col>
-    </t-row>
-
+      </t-space>
+    </t-col>
+  </t-row>
+  <t-space></t-space>
+  <t-col>
     <t-card :bordered="true" class="settings-card">
       <template #title><span class="text-nap-text">文档列表</span></template>
       <template #actions>
@@ -54,32 +32,20 @@
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
       </template>
-      <t-table
-        :data="filteredDocuments"
-        :columns="columns"
-        :pagination="pagination"
-        hover
-      />
+      <t-table :data="filteredDocuments" :columns="columns" :pagination="pagination" hover />
     </t-card>
-
-    <t-dialog v-model:visible="showUpload" header="上传文档" :footer="null" placement="center" width="600px">
-      <t-upload
-        action="/api/upload"
-        multiple
-        :max="10"
-        accept=".pdf,.txt,.md,.docx,.csv"
-        theme="drag"
-      >
-        <template #default>
-          <div class="text-center">
-            <t-icon name="upload" :size="48" class="text-nap-primary mx-auto mb-4" />
-            <p class="text-nap-text">点击或拖拽文件到此处上传</p>
-            <p class="text-sm text-nap-text-secondary mt-2">支持 PDF、TXT、Markdown、DOCX、CSV 格式</p>
-          </div>
-        </template>
-      </t-upload>
-    </t-dialog>
-  </div>
+  </t-col>
+  <t-dialog v-model:visible="showUpload" header="上传文档" :footer="null" placement="center" width="600px">
+    <t-upload action="/api/upload" multiple :max="10" accept=".pdf,.txt,.md,.docx,.csv">
+      <template #default>
+        <div class="text-center">
+          <t-icon name="upload" size="48" class="text-nap-primary mx-auto mb-4" />
+          <p class="text-nap-text">点击或拖拽文件到此处上传</p>
+          <p class="text-sm text-nap-text-secondary mt-2">支持 PDF、TXT、Markdown、DOCX、CSV 格式</p>
+        </div>
+      </template>
+    </t-upload>
+  </t-dialog>
 </template>
 
 <script setup lang="ts">
@@ -114,15 +80,19 @@ const pagination = ref({
 const columns = [
   { colKey: 'name', title: '名称', width: 250 },
   { colKey: 'type', title: '类型', width: 100 },
-  { colKey: 'size', title: '大小', width: 120, cell: (_row: any, rowIndex: number) => {
-    const doc = filteredDocuments.value[rowIndex]
-    return doc ? formatSize(doc.size) : ''
-  }},
+  {
+    colKey: 'size', title: '大小', width: 120, cell: (_row: any, rowIndex: number) => {
+      const doc = filteredDocuments.value[rowIndex]
+      return doc ? formatSize(doc.size) : ''
+    }
+  },
   { colKey: 'chunks', title: '分块数', width: 100 },
-  { colKey: 'status', title: '状态', width: 120, cell: (_row: any, rowIndex: number) => {
-    const doc = filteredDocuments.value[rowIndex]
-    return doc ? h(StatusBadge, { status: doc.status }) : ''
-  }}
+  {
+    colKey: 'status', title: '状态', width: 120, cell: (_row: any, rowIndex: number) => {
+      const doc = filteredDocuments.value[rowIndex]
+      return doc ? h(StatusBadge, { status: doc.status }) : ''
+    }
+  }
 ]
 
 function formatSize(bytes: number) {
