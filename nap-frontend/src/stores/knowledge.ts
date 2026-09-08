@@ -6,10 +6,15 @@ import type { KnowledgeBase, KnowledgeItem } from '@/types'
 export const useKnowledgeStore = defineStore('knowledge', () => {
   const knowledgeBases = ref<KnowledgeBase[]>([])
   const items = ref<KnowledgeItem[]>([])
+  const docCounts = ref<Record<string, number>>({})
   const loading = ref(false)
 
   const totalSize = computed(() =>
-    knowledgeBases.value.reduce((sum, kb) => sum + kb.file_size, 0)
+    items.value.reduce((sum, item) => sum + item.size, 0)
+  )
+
+  const totalDocs = computed(() =>
+    Object.values(docCounts.value).reduce((sum, n) => sum + n, 0)
   )
 
   async function fetchKnowledgeBases() {
@@ -22,10 +27,24 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
     }
   }
 
-  async function fetchKnowledgeItems() {
+  async function fetchDocCounts() {
+    for (const kb of knowledgeBases.value) {
+      try {
+        const { data } = await axios.get(`/api/v1/knowledge-bases/${kb.uuid}/stats`)
+        docCounts.value[kb.uuid] = data.total ?? (data as number) ?? 0
+      } catch {
+        docCounts.value[kb.uuid] = 0
+      }
+    }
+  }
+
+  async function fetchKnowledgeItems(kbId?: string) {
     loading.value = true
     try {
-      const { data } = await axios.get('/api/v1/knowledge')
+      const url = kbId
+        ? `/api/v1/knowledge-bases/${kbId}/knowledges`
+        : '/api/v1/knowledges'
+      const { data } = await axios.get(url)
       items.value = data.items || []
     } finally {
       loading.value = false
@@ -39,9 +58,12 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
   return {
     knowledgeBases,
     items,
+    docCounts,
     loading,
     totalSize,
+    totalDocs,
     fetchKnowledgeBases,
+    fetchDocCounts,
     fetchKnowledgeItems,
     itemsByBase
   }

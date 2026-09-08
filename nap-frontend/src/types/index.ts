@@ -55,7 +55,7 @@ export interface KnowledgeBase {
   uuid: string
   name: string
   description: string
-  active: number
+  active: boolean
   created_at: string
   updated_at: string
 }
@@ -63,12 +63,24 @@ export interface KnowledgeBase {
 export interface KnowledgeItem {
   uuid: string
   knowledge: string
+  creator: string
   name: string
   size: number
   path: string | null
-  status: string
+  status: number
   created_at: string
   updated_at: string
+}
+
+export const KNOWLEDGE_STATUS: Record<number, string> = {
+  0: '排队中',
+  1: '保存中',
+  2: '已保存',
+  3: '解析中',
+  4: '已解析',
+  5: '解析失败',
+  100: '删除中',
+  101: '已删除'
 }
 
 export interface Trace {

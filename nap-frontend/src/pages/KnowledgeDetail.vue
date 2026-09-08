@@ -8,7 +8,9 @@
         <h1 class="text-2xl font-bold text-nap-text">{{ kb?.name || '知识库详情' }}</h1>
         <p class="text-nap-text-secondary mt-1">{{ kb?.description || '暂无描述' }}</p>
       </div>
-      <StatusBadge v-if="kb" :status="kb.status" class="ml-2 self-center" />
+      <t-tag v-if="kb" shape="round" class="self-center" :theme="kb.active ? 'success' : 'danger'">
+        {{ kb.active ? '启用' : '禁用' }}
+      </t-tag>
     </div>
 
     <t-row :gutter="[16, 16]">
@@ -75,12 +77,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, h, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import { MessagePlugin } from 'tdesign-vue-next'
+import { MessagePlugin, Popconfirm, Button as TButton } from 'tdesign-vue-next'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useKnowledgeStore } from '@/stores/knowledge'
+import { KNOWLEDGE_STATUS } from '@/types'
 import type { KnowledgeItem, KnowledgeBase } from '@/types'
 
 const route = useRoute()
@@ -96,7 +99,7 @@ const showUpload = ref(false)
 const uploading = ref(false)
 const uploadFiles = ref<any[]>([])
 
-const docs = computed<KnowledgeItem[]>(() => knowledgeStore.itemsByBase(baseUuid.value))
+const docs = computed<KnowledgeItem[]>(() => knowledgeStore.items)
 
 const filteredDocs = computed(() => {
   if (!searchQuery.value) return docs.value
@@ -104,46 +107,77 @@ const filteredDocs = computed(() => {
   return docs.value.filter(d => d.name.toLowerCase().includes(q))
 })
 
-const readyCount = computed(() => docs.value.filter(d => d.status === 'saved' || d.status === 'parsed').length)
+const readyCount = computed(() => docs.value.filter(d => d.status === 2 || d.status === 4).length)
 const pendingCount = computed(() => docs.value.length - readyCount.value)
 const totalSizeText = computed(() => formatSize(docs.value.reduce((sum, d) => sum + d.size, 0)))
 
 function parseType(name: string) {
   const ext = name.split('.').pop()?.toLowerCase() || 'file'
-  const map: Record<string, string> = {
-    pdf: 'pdf', txt: 'text', md: 'markdown', docx: 'docx', csv: 'csv'
-  }
-  return map[ext] || 'file'
+  // const map: Record<string, string> = {
+  //   pdf: 'pdf', txt: 'text', md: 'md', docx: 'docx', csv: 'csv'
+  // }
+  return ext || 'file'
 }
 
 const columns = [
   { colKey: 'name', title: '名称', width: 260 },
   {
-    colKey: 'type', title: '类型', width: 110, cell: (row: any) => h('span', parseType(row.name))
+    colKey: 'type', title: '类型', width: 50, cell: (h: any, { row }: any) => h('span', parseType(row.name))
   },
   {
-    colKey: 'size', title: '大小', width: 120, cell: (row: any) => h('span', formatSize(row.size))
+    colKey: 'size', title: '大小', width: 80, cell: (h: any, { row }: any) => h('span', formatSize(row.size))
   },
   {
-    colKey: 'status', title: '状态', width: 120, cell: (row: any) => h(StatusBadge, { status: row.status })
+    colKey: 'creator', title: '上传者', width: 120, cell: (h: any, { row }: any) => h('span', row.creator || '-')
   },
   {
-    colKey: 'created_at', title: '上传时间', width: 180, cell: (row: any) => h('span', new Date(row.created_at).toLocaleString())
+    colKey: 'status', title: '状态', width: 120,
+    cell: (h: any, { row }: any) => h(StatusBadge, { status: KNOWLEDGE_STATUS[row.status] || row.status })
+  },
+  {
+    colKey: 'created_at', title: '上传时间', width: 180, cell: (h: any, { row }: any) => h('span', new Date(row.created_at).toLocaleString())
+  },
+  {
+    colKey: 'operation', title: '操作', width: 80, fixed: 'right',
+    cell: (h: any, { row }: any) => h('div', { class: 'flex justify-center' }, [
+      h(Popconfirm,
+        {
+          content: `确定删除文档「${row.name}」吗？`,
+          onConfirm: () => handleDelete(row)
+        },
+        {
+          default: () => h(TButton, {
+            variant: 'text',
+            theme: 'danger'
+          }, { default: () => '删除' })
+        })
+    ])
   }
 ]
+
+async function handleDelete(row: any) {
+  try {
+    await axios.delete(`/api/v1/knowledges/${row.uuid}`)
+    MessagePlugin.success('删除成功')
+    await knowledgeStore.fetchKnowledgeItems(baseUuid.value)
+  } catch {
+    MessagePlugin.error('删除失败')
+  }
+}
 
 function handleUpload() {
   if (uploadFiles.value.length === 0) return
   uploading.value = true
+  const endpoint = `/api/v1/knowledge-bases/${baseUuid.value}/knowledges/file`
   const tasks = uploadFiles.value.map(file =>
-    axios.post('/api/v1/docs/upload', buildFormData(file))
+    axios.post(endpoint, buildFormData(file))
   )
   Promise.all(tasks)
     .then(() => {
       MessagePlugin.success('上传成功')
       showUpload.value = false
       uploadFiles.value = []
-      return knowledgeStore.fetchKnowledgeItems()
+      return knowledgeStore.fetchKnowledgeItems(baseUuid.value)
     })
     .catch(() => MessagePlugin.error('上传失败'))
     .finally(() => {
@@ -159,14 +193,15 @@ function buildFormData(file: any) {
 }
 
 function formatSize(bytes: number) {
-  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB'
+  if (!bytes) return '0 B'
   if (bytes === 0) return '0 B'
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB'
   return (bytes / 1024).toFixed(1) + ' KB'
 }
 
-watch(baseUuid, () => knowledgeStore.fetchKnowledgeItems())
+watch(baseUuid, () => knowledgeStore.fetchKnowledgeItems(baseUuid.value))
 
 onMounted(() => {
-  knowledgeStore.fetchKnowledgeItems()
+  knowledgeStore.fetchKnowledgeItems(baseUuid.value)
 })
 </script>

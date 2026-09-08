@@ -58,7 +58,9 @@ async def get_llm(uuid: str):
 
 @router.post("", status_code=201)
 async def create_llm(body: LLMCreate):
-    d = LLMs(name=body.name, base_url=body.base_url, api_key=body.api_key, models=body.models)
+    d = LLMs(
+        name=body.name, base_url=body.base_url, api_key=body.api_key, models=body.models
+    )
     d.create()
     return _to_response(d)
 

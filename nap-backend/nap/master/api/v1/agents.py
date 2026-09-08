@@ -68,7 +68,7 @@ async def get_agent(uuid: str):
     a = Agents.get_by_uuid(uuid)
     if not a:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return _to_response(a)
+    return a
 
 
 @router.post("", status_code=201)

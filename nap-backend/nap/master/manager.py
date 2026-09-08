@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from loguru import logger
 from markitdown import MarkItDown
 from nap.common.exceptions import KnowledgeAlreadyExists
-from nap.db.models import Knowledge
+from nap.db.models import Knowledge, KnowledgeBase
 from nap.research.ai import ResearchAI
 from nap.storage.manager import get_storage_driver
 from nap.vector.manager import get_vector_driver
@@ -37,15 +37,18 @@ class MasterManager:
             return None
         return self.storage_driver.get_path(docs[0])
 
-    def upload_doc(self, filename: str, content: bytes) -> Knowledge:
+    def upload_doc(
+        self, kb: KnowledgeBase, creator: str, filename: str, content: bytes
+    ) -> Knowledge:
         """创建 doc 记录， 保存 doc 内容到本地存储"""
 
         doc = Knowledge(
-            project_uuid=context.project_id.get() or "",
+            knowledge=kb.uuid,
+            creator=creator,
             name=filename,
-            file_size=len(content),
-            file_path="",
-            status="pending",
+            size=len(content),
+            path="",
+            status=0,
         )
         doc.create()
         self.storage_driver.save(doc, content)
@@ -159,7 +162,7 @@ class MasterManager:
         return messages
 
     async def streaming_llm_query(
-        self, text: str, session_id: str | None= None, model: str = ""
+        self, text: str, session_id: str | None = None, model: str = ""
     ):
         if model:
             self.llm.set_model(model)

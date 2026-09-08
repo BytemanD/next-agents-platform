@@ -1,3 +1,5 @@
+from enum import IntEnum
+
 from pystonic.orm.models import DBModel, get_session
 from sqlmodel import JSON, Field, Text, col, func, select
 
@@ -11,7 +13,7 @@ class Users(DBModel, table=True):
 
 class LLMs(DBModel, table=True):
     __tablename__ = "llms"  # type: ignore
-    
+
     name: str = Field(nullable=False, default="")
     base_url: str = Field(nullable=False)
     api_key: str = Field(nullable=False)
@@ -19,7 +21,7 @@ class LLMs(DBModel, table=True):
 
 
 class Agents(DBModel, table=True):
-    __tablename__ = "agents" # type: ignore
+    __tablename__ = "agents"  # type: ignore
 
     name: str = Field(nullable=False)
     description: str = Field(nullable=False)
@@ -32,7 +34,7 @@ class Agents(DBModel, table=True):
 
 
 class KnowledgeBase(DBModel, table=True):
-    __tablename__ = "knowledge_bases" # type: ignore
+    __tablename__ = "knowledge_bases"  # type: ignore
 
     name: str = Field(nullable=False)
     description: str = Field(nullable=False)
@@ -41,17 +43,38 @@ class KnowledgeBase(DBModel, table=True):
     )
 
 
-class Knowledge(DBModel, table=True):
-    __tablename__ = "knowledges" # type: ignore
+class KnowledgeStatus(IntEnum):
+    queue = 0
+    saving = 1
+    saved = 2
+    parsing = 3
+    parsed = 4
+    parse_failed = 5
+    deleting = 100
+    deleted = 101
 
-    knowledge: str = Field(nullable=False, description="knowledge base UUID")
+
+class Knowledge(DBModel, table=True):
+    __tablename__ = "knowledges"  # type: ignore
+
+    knowledge: str = Field(nullable=False, description="knowledge UUID")
+    creator: str = Field(nullable=False, description="knowledge creator")
     name: str = Field(nullable=False)
     size: int = Field(nullable=False)
     path: str = Field(nullable=True)
     status: int = Field(
         nullable=False,
         default=0,
-        description="0: saved, 1: parsing, 2: parsed, 3: parse_failed, 100: deleting, 101: deleted",
+        description=(
+            "  0: queue, "
+            "  1: saving, "
+            "  2: saved, "
+            "  3: parsing, "
+            "  4: parsed, "
+            "  5: parse_failed, "
+            "100: deleting, "
+            "101: deleted"
+        ),
     )
 
     @classmethod
