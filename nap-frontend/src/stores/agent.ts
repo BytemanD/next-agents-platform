@@ -1,6 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import axios from 'axios'
 import type { Agent } from '@/types'
+
+interface AgentAPI {
+  uuid: string
+  name: string
+  description: string
+  instruction: string
+  llm: string
+  status: string
+  tools: string[]
+  created_at: string
+  updated_at: string
+}
 
 export const useAgentStore = defineStore('agent', () => {
   const agents = ref<Agent[]>([])
@@ -13,42 +26,19 @@ export const useAgentStore = defineStore('agent', () => {
   async function fetchAgents() {
     loading.value = true
     try {
-      // TODO: replace with actual API call
-      agents.value = [
-        {
-          id: '1',
-          name: '研究助理',
-          description: '协助进行研究和文献综述',
-          avatar: '',
-          model: 'gpt-4o',
-          status: 'active',
-          tools: ['web_search', 'file_read'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: '2',
-          name: '代码评审员',
-          description: '审查代码并提供改进建议',
-          avatar: '',
-          model: 'claude-3.5-sonnet',
-          status: 'active',
-          tools: ['code_review', 'file_read'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: '3',
-          name: '数据分析师',
-          description: '分析数据并生成报告',
-          avatar: '',
-          model: 'gpt-4o',
-          status: 'draft',
-          tools: ['code_exec', 'file_write'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ]
+      const { data } = await axios.get('/api/v1/agents')
+      agents.value = (data.agents || []).map((a: AgentAPI) => ({
+        id: a.uuid,
+        name: a.name,
+        description: a.description,
+        avatar: '',
+        model: a.llm,
+        status: a.status === 'active' ? 'active' : a.status === 'draft' ? 'draft' : 'error',
+        tools: a.tools || [],
+        systemPrompt: a.instruction,
+        createdAt: a.created_at,
+        updatedAt: a.updated_at
+      }))
     } finally {
       loading.value = false
     }

@@ -1,0 +1,2 @@
+class KnowledgeAlreadyExists(Exception):
+    pass

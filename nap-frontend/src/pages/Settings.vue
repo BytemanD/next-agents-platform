@@ -1,12 +1,11 @@
 <template>
   <t-tabs :value="activeTab" @change="activeTab = $event" class="settings-tabs">
     <t-tab-panel value="api" label="模型">
-      <t-row>
-        <t-col :xs="12" :sm="12" :md="6" :xl="4" v-for="endpoint in apiEndpoints" :key="endpoint.base_url"
-          :bordered="true" size="small" style="padding: 4px">
-          <t-card :title="endpoint.name" size="small">
-            <t-descriptions :column="1" size="" tableLayout="auto">
-              <t-descriptions-item label="地址" labelStyle="width: 20px;">{{ endpoint.base_url }}</t-descriptions-item>
+      <t-row :gutter="16">
+        <t-col v-for="endpoint in apiEndpoints" :key="endpoint.uuid" :xs="24" :sm="12" :md="8" :xl="6">
+          <t-card :title="endpoint.name || endpoint.base_url" size="small" :bordered="true">
+            <t-descriptions :column="1" size="small" tableLayout="auto">
+              <t-descriptions-item label="地址">{{ endpoint.base_url }}</t-descriptions-item>
               <t-descriptions-item label="密钥">{{ maskKey(endpoint.api_key) }}</t-descriptions-item>
               <t-descriptions-item label="模型">
                 <t-space :size="4">
@@ -17,13 +16,14 @@
               </t-descriptions-item>
             </t-descriptions>
             <template #actions>
-              <t-button size="small" variant="outline">编辑</t-button>
-              <t-button theme="danger" size="small" variant="text">删除</t-button>
+              <t-button size="small" variant="outline" @click="handleEdit(endpoint)">编辑</t-button>
+              <t-popconfirm content="确认删除该模型？" @confirm="handleDelete(endpoint)">
+                <t-button theme="danger" size="small" variant="text">删除</t-button>
+              </t-popconfirm>
             </template>
           </t-card>
-          <t-card></t-card>
         </t-col>
-        <t-col :xs="12" :sm="12" :md="6" :xl="4">
+        <t-col :xs="24" :sm="12" :md="8" :xl="6">
           <t-button variant="dashed" block @click="handleAddKey">
             <template #icon><t-icon name="add" /></template>
             添加模型
@@ -91,36 +91,134 @@
       </div>
     </t-tab-panel>
   </t-tabs>
+
+  <t-dialog
+    v-model:visible="createVisible"
+    :header="editingUuid ? '编辑模型' : '添加模型'"
+    :confirm-btn="{ content: editingUuid ? '保存' : '创建', loading: submitting }"
+    @confirm="handleCreate"
+  >
+    <t-form ref="formRef" :data="createForm" :rules="formRules" label-align="top">
+      <t-form-item label="名称" name="name">
+        <t-input v-model="createForm.name" placeholder="OpenAI" clearable />
+      </t-form-item>
+      <t-form-item label="Base URL" name="base_url">
+        <t-input v-model="createForm.base_url" placeholder="https://api.openai.com/v1" clearable />
+      </t-form-item>
+      <t-form-item label="API Key" name="api_key">
+        <t-input v-model="createForm.api_key" placeholder="sk-..." type="password" clearable />
+      </t-form-item>
+      <t-form-item label="模型（用逗号分隔）" name="models">
+        <t-input v-model="createForm.modelsText" placeholder="gpt-4o, deepseek-v4, kimi" clearable />
+      </t-form-item>
+    </t-form>
+  </t-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import axios from 'axios'
+import { MessagePlugin } from 'tdesign-vue-next'
+
+interface APIEndpoint {
+  uuid: string
+  name: string
+  base_url: string
+  api_key: string
+  models: string[]
+}
 
 const activeTab = ref('api')
 
-const apiEndpoints = ref([
-  {
-    name: 'OpenAI',
-    base_url: 'https://api.openai.com/v1',
-    api_key: 'sk-xxxxxxxxxxxxxxxxxxxxxxxx',
-    models: ['gpt-4o', 'gpt-4o-mini']
-  },
-  {
-    name: 'Anthropic',
-    base_url: 'https://api.anthropic.com/v1',
-    api_key: 'sk-ant-xxxxxxxxxxxxxxxx',
-    models: ['claude-sonnet-4', 'claude-opus-4']
-  },
-  {
-    name: '自定义端点',
-    base_url: 'https://localhost:8000/v1',
-    api_key: 'local-xxxxxxxxxxxxxxxx',
-    models: ['deepseek-v4', 'kimi', 'qwen2.5']
-  }
-])
+const apiEndpoints = ref<APIEndpoint[]>([])
+const listLoading = ref(false)
 
 const maskKey = (key: string) =>
   key.length > 8 ? `${key.slice(0, 4)}...${key.slice(-4)}` : '••••••••'
+
+async function fetchLLMs() {
+  listLoading.value = true
+  try {
+    const { data } = await axios.get('/api/v1/llms')
+    apiEndpoints.value = data.llms || []
+  } catch {
+    MessagePlugin.error('加载模型列表失败')
+  } finally {
+    listLoading.value = false
+  }
+}
+
+onMounted(fetchLLMs)
+
+const createVisible = ref(false)
+const submitting = ref(false)
+const editingUuid = ref('')
+const formRef = ref()
+const createForm = ref({ name: '', base_url: '', api_key: '', modelsText: '' })
+
+const formRules = {
+  base_url: [{ required: true, message: '请填写 Base URL', type: 'error' }],
+  api_key: [{ required: true, message: '请填写 API Key', type: 'error' }]
+}
+
+function handleAddKey() {
+  editingUuid.value = ''
+  createForm.value = { name: '', base_url: '', api_key: '', modelsText: '' }
+  createVisible.value = true
+}
+
+function handleEdit(endpoint: APIEndpoint) {
+  editingUuid.value = endpoint.uuid
+  createForm.value = {
+    name: endpoint.name,
+    base_url: endpoint.base_url,
+    api_key: endpoint.api_key,
+    modelsText: endpoint.models.join(', ')
+  }
+  createVisible.value = true
+}
+
+async function handleCreate() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  submitting.value = true
+  try {
+    const models = createForm.value.modelsText
+      .split(/[,，]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const payload = {
+      name: createForm.value.name,
+      base_url: createForm.value.base_url,
+      api_key: createForm.value.api_key,
+      models
+    }
+    if (editingUuid.value) {
+      await axios.put(`/api/v1/llms/${editingUuid.value}`, payload)
+      MessagePlugin.success('更新成功')
+    } else {
+      await axios.post('/api/v1/llms', payload)
+      MessagePlugin.success('创建成功')
+    }
+    createVisible.value = false
+    fetchLLMs()
+  } catch {
+    MessagePlugin.error(editingUuid.value ? '更新失败' : '创建失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleDelete(endpoint: APIEndpoint) {
+  try {
+    await axios.delete(`/api/v1/llms/${endpoint.uuid}`)
+    MessagePlugin.success('删除成功')
+    fetchLLMs()
+  } catch {
+    MessagePlugin.error('删除失败')
+  }
+}
 
 const settings = ref({
   theme: 'light',
@@ -144,10 +242,6 @@ const notifications = ref([
   { key: 'error_alert', label: '错误提醒', description: '智能体出错时通知', icon: 'alert-circle', enabled: true },
   { key: 'weekly_report', label: '周报', description: '每周收到使用量汇总', icon: 'chart-bar', enabled: false }
 ])
-
-function handleAddKey() {
-  console.log('添加 API 密钥')
-}
 </script>
 
 <style scoped>
@@ -156,14 +250,6 @@ function handleAddKey() {
   background: transparent !important;
   /* padding-top: 2px; */
 }
-
-.settings-api {
-  display: flex;
-  flex-direction: column;
-  /* gap: 16px; */
-}
-
-
 
 :deep(.t-tab-panel) {
   padding: 10px 10px;

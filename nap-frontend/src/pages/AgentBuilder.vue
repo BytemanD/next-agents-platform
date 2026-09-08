@@ -99,6 +99,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
+import { MessagePlugin } from 'tdesign-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -115,14 +117,21 @@ const form = ref({
   knowledgeBaseIds: [] as string[]
 })
 
-const modelOptions = [
-  { label: 'GPT-4o', value: 'gpt-4o' },
-  { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },
-  { label: 'Claude 3.5 Sonnet', value: 'claude-3.5-sonnet' },
-  { label: 'Claude 3 Opus', value: 'claude-3-opus' },
-  { label: 'Llama 3.1 70B', value: 'llama-3.1-70b' },
-  { label: 'DeepSeek V3', value: 'deepseek-v3' }
-]
+const modelOptions = ref<{ label: string; value: string }[]>([])
+
+async function fetchLLMs() {
+  try {
+    const { data } = await axios.get('/api/v1/llms')
+    modelOptions.value = (data.llms || []).map(
+      (llm: { uuid: string; name: string; base_url: string }) => ({
+        label: llm.name || llm.base_url,
+        value: llm.uuid
+      })
+    )
+  } catch {
+    MessagePlugin.error('加载模型列表失败')
+  }
+}
 
 const availableTools = [
   { id: 'web_search', name: '联网搜索', description: '搜索互联网', icon: 'search' },
@@ -148,12 +157,31 @@ function toggleTool(toolId: string) {
   }
 }
 
-function handleSave(status: string) {
-  console.log('保存智能体:', { ...form.value, status })
-  router.push('/agents')
+async function handleSave(status: string) {
+  const payload = {
+    name: form.value.name,
+    description: form.value.description,
+    instruction: form.value.systemPrompt,
+    llm: form.value.model || '',
+    status,
+    tools: form.value.tools
+  }
+  try {
+    if (route.params.id) {
+      await axios.put(`/api/v1/agents/${route.params.id}`, payload)
+      MessagePlugin.success('更新成功')
+    } else {
+      await axios.post('/api/v1/agents', payload)
+      MessagePlugin.success('创建成功')
+    }
+    router.push('/agents')
+  } catch {
+    MessagePlugin.error(route.params.id ? '更新失败' : '创建失败')
+  }
 }
 
 onMounted(() => {
+  fetchLLMs()
   if (isEdit.value) {
     form.value = {
       name: '研究助理',

@@ -4,4 +4,24 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "chromadb>=1.5.9",
+    "fastapi>=0.141.1",
+    "loguru>=0.7.3",
+    "markitdown>=0.1.7",
+    "openai>=3.8.0",
+    "openai-agents>=0.22.0",
+    "pydantic>=2.13.5",
+    "pystonic",
+    "rich>=15.0.0",
+    "sqlmodel>=0.0.42",
+    "uvicorn>=0.52.4",
+]
+
+
+[[tool.uv.index]]
+name = "tencent"
+url = "http://mirrors.cloud.tencent.com/pypi/simple"
+
+[tool.uv.sources]
+pystonic = { git = "https://github.com/BytemanD/pystonic.git" }
