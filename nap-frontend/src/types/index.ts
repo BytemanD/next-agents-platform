@@ -51,6 +51,26 @@ export interface KnowledgeDocument {
   createdAt: string
 }
 
+export interface KnowledgeBase {
+  uuid: string
+  name: string
+  description: string
+  active: number
+  created_at: string
+  updated_at: string
+}
+
+export interface KnowledgeItem {
+  uuid: string
+  knowledge: string
+  name: string
+  size: number
+  path: string | null
+  status: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Trace {
   id: string
   agentId: string

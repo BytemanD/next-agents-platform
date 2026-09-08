@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from nap.db.models import KnowledgeBase
+from nap.db.models import Knowledge, KnowledgeBase
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/knowledge-bases")
@@ -10,46 +10,26 @@ router = APIRouter(prefix="/knowledge-bases")
 class KnowledgeBaseCreate(BaseModel):
     name: str
     description: str = ""
-    file_size: int = 0
-    file_path: Optional[str] = None
-    status: str = "pending"
+    active: bool = True
 
 
 class KnowledgeBaseUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    file_size: Optional[int] = None
-    file_path: Optional[str] = None
-    status: Optional[str] = None
-
+    active: Optional[bool] = None
 
 class KnowledgeBaseResponse(BaseModel):
     uuid: str
     name: str
     description: str
-    file_size: int
-    file_path: Optional[str]
-    status: str
+    active: bool
     created_at: str
     updated_at: str
 
 
-def _to_response(kb: KnowledgeBase) -> KnowledgeBaseResponse:
-    return KnowledgeBaseResponse(
-        uuid=kb.uuid,
-        name=kb.name,
-        description=kb.description,
-        file_size=kb.file_size,
-        file_path=kb.file_path,
-        status=kb.status,
-        created_at=kb.created_at.isoformat(),
-        updated_at=kb.updated_at.isoformat(),
-    )
-
-
 @router.get("")
 async def list_kbs():
-    return {"items": [_to_response(kb) for kb in KnowledgeBase.query()]}
+    return {"items": KnowledgeBase.query()}
 
 
 @router.get("/{uuid}")
@@ -57,7 +37,7 @@ async def get_kb(uuid: str):
     kb = KnowledgeBase.get_by_uuid(uuid)
     if not kb:
         raise HTTPException(status_code=404, detail="KnowledgeBase not found")
-    return _to_response(kb)
+    return kb
 
 
 @router.post("", status_code=201)
@@ -65,12 +45,10 @@ async def create_kb(body: KnowledgeBaseCreate):
     kb = KnowledgeBase(
         name=body.name,
         description=body.description,
-        file_size=body.file_size,
-        file_path=body.file_path,
-        status=body.status,
+        active=body.active,
     )
     kb.create()
-    return _to_response(kb)
+    return kb
 
 
 @router.put("/{uuid}")
@@ -83,15 +61,11 @@ async def update_kb(uuid: str, body: KnowledgeBaseUpdate):
         kb.name = body.name
     if body.description is not None:
         kb.description = body.description
-    if body.file_size is not None:
-        kb.file_size = body.file_size
-    if body.file_path is not None:
-        kb.file_path = body.file_path
-    if body.status is not None:
-        kb.status = body.status
+    if body.active is not None:
+        kb.status = body.active
 
     kb.save()
-    return _to_response(kb)
+    return kb
 
 
 @router.delete("/{uuid}", status_code=204)
@@ -100,3 +74,13 @@ async def delete_kb(uuid: str):
     if not kb:
         raise HTTPException(status_code=404, detail="KnowledgeBase not found")
     kb.delete()
+
+
+@router.get("/{kb_id}/stats", status_code=204)
+async def get_kb_stats(kb_id: str):
+    return {"total": Knowledge.count(Knowledge.knowledge == kb_id)}
+
+@router.get("/{kb_id}/knowledges", status_code=204)
+async def list_kb_knowledges(kb_id: str):
+    knowledges = Knowledge.query(Knowledge.knowledge == kb_id)
+    return {"items": knowledges}

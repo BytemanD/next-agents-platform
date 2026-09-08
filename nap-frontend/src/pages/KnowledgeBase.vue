@@ -1,108 +1,158 @@
 <template>
-  <t-row>
-    <t-col :span="6">
-      <t-space direction="vertical">
-        <p>管理文档与知识源</p>
-        <t-button @click="showUpload = true">
-          <template #icon><t-icon name="upload" /></template>
-          上传文档
-        </t-button>
-      </t-space>
-    </t-col>
-    <t-col :span="6">
-      <t-space>
-        <t-card size="small">
-          <t-statistic title="文档总数" :value="documents.length" unit="个" trend="increase" />
-        </t-card>
-        <t-card size="small">
-          <t-statistic title="处理完成" :value="readyCount" unit="个" trend="increase" />
-        </t-card>
-        <t-card size="small">
-          <t-statistic title="文档分块数" :value="readyCount" unit="块" />
-        </t-card>
-      </t-space>
-    </t-col>
-  </t-row>
-  <t-space></t-space>
-  <t-col>
-    <t-card :bordered="true" class="settings-card">
-      <template #title><span class="text-nap-text">文档列表</span></template>
-      <template #actions>
-        <t-input v-model="searchQuery" placeholder="搜索文档..." size="small" clearable class="w-64">
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-nap-text-secondary mt-1">管理知识库与知识来源</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <t-input v-model="searchQuery" placeholder="搜索知识库..." clearable class="w-64">
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
+        <t-select :disabled="knowledgeStore.loading" class="w-36" size="small" v-model="filterByStatus"
+          :options="statusOptions" />
+        <t-button @click="showCreate = true">
+          <template #icon><t-icon name="add" /></template>
+          新建知识库
+        </t-button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-6">
+      <t-statistic title="知识库总数" :value="knowledgeStore.knowledgeBases.length" unit="个" />
+      <t-statistic title="文档总数" :value="knowledgeStore.items.length" unit="个" />
+      <t-statistic title="占用空间" :value="totalSizeText" unit="" />
+    </div>
+
+    <t-empty v-if="filteredBases.length === 0 && !knowledgeStore.loading" class="py-20">
+      <template #description>
+        <p class="text-nap-text">未找到知识库</p>
+        <p class="text-sm text-nap-text-secondary mt-1">创建你的第一个知识库开始使用</p>
+        <t-button size="small" class="mt-4" @click="showCreate = true">
+          新建知识库
+        </t-button>
       </template>
-      <t-table :data="filteredDocuments" :columns="columns" :pagination="pagination" hover />
-    </t-card>
-  </t-col>
-  <t-dialog v-model:visible="showUpload" header="上传文档" :footer="null" placement="center" width="600px">
-    <t-upload action="/api/upload" multiple :max="10" accept=".pdf,.txt,.md,.docx,.csv">
-      <template #default>
-        <div class="text-center">
-          <t-icon name="upload" size="48" class="text-nap-primary mx-auto mb-4" />
-          <p class="text-nap-text">点击或拖拽文件到此处上传</p>
-          <p class="text-sm text-nap-text-secondary mt-2">支持 PDF、TXT、Markdown、DOCX、CSV 格式</p>
-        </div>
+      <template #image>
+        <t-icon name="book" size="48" class="text-nap-text-tertiary" />
       </template>
-    </t-upload>
-  </t-dialog>
+    </t-empty>
+
+    <t-row v-else :gutter="[16, 16]">
+      <t-col v-for="kb in filteredBases" :key="kb.uuid" :xs="12" :sm="12" :md="8" :lg="6">
+        <t-card class="card-hover cursor-pointer group h-full" :bordered="true"
+          @click="$router.push(`/knowledge/${kb.uuid}`)">
+          <div class="flex flex-col h-full">
+            <div class="flex items-start justify-between">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-nap-primary/10 text-nap-primary">
+                <t-icon name="book" size="20" />
+              </div>
+              <t-tag shape="round" theme="success" v-if="kb.active">启用</t-tag>
+              <t-tag shape="round" theme="danger" v-else >禁用</t-tag>
+            </div>
+
+            <h3 class="font-semibold text-nap-text mt-3 group-hover:text-nap-primary transition-colors">{{ kb.name }}</h3>
+            <p class="text-sm text-nap-text-secondary mt-1 line-clamp-2 flex-1">{{ kb.description || '暂无描述' }}</p>
+
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-nap-border">
+              <span class="text-xs text-nap-text-secondary">{{ formatSize(kb.file_size) }}</span>
+              <t-space :size="6" class="items-center">
+                <span class="text-xs text-nap-text-secondary">{{ docCount(kb.uuid) }} 个文档</span>
+                <t-icon name="chevron-right" size="14" class="text-nap-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
+              </t-space>
+            </div>
+          </div>
+        </t-card>
+      </t-col>
+    </t-row>
+
+    <t-dialog v-model:visible="showCreate" header="新建知识库" placement="center" width="520px"
+      :confirm-btn="{ content: '创建', loading: creating }" :cancel-btn="{}" @confirm="handleCreate">
+      <t-form label-align="top">
+        <t-form-item label="名称">
+          <t-input v-model="createForm.name" placeholder="例如：产品文档库" />
+        </t-form-item>
+        <t-form-item label="描述">
+          <t-textarea v-model="createForm.description" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="这个知识库是做什么的？" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { MessagePlugin } from 'tdesign-vue-next'
+import axios from 'axios'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import type { KnowledgeDocument } from '@/types'
+import { useKnowledgeStore } from '@/stores/knowledge'
+
+const knowledgeStore = useKnowledgeStore()
 
 const searchQuery = ref('')
-const showUpload = ref(false)
+const filterByStatus = ref('all')
+const showCreate = ref(false)
+const creating = ref(false)
+const createForm = ref({ name: '', description: '' })
 
-const documents = ref<KnowledgeDocument[]>([
-  { id: '1', name: 'research-paper.pdf', type: 'pdf', size: 2048000, status: 'ready', chunks: 156, createdAt: new Date().toISOString() },
-  { id: '2', name: 'codebase-docs.md', type: 'markdown', size: 512000, status: 'ready', chunks: 89, createdAt: new Date().toISOString() },
-  { id: '3', name: 'data-analysis.csv', type: 'csv', size: 1024000, status: 'processing', chunks: 0, createdAt: new Date().toISOString() },
-  { id: '4', name: 'meeting-notes.txt', type: 'text', size: 256000, status: 'ready', chunks: 42, createdAt: new Date().toISOString() }
-])
-
-const readyCount = computed(() => documents.value.filter(d => d.status === 'ready').length)
-const totalChunks = computed(() => documents.value.reduce((sum, d) => sum + d.chunks, 0))
-
-const filteredDocuments = computed(() => {
-  if (!searchQuery.value) return documents.value
-  const q = searchQuery.value.toLowerCase()
-  return documents.value.filter(d => d.name.toLowerCase().includes(q))
-})
-
-const pagination = ref({
-  defaultPageSize: 10,
-  defaultCurrent: 1
-})
-
-const columns = [
-  { colKey: 'name', title: '名称', width: 250 },
-  { colKey: 'type', title: '类型', width: 100 },
-  {
-    colKey: 'size', title: '大小', width: 120, cell: (_row: any, rowIndex: number) => {
-      const doc = filteredDocuments.value[rowIndex]
-      return doc ? formatSize(doc.size) : ''
-    }
-  },
-  { colKey: 'chunks', title: '分块数', width: 100 },
-  {
-    colKey: 'status', title: '状态', width: 120, cell: (_row: any, rowIndex: number) => {
-      const doc = filteredDocuments.value[rowIndex]
-      return doc ? h(StatusBadge, { status: doc.status }) : ''
-    }
-  }
+const statusOptions = [
+  { label: '全部状态', value: 'all' },
+  { label: '启用', value: 'true' },
+  { label: '禁用', value: 'false' },
 ]
+
+const filteredBases = computed(() => {
+  let bases = knowledgeStore.knowledgeBases
+  if (filterByStatus.value !== 'all') {
+    bases = bases.filter(kb => String(kb.active) == filterByStatus.value)
+  }
+    console.log('xxxxxxxxx', bases)
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    bases = bases.filter(kb => kb.name.toLowerCase().includes(q) || (kb.description || '').toLowerCase().includes(q))
+  }
+  return bases
+})
+
+const totalSizeText = computed(() => formatSize(knowledgeStore.totalSize))
+
+function docCount(baseUuid: string) {
+  return knowledgeStore.itemsByBase(baseUuid).length
+}
+
+function handleCreate() {
+  if (!createForm.value.name.trim()) {
+    MessagePlugin.warning('请输入知识库名称')
+    return
+  }
+  creating.value = true
+  axios
+    .post('/api/v1/knowledge-bases', {
+      name: createForm.value.name,
+      description: createForm.value.description,
+      file_size: 0,
+      file_path: null,
+      status: 'pending'
+    })
+    .then(() => {
+      MessagePlugin.success('知识库创建成功')
+      showCreate.value = false
+      createForm.value = { name: '', description: '' }
+      return knowledgeStore.fetchKnowledgeBases()
+    })
+    .catch(() => MessagePlugin.error('创建失败'))
+    .finally(() => {
+      creating.value = false
+    })
+}
 
 function formatSize(bytes: number) {
   if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB'
+  if (bytes === 0) return '0 B'
   return (bytes / 1024).toFixed(1) + ' KB'
 }
-</script>
 
-<style scoped>
-.settings-card {
-  background-color: var(--td-bg-color-container);
-}
-</style>
+onMounted(() => {
+  knowledgeStore.fetchKnowledgeBases()
+  knowledgeStore.fetchKnowledgeItems()
+})
+</script>

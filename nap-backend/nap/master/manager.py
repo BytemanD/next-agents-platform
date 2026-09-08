@@ -52,7 +52,7 @@ class MasterManager:
         return doc
 
     def parse_doc(self, doc_uuid: str):
-        doc: Optional[Knowledge] = Doc.get_by_uuid(doc_uuid)
+        doc: Optional[Knowledge] = Knowledge.get_by_uuid(doc_uuid)
         if not doc:
             logger.warning("parse_doc: doc {} not found, skip", doc_uuid)
             return
@@ -159,7 +159,7 @@ class MasterManager:
         return messages
 
     async def streaming_llm_query(
-        self, text: str, session_id: str = None, model: str = ""
+        self, text: str, session_id: str | None= None, model: str = ""
     ):
         if model:
             self.llm.set_model(model)
