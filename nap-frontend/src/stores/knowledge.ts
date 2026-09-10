@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
+import { API } from '@/api'
 import type { KnowledgeBase, KnowledgeItem } from '@/types'
 
 export const useKnowledgeStore = defineStore('knowledge', () => {
@@ -20,7 +20,7 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
   async function fetchKnowledgeBases() {
     loading.value = true
     try {
-      const { data } = await axios.get('/api/v1/knowledge-bases')
+      const data = await API.fetchKnowledgeBases()
       knowledgeBases.value = data.items || []
     } finally {
       loading.value = false
@@ -30,8 +30,8 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
   async function fetchDocCounts() {
     for (const kb of knowledgeBases.value) {
       try {
-        const { data } = await axios.get(`/api/v1/knowledge-bases/${kb.uuid}/stats`)
-        docCounts.value[kb.uuid] = data.total ?? (data as number) ?? 0
+        const data = await API.fetchKbStats(kb.uuid)
+        docCounts.value[kb.uuid] = data.total ?? 0
       } catch {
         docCounts.value[kb.uuid] = 0
       }
@@ -41,10 +41,9 @@ export const useKnowledgeStore = defineStore('knowledge', () => {
   async function fetchKnowledgeItems(kbId?: string) {
     loading.value = true
     try {
-      const url = kbId
-        ? `/api/v1/knowledge-bases/${kbId}/knowledges`
-        : '/api/v1/knowledges'
-      const { data } = await axios.get(url)
+      const data = kbId
+        ? await API.fetchKbKnowledges(kbId)
+        : await API.fetchKnowledges()
       items.value = data.items || []
     } finally {
       loading.value = false

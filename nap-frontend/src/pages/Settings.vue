@@ -117,8 +117,8 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import axios from 'axios'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { API } from '@/api'
 
 interface APIEndpoint {
   uuid: string
@@ -139,7 +139,7 @@ const maskKey = (key: string) =>
 async function fetchLLMs() {
   listLoading.value = true
   try {
-    const { data } = await axios.get('/api/v1/llms')
+    const data = await API.fetchLLMs<{ llms: APIEndpoint[] }>()
     apiEndpoints.value = data.llms || []
   } catch {
     MessagePlugin.error('加载模型列表失败')
@@ -195,10 +195,10 @@ async function handleCreate() {
       models
     }
     if (editingUuid.value) {
-      await axios.put(`/api/v1/llms/${editingUuid.value}`, payload)
+      await API.updateLLM(editingUuid.value, payload)
       MessagePlugin.success('更新成功')
     } else {
-      await axios.post('/api/v1/llms', payload)
+      await API.createLLM(payload)
       MessagePlugin.success('创建成功')
     }
     createVisible.value = false
@@ -212,7 +212,7 @@ async function handleCreate() {
 
 async function handleDelete(endpoint: APIEndpoint) {
   try {
-    await axios.delete(`/api/v1/llms/${endpoint.uuid}`)
+    await API.deleteLLM(endpoint.uuid)
     MessagePlugin.success('删除成功')
     fetchLLMs()
   } catch {

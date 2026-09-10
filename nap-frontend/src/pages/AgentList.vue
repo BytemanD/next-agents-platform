@@ -25,14 +25,28 @@
   </t-row>
   <t-row :gutter="[16, 16]">
     <t-col v-for="agent in filteredAgents" :key="agent.id" :xs="12" :sm="12" :md="6">
-      <t-card class="card-hover cursor-pointer group" :bordered="true" size="small"
-        @click="$router.push(`/agents/builder/${agent.id}`)" :title="agent.name" :subtitle="agent.id">
+      <nap-card class="card-hover" :bordered="true" size="small" :title="agent.name" :subtitle="agent.id">
         <template #actions>
-          <StatusBadge :status="agent.status" />
+          <StatusBadge :status="agent.status" v-if="agent.status == 'active'"
+            :theme="agent.status == 'active' ? 'success' : 'warning'" />
+          <t-button variant="text" shape="circle" @click="$router.push(`/agents/builder/${agent.id}`)">
+            <t-icon name="edit"></t-icon>
+          </t-button>
         </template>
-        <p class="text-sm text-nap-text-secondary mt-4 line-clamp-2">{{ agent.description }}</p>
+        <template #footer-left>
+          <span class="text-xs text-nap-text-secondary">{{ formatDate(agent.updatedAt) }}</span>
+        </template>
 
-        <t-space :size="8" class="mt-4">
+        <template #footer-right>
+          <t-button size="small" variant="text" @click.stop="handleChat()">
+            <template #icon><t-icon name="chat" /></template>
+          </t-button>
+          <t-button theme="danger" size="small" variant="text" @click.stop="handleDelete(agent)">
+            <t-icon name="delete" />
+          </t-button>
+        </template>
+        <p>{{ agent.description }}</p>
+        <t-space size="small" class="mt-4">
           <t-tag v-for="tool in agent.tools.slice(0, 3)" :key="tool" size="small" variant="light-outline">
             {{ tool }}
           </t-tag>
@@ -40,20 +54,10 @@
             +{{ agent.tools.length - 3 }}
           </t-tag>
         </t-space>
-        <div class="flex items-center justify-between mt-4 pt-4 border-t border-nap-border">
-          <span class="text-xs text-nap-text-secondary">{{ formatDate(agent.updatedAt) }}</span>
-          <t-space :size="4" class="opacity-0 group-hover:opacity-100 transition-opacity">
-            <t-button size="small" variant="text" @click.stop="handleChat()">
-              <template #icon><t-icon name="chat" /></template>
-            </t-button>
-            <t-button theme="danger" size="small" variant="text" @click.stop="handleDelete(agent)">
-              <template #icon><t-icon name="delete" /></template>
-            </t-button>
-          </t-space>
-        </div>
-      </t-card>
+      </nap-card>
     </t-col>
   </t-row>
+
   <t-empty v-if="filteredAgents.length === 0" class="py-20">
     <template #description>
       <p class="text-nap-text">未找到智能体</p>
@@ -74,6 +78,7 @@ import { useRouter } from 'vue-router'
 import { useAgentStore } from '@/stores/agent'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import Tools from '@/components/common/Tools.vue'
+import NapCard from '@/components/common/NapCard.vue'
 
 const router = useRouter()
 const agentStore = useAgentStore()

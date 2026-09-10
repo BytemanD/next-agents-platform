@@ -42,30 +42,27 @@
     </template>
   </t-empty>
   <t-row v-else :gutter="[16, 16]">
-    <t-col v-for="kb in filteredBases" :key="kb.uuid" :xs="12" :sm="12" :md="8" :lg="6">
-      <t-card class="card-hover cursor-pointer group h-full" :bordered="true"
-        @click="$router.push(`/knowledge/${kb.uuid}`)">
-        <div class="flex flex-col h-full">
-          <div class="flex items-start justify-between">
-            <div
-              class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-nap-primary/10 text-nap-primary">
-              <t-icon name="book" size="20" />
-            </div>
-            <t-tag shape="round" theme="success" v-if="kb.active">启用</t-tag>
-            <t-tag shape="round" theme="danger" v-else>禁用</t-tag>
-          </div>
-
-          <h3 class="font-semibold text-nap-text mt-3 group-hover:text-nap-primary transition-colors">{{ kb.name }}
-          </h3>
-          <p class="text-sm text-nap-text-secondary mt-1 line-clamp-2 flex-1">{{ kb.description || '暂无描述' }}</p>
-
-          <div class="flex items-center justify-between mt-4 pt-4 border-t border-nap-border">
-            <span class="text-xs text-nap-text-secondary">{{ docCount(kb.uuid) }} 个文档</span>
-            <t-icon name="chevron-right" size="14"
-              class="text-nap-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-      </t-card>
+    <t-col v-for="kb in filteredBases" :key="kb.uuid" :xs="12" :sm="12" :md="8" :lg="4">
+      <nap-card :title="kb.name" :subtitle="kb.uuid" >
+        <template #actions>
+          <t-space align="center">
+            <t-tag shape="round" theme="success" variant="light" v-if="kb.active">启用</t-tag>
+            <t-tag shape="round" theme="warning" variant="light" v-else>禁用</t-tag>
+            <t-button variant="text" shape="circle" @click="$router.push(`/knowledge/${kb.uuid}`)">
+              <t-icon name="link" ></t-icon>
+            </t-button>
+          </t-space>
+        </template>
+        <template #footer-left>
+          <span>{{ docCount(kb.uuid) }} 个文档</span>
+        </template>
+        <template #footer-right>
+          <t-popconfirm :content="`确定删除知识库「${kb.name}」吗？`" theme="danger" @confirm="handleDelete(kb)">
+            <t-button theme="danger" variant="text"><t-icon name="delete" /></t-button>
+          </t-popconfirm>
+        </template>
+        <p>{{ kb.description || '暂无描述' }}</p>
+      </nap-card>
     </t-col>
   </t-row>
 
@@ -85,11 +82,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
-import axios from 'axios'
+import { API } from '@/api'
 import { useKnowledgeStore } from '@/stores/knowledge'
 
 import StatisticCard from '@/components/common/StatisticCard.vue'
 import Tools from '@/components/common/Tools.vue'
+import NapCard from '@/components/common/NapCard.vue'
 
 const knowledgeStore = useKnowledgeStore()
 
@@ -107,7 +105,7 @@ const statusOptions = [
 
 const filteredBases = computed(() => {
   let bases = knowledgeStore.knowledgeBases
-if (filterByStatus.value !== 'all') {
+  if (filterByStatus.value !== 'all') {
     bases = bases.filter(kb => String(kb.active) == filterByStatus.value)
   }
 
@@ -128,12 +126,11 @@ function handleCreate() {
     return
   }
   creating.value = true
-  axios
-    .post('/api/v1/knowledge-bases', {
-      name: createForm.value.name,
-      description: createForm.value.description,
-      active: true
-    })
+  API.createKnowledgeBase({
+    name: createForm.value.name,
+    description: createForm.value.description,
+    active: true
+  })
     .then(() => {
       MessagePlugin.success('知识库创建成功')
       showCreate.value = false
@@ -144,6 +141,16 @@ function handleCreate() {
     .finally(() => {
       creating.value = false
     })
+}
+
+async function handleDelete(kb: { uuid: string; name: string }) {
+  try {
+    await API.deleteKnowledgeBase(kb.uuid)
+    MessagePlugin.success('删除成功')
+    knowledgeStore.fetchKnowledgeBases()
+  } catch {
+    MessagePlugin.error('删除失败')
+  }
 }
 
 onMounted(() => {

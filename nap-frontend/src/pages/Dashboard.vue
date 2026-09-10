@@ -51,24 +51,19 @@
       </t-col>
     </t-row>
 
-    <t-row :gutter="[16, 16]">
-      <t-col :xs="24" :xl="16">
-        <t-card :bordered="true" class="canvas-card" :class="{ 'nap-rise': true }" :style="{ animationDelay: '220ms' }">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h2 class="text-base font-semibold text-nap-text leading-none">最近智能体</h2>
-              <p class="text-xs text-nap-text-secondary mt-1.5">团队的智能体运行状态</p>
-            </div>
+    <t-row :gutter="[8, 8]">
+      <t-col :xs="24" :xl="4">
+        <t-card :bordered="true" class="canvas-card" :class="{ 'nap-rise': true }" :style="{ animationDelay: '220ms' }"
+          title="最近智能体" subtitle="团队的智能体运行状态" size="small">
+          <template #actions>
             <t-button variant="text" size="small" @click="$router.push('/agents')">
               查看全部
-              <t-icon name="arrow-right" size="14" class="ml-1" />
+              <t-icon name="arrow-right" size="14" class="ml-2 mt-1" />
             </t-button>
-          </div>
-
-          <div class="divide-y divide-nap-border">
-            <div v-for="agent in recentAgents" :key="agent.id"
-              class="agent-row flex items-center gap-4 py-3.5 -mx-3 px-3 rounded-xl cursor-pointer"
-              @click="$router.push(`/agents/builder/${agent.id}`)">
+          </template>
+          <t-list>
+            <t-list-item class="agent-row flex items-center gap-4 rounded-xl cursor-pointer" :split="true"
+              v-for="agent in recentAgents" :key="agent.id" @click="$router.push(`/agents/builder/${agent.id}`)">
               <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" :class="agent.avatarClass">
                 <t-icon name="robot" size="18" :class="agent.avatarColor" />
               </div>
@@ -91,37 +86,32 @@
                   {{ agent.tools.length }} 个工具
                 </span>
               </div>
-              <t-icon name="chevron-right" size="16"
-                class="text-nap-text-tertiary flex-shrink-0 transition-transform group-hover:translate-x-1" />
-            </div>
-          </div>
+              <template #action>
+                <t-icon name="chevron-right" size="16"
+                  class="text-nap-text-tertiary flex-shrink-0 transition-transform group-hover:translate-x-1" />
+              </template>
+            </t-list-item>
+          </t-list>
         </t-card>
       </t-col>
 
       <t-col :xs="24" :xl="4">
-        <div class="space-y-4">
-          <t-card :bordered="true" class="nap-rise" :style="{ animationDelay: '300ms' }">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-base font-semibold text-nap-text leading-none">快速开始</h2>
-            </div>
-            <t-row :gutter="[12, 12]">
-              <t-col v-for="template in templates" :key="template.name" :xs="12">
-                <div
-                  class="template-tile flex items-center gap-3 rounded-xl border border-nap-border p-3 cursor-pointer"
-                  @click="createFromTemplate(template)">
-                  <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :class="template.tint">
-                    <t-icon :name="template.icon" size="16" :class="template.iconClass" />
-                  </div>
-                  <div class="min-w-0">
-                    <h3 class="font-medium text-nap-text text-[13px] leading-none">{{ template.name }}</h3>
-                    <p class="text-xs text-nap-text-secondary mt-1 truncate">{{ template.description }}</p>
-                  </div>
-                </div>
-              </t-col>
-            </t-row>
-          </t-card>
+        <t-card :bordered="true" :style="{ animationDelay: '300ms' }" title="快速开始" size="small">
+          <t-list size="small" :split="true">
+            <t-list-item v-for="template in templates" 
+              class="agent-row cursor-pointer" @click="createFromTemplate(template)">
 
-        </div>
+              <t-list-item-meta :title="template.name">
+                <template #image>
+                  <t-icon class="mt-4 ml-4" :name="template.icon" :size="26" :class="template.iconClass" />
+                </template>
+                <template #description>
+                  <p>{{ template.description }}</p>
+                </template>
+              </t-list-item-meta>
+            </t-list-item>
+          </t-list>
+        </t-card>
       </t-col>
       <t-col :xs="24" :xl="4">
         <t-card :bordered="true" class="nap-rise" :style="{ animationDelay: '360ms' }">
@@ -167,7 +157,7 @@ const templates = ref([
   { name: '研究专家', description: '联网深度研究', icon: 'book', tint: 'bg-nap-accent-soft', iconClass: 'text-nap-primary' },
   { name: '代码助手', description: '代码审查与生成', icon: 'code', tint: 'bg-emerald-50', iconClass: 'text-nap-success' },
   { name: '对话助手', description: '通用智能对话', icon: 'chat', tint: 'bg-violet-50', iconClass: 'text-nap-secondary' },
-  { name: '任务自动化', description: '自动化重复任务', icon: 'bolt', tint: 'bg-amber-50', iconClass: 'text-nap-warning' }
+  { name: '任务自动化', description: '自动化重复任务', icon: 'robot', tint: 'bg-amber-50', iconClass: 'text-nap-warning' }
 ])
 
 const activities = ref([

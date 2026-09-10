@@ -1,6 +1,6 @@
 <template>
   <t-aside :width="uiStore.collapsed ? '64px' : '232px'" style="height: 100vh;">
-    <t-menu :collapsed="uiStore.collapsed" @change="handleMenuChange" class='border-r'>
+    <t-menu :collapsed="uiStore.collapsed" @change="handleMenuChange" class='border-r' v-model:value="currentPath">
       <template #logo>
         <div
           class="w-8 h-8 rounded-[10px] bg-nap-gradient flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-[0_4px_12px_rgba(79,70,229,0.35)]">
@@ -61,6 +61,9 @@ const navItems: NavItem[] = [
   { label: '设置', path: '/settings', icon: 'setting' }
 ]
 
+const currentPath = computed(() =>{
+  return route.path;
+})
 
 function handleMenuChange(value: any) {
   router.push(value);

@@ -99,8 +99,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { API } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -121,9 +121,9 @@ const modelOptions = ref<{ label: string; value: string }[]>([])
 
 async function fetchLLMs() {
   try {
-    const { data } = await axios.get('/api/v1/llms')
+    const data = await API.fetchLLMs<{ llms: { uuid: string; name: string; base_url: string }[] }>()
     modelOptions.value = (data.llms || []).map(
-      (llm: { uuid: string; name: string; base_url: string }) => ({
+      (llm) => ({
         label: llm.name || llm.base_url,
         value: llm.uuid
       })
@@ -168,10 +168,10 @@ async function handleSave(status: string) {
   }
   try {
     if (route.params.id) {
-      await axios.put(`/api/v1/agents/${route.params.id}`, payload)
+      await API.updateAgent(route.params.id as string, payload)
       MessagePlugin.success('更新成功')
     } else {
-      await axios.post('/api/v1/agents', payload)
+      await API.createAgent(payload)
       MessagePlugin.success('创建成功')
     }
     router.push('/agents')

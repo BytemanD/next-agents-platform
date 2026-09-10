@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
+import { API } from '@/api'
 import type { Agent } from '@/types'
 
 interface AgentAPI {
@@ -26,7 +26,7 @@ export const useAgentStore = defineStore('agent', () => {
   async function fetchAgents() {
     loading.value = true
     try {
-      const { data } = await axios.get('/api/v1/agents')
+      const data = await API.fetchAgents<{ agents: AgentAPI[] }>()
       agents.value = (data.agents || []).map((a: AgentAPI) => ({
         id: a.uuid,
         name: a.name,
