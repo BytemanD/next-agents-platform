@@ -1,9 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from pystonic.common import context
-from pystonic.utils.strutil import text_shorten
-from nap.db.models import Agents, Session
+from nap.db.models import Agents
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
