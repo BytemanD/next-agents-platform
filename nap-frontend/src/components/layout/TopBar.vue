@@ -1,6 +1,6 @@
 <template>
   <t-header>
-    <t-head-menu class="border-b">
+    <t-head-menu>
       <template #logo>
         <t-button variant="text" shape="square" :title="uiStore.collapsed ? '展开导航' : '收起导航'"
           @click="uiStore.toggleCollapsed()">
@@ -11,22 +11,25 @@
       </template>
 
       <template #operations>
-        <t-input v-model="searchQuery" placeholder="搜索智能体、会话、文档..." clearable class="w-72" @focus="showSearch = true">
-          <template #prefixIcon>
-            <t-icon name="search" />
-          </template>
-          <template #suffixIcon>
-            <kbd
-              class="text-[11px] leading-none bg-nap-surface-hover border border-nap-border rounded px-1.5 py-0.5 text-nap-text-secondary select-none">
-              ⌘K
-            </kbd>
-          </template>
-        </t-input>
-        <t-badge :count="3" size="small" :offset="[0, 2]">
-          <t-button variant="text" shape="square">
-            <template #icon><t-icon name="notification" size="20" /></template>
-          </t-button>
-        </t-badge>
+        <t-space align="center">
+          <t-input v-model="searchQuery" placeholder="搜索智能体、会话、文档..." clearable class="w-72" @focus="showSearch = true">
+            <template #prefixIcon>
+              <t-icon name="search" />
+            </template>
+            <template #suffixIcon>
+              <kbd
+                class="text-[11px] leading-none bg-nap-surface-hover border border-nap-border rounded px-1.5 py-0.5 text-nap-text-secondary select-none">
+                ⌘K
+              </kbd>
+            </template>
+          </t-input>
+          <t-badge :count="3" size="small" :offset="[0, 2]">
+            <t-button variant="text" shape="square">
+              <template #icon><t-icon name="notification" size="20" /></template>
+            </t-button>
+          </t-badge>
+          <theme-mode></theme-mode>
+        </t-space>
         <t-divider layout="vertical"></t-divider>
 
         <t-dropdown :options="userMenuOptions" @click="userMenuHandler">
@@ -57,8 +60,9 @@
 import { useUIStore } from '@/stores/ui'
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { User1Icon, ChevronDownIcon } from 'tdesign-icons-vue-next';
+import { User1Icon} from 'tdesign-icons-vue-next';
 import { MessagePlugin } from 'tdesign-vue-next';
+import ThemeMode from '../common/ThemeMode.vue';
 
 const route = useRoute()
 const router = useRouter()

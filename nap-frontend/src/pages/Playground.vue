@@ -1,154 +1,199 @@
 <template>
-  <t-layout class="h-full w-full">
-    <t-aside width="304px" class="border-r border-nap-border bg-nap-surface flex flex-col">
-      <div class="p-4 pb-3">
-        <t-button size="large" block :style="{ borderRadius: '9999px' }" @click="newConversation">
-          <template #icon><t-icon name="add" /></template>
-          新建会话
-        </t-button>
-      </div>
-      <div class="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
-        <p class="px-1 pb-2 text-xs text-nap-text-tertiary select-none">最近会话</p>
-        <div v-for="conv in conversations" :key="conv.id" class="conversation-item"
-          :class="currentConvId === conv.id ? 'conversation-item-active' : ''" @click="selectConversation(conv.id)">
-          <t-icon name="chat" size="15" />
-          <span class="flex-1 truncate text-sm font-medium">{{ conv.title }}</span>
-          <t-icon v-if="currentConvId === conv.id" name="check" size="14" class="flex-shrink-0" />
-        </div>
+  <t-row style="height: 100%; overflow-y: auto;" :gutter="6">
+    <t-col :span="2" style="height: 100%;">
+      <t-aside class="p-2 border-rounded-4 h-full flex flex-col min-h-0" style="min-width: 220px">
+        <t-select label="智能体：" v-model="agentStore.selectedAgentId" :options="agentOptions" placeholder="选择智能体">
+        </t-select>
+        <!-- <t-divider></t-divider> -->
+        <t-space class="flex justify-between mt-8">
+          <p class="px-1 pb-2 text-grey">最近会话</p>
+          <t-space :size="4">
+            <t-button variant="text" @click="fetchSessions" size="small">
+              <template #icon><t-icon name="refresh" /></template>
+            </t-button>
+            <t-button variant="text" size="small" :style="{ borderRadius: '9999px' }" @click="newConversation">
+              <template #icon><t-icon name="add" /></template>
+            </t-button>
+          </t-space>
+        </t-space>
         <t-empty v-if="conversations.length === 0" class="py-10">
           <template #description>
             <p class="text-sm text-nap-text-secondary">还没有会话</p>
           </template>
         </t-empty>
-      </div>
-    </t-aside>
-
-    <t-layout>
-      <t-header class="h-14 border-b border-nap-border flex items-center justify-between px-6 bg-nap-surface">
-        <t-space :size="12">
-          <t-select v-model="selectedAgentId" :options="agentOptions" placeholder="选择智能体" class="w-48" size="small" />
-          <StatusBadge v-if="selectedAgent" :status="selectedAgent.status" />
-        </t-space>
-        <t-space :size="8">
-          <t-button size="small" variant="text" @click="showActivity = !showActivity">
-            <template #icon><t-icon name="list" /></template>
-          </t-button>
-          <t-button size="small" variant="text" @click="clearChat">
-            <template #icon><t-icon name="delete" /></template>
-          </t-button>
-        </t-space>
-      </t-header>
-
-      <t-layout>
-        <t-content class="chat-content">
-          <div class="flex-1 overflow-y-auto p-6 space-y-4">
-            <t-space v-for="msg in messages" :key="msg.id" class="w-full"
-              :class="msg.role === 'user' ? 'justify-end' : 'justify-start'" :style="{ 'display': 'flex' }">
-              <t-avatar v-if="msg.role !== 'user'" :icon="'robot'" size="small"
-                class="bg-nap-primary/20 text-nap-primary" />
-              <div class="max-w-[70%] rounded-2xl px-4 py-3 text-sm"
-                :class="msg.role === 'user' ? 'bg-nap-primary text-white rounded-br-md' : 'bg-nap-surface border border-nap-border text-nap-text rounded-bl-md'">
-                <div v-html="renderMarkdown(msg.content)" />
-                <div v-if="msg.toolCalls && msg.toolCalls.length > 0" class="mt-3 space-y-2">
-                  <ToolCallCard v-for="tc in msg.toolCalls" :key="tc.id" :tool-call="tc" />
-                </div>
-              </div>
-            </t-space>
-
-            <t-space v-if="chatStore.isStreaming" class="w-full" :style="{ 'display': 'flex' }">
-              <t-avatar :icon="'robot'" size="small" class="bg-nap-primary/20 text-nap-primary" />
-              <div
-                class="bg-nap-surface border border-nap-border rounded-2xl rounded-bl-md px-4 py-3 text-sm text-nap-text">
-                <div v-if="chatStore.streamingContent" v-html="renderMarkdown(chatStore.streamingContent)" />
-                <span v-else class="inline-block w-2 h-4 bg-nap-primary animate-pulse" />
-              </div>
-            </t-space>
-
-            <t-empty v-if="messages.length === 0 && !chatStore.isStreaming" class="py-20">
+        <t-list v-else class="conversation-list flex-1 min-h-0 overflow-y-auto">
+          <t-list-item v-for="session in conversations" :key="session.uuid" class="cursor-pointer rounded-2"
+            :class="{ 'conversation-item-active': currentConvId === session.uuid }"
+            @click="selectConversation(session.uuid)">
+            <t-list-item-meta>
               <template #description>
-                <h3 class="text-lg font-medium text-nap-text">开始一段对话</h3>
-                <p class="text-sm text-nap-text-secondary mt-1">选择一个智能体并发送消息</p>
+                <span class="conversation-title">{{ session.title }}</span>
               </template>
-              <template #image>
-                <t-icon name="chat" size="48" class="text-nap-primary" />
-              </template>
-            </t-empty>
-          </div>
+            </t-list-item-meta>
+            <template #action>
+              <t-popconfirm
+                theme="warning"
+                content="确定删除该会话吗？删除后不可恢复。"
+                placement="bottom-right"
+                @confirm="deleteConversation(session.uuid)"
+                @click.stop
+              >
+                <t-link @click.stop theme="danger" hover="color"><t-icon name="close"></t-icon></t-link>
+              </t-popconfirm>
+          </template>
+          </t-list-item>
+        </t-list>
+      </t-aside>
+    </t-col>
+    <t-col :span="10" style="height: 100%; padding: 40px;">
+      <div class="relative h-full flex flex-col min-h-0">
+        <t-chatbot v-if="agentStore.selectedAgentId" :key="agentStore.selectedAgentId"
+          :chat-service-config="chatServiceConfig" :message-props="messageItemProps" ref="chatRef"
+          class="flex-1 min-h-0 min-w-0" @message-change="onMessageChange">
+          <template #sender-footer-prefix>
+            <t-space>
+              <t-button shape="round" variant="outline">深度思考</t-button>
+              <!-- 选择模型 -->
+              <t-select v-model="selectedModel" :options="modelOptions" placeholder="选择模型" class="border-rounded-10"
+                clearable>
+              </t-select>
+            </t-space>
+          </template>
+          <template #sender-footer-suffix>
+          </template>
+        </t-chatbot>
 
-          <div class="p-4 border-t border-nap-border">
-            <div class="flex items-end gap-3">
-              <t-textarea v-model="inputMessage" :autosize="{ minRows: 1, maxRows: 5 }" placeholder="输入你的消息..."
-                class="flex-1" @keydown.enter.exact.prevent="sendMessage" />
-              <t-button :disabled="!inputMessage.trim() || chatStore.isStreaming" :loading="chatStore.isStreaming"
-                @click="sendMessage">
-                <template #icon><t-icon :name="chatStore.isStreaming ? 'stop' : 'send'" /></template>
-              </t-button>
+        <div v-if="agentStore.selectedAgentId && !hasMessages" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none welcome">
+          <div class="welcome-glow welcome-glow-1"></div>
+          <div class="welcome-glow welcome-glow-2"></div>
+          <div class="flex flex-col items-center gap-4 relative z-10">
+            <div class="welcome-logo-wrap">
+              <span class="welcome-logo-ring"></span>
+              <AppLogo size="large" :show-text="false" />
+            </div>
+            <h1 class="welcome-title text-2xl font-semibold">你好，有什么我能帮你的吗？</h1>
+            <p class="text-sm text-nap-muted">选择右侧会话继续，或直接提问开始一段新对话</p>
+
+            <div class="welcome-suggestions pointer-events-auto">
+              <button
+                v-for="s in welcomeSuggestions"
+                :key="s"
+                class="welcome-chip"
+                @click="useSuggestion(s)"
+              >
+                <t-icon name="chat" size="14" />
+                {{ s }}
+              </button>
             </div>
           </div>
-        </t-content>
-
-        <t-aside v-if="showActivity" width="320px"
-          class="border-l border-nap-border bg-nap-surface overflow-y-auto activity-panel">
-          <t-card :bordered="false" size="small">
-            <template #title><span class="text-nap-text">执行活动</span></template>
-            <t-space direction="vertical" size="16" style="width: 100%">
-              <div v-for="span in traceSpans" :key="span.id" class="space-y-2">
-                <div class="flex items-center gap-2 text-sm">
-                  <t-icon :name="getSpanIcon(span.type)" class="text-nap-text-secondary" />
-                  <span class="text-nap-text">{{ span.name }}</span>
-                  <span class="text-xs text-nap-text-secondary ml-auto">{{ span.duration }}ms</span>
-                </div>
-                <div class="ml-6 text-xs text-nap-text-secondary border-l-2 border-nap-border pl-3">
-                  <p><strong>输入:</strong> {{ JSON.stringify(span.input).slice(0, 100) }}</p>
-                  <p class="mt-1"><strong>输出:</strong> {{ JSON.stringify(span.output).slice(0, 100) }}</p>
-                </div>
-              </div>
-            </t-space>
-          </t-card>
-        </t-aside>
-      </t-layout>
-    </t-layout>
-  </t-layout>
+        </div>
+      </div>
+    </t-col>
+  </t-row>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
-import ToolCallCard from '@/components/chat/ToolCallCard.vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { MessagePlugin } from 'tdesign-vue-next'
+import { API } from '@/api'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
-import type { TraceSpan } from '@/types'
+import AppLogo from '@/components/common/AppLogo.vue'
+import type { Session, SessionMessage } from '@/types'
+import { ChatServiceConfig, type AIMessageContent, type ChatMessagesData, type SSEChunkData } from '@tdesign-vue-next/chat'
+import {
+  Chatbot as TChatbot,
+} from '@tdesign-vue-next/chat';
 
 const chatStore = useChatStore()
 const agentStore = useAgentStore()
 
+function messageItemProps(msg: any) {
+  return {
+    variant: msg?.role === 'user' ? 'base' as const : undefined,
+    chatContentProps: { thinking: { collapsed: true, animation: 'moving' as const } },
+  }
+}
+
+const chatServiceConfig = computed<ChatServiceConfig>(() => ({
+  // 对话服务地址
+  endpoint: agentStore.selectedAgentId
+    ? `/api/v1/agents/${agentStore.selectedAgentId}/chat`
+    : '',
+  // 开启流式传输
+  stream: true,
+  onRequest: (params) => {
+    console.log(selectedModel.value)
+    return {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // 'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        // 改成你后端要的格式
+        query: params.prompt,        // 默认可能是 messages 数组
+        model: selectedModel.value || undefined,
+        session: currentConvId.value || undefined,
+      }),
+    };
+  },
+
+  // 解析后端返回的数据，转换为组件所需格式
+  onMessage: (chunk: SSEChunkData): AIMessageContent => {
+    const rest = chunk.data as { type?: string; msg?: string };
+    const msg = rest?.msg || '';
+    if (rest?.type === 'thinking') {
+      return { type: 'thinking', data: { text: msg, title: '深度思考' } };
+    }
+    return { type: 'markdown', data: msg };
+  },
+
+  onComplete: (isAborted?: boolean) => {
+    const el = (chatRef.value as any)?.$el ?? chatRef.value
+    const messageStore = el?.provide?.chatEngine?.messageStore
+    if (!messageStore) return
+    const ai = messageStore.messages.filter((m: any) => m.role === 'assistant').pop()
+    if (!ai?.content?.length) return
+    const status = isAborted ? 'stop' : 'complete'
+    messageStore.updateMultipleContents(
+      ai.id,
+      ai.content.map((c: any) => (c.type === 'thinking' ? { ...c, status } : c))
+    )
+  },
+}))
+
 const chatContainer = ref<HTMLElement>()
 const inputMessage = ref('')
-const selectedAgentId = ref<string | null>(null)
 const showActivity = ref(false)
 const currentConvId = ref<string | null>(null)
+const chatRef = ref<any>(null)
+const hasMessages = ref(false)
 
-const conversations = ref([
-  { id: '1', title: '量子计算研究' },
-  { id: '2', title: 'API 代码评审' },
-  { id: '3', title: '数据分析报告' }
-])
+function onMessageChange(e: any) {
+  const detail = e.detail ?? e
+  hasMessages.value = Array.isArray(detail) ? detail.length > 0 : true
+}
+
+const selectedModel = ref('')
+
+const welcomeSuggestions = [
+  '帮我总结这份文档的重点',
+  '用 Python 写一段数据分析脚本',
+  '解释这段代码的含义',
+]
+
+const modelOptions = computed(() =>
+  agentStore.selectedAgentModels.map(m => ({ label: m, value: m }))
+)
+
+const conversations = ref<Session[]>([])
 
 const messages = computed(() => chatStore.messages)
-
-const selectedAgent = computed(() =>
-  agentStore.agents.find(a => a.id === selectedAgentId.value)
-)
 
 const agentOptions = computed(() =>
   agentStore.agents.map(a => ({ label: a.name, value: a.id }))
 )
-
-const traceSpans = ref<TraceSpan[]>([
-  { id: '1', name: 'LLM 调用', type: 'llm', duration: 1200, input: { prompt: '你好' }, output: { response: '你好，有什么可以帮你？' }, status: 'success' },
-  { id: '2', name: '联网搜索', type: 'tool', duration: 800, input: { query: '量子计算' }, output: { results: 5 }, status: 'success' },
-  { id: '3', name: '知识检索', type: 'retrieval', duration: 300, input: { query: '量子' }, output: { chunks: 3 }, status: 'success' }
-])
 
 function renderMarkdown(content: string) {
   return content
@@ -213,22 +258,94 @@ function sendMessage() {
 
 function newConversation() {
   currentConvId.value = null
-  chatStore.clearMessages()
+  hasMessages.value = false
+  chatRef.value?.clearMessages()
 }
 
-function selectConversation(id: string) {
+async function useSuggestion(text: string) {
+  if (!chatRef.value?.addPrompt) return
+  chatRef.value.addPrompt(text, true)
+}
+
+async function selectConversation(id: string) {
   currentConvId.value = id
-  chatStore.clearMessages()
+  try {
+    const { messages } = await API.fetchSessionMessages<{ messages: SessionMessage[] }>(id)
+    chatRef.value?.setMessages(convertMessages(messages), 'replace')
+  } catch {
+    MessagePlugin.error('加载会话消息失败')
+  }
+}
+
+function convertMessages(messages: SessionMessage[]): ChatMessagesData[] {
+  return messages.map(msg => {
+    let role: 'user' | 'assistant' | 'system'
+    if (msg.type === 'ai') role = 'assistant'
+    else if (msg.type === 'system' || msg.type === 'system-text') role = 'system'
+    else role = 'user'
+
+    const content: AIMessageContent[] = []
+    if (msg.thinking) {
+      content.push({
+        type: 'thinking',
+        status: 'complete',
+        data: { text: msg.thinking, title: '深度思考' },
+      })
+    }
+    const data = msg.content ?? ''
+    if (role === 'assistant') content.push({ type: 'markdown', data })
+    else content.push({ type: 'text', data })
+
+    return { id: msg.id, role, content }
+  }) as any
 }
 
 function clearChat() {
   chatStore.clearMessages()
 }
 
+async function deleteConversation(id: string) {
+  try {
+    await API.deleteSession(id)
+    MessagePlugin.success('会话已删除')
+    if (currentConvId.value === id) {
+      currentConvId.value = null
+      hasMessages.value = false
+      chatRef.value?.clearMessages()
+    }
+    await fetchSessions()
+  } catch {
+    MessagePlugin.error('删除会话失败')
+  }
+}
+
+async function fetchSessions() {
+  if (!agentStore.selectedAgentId) {
+    conversations.value = []
+    return
+  }
+  try {
+    const data = await API.fetchSessions<{ sessions: Session[] }>(agentStore.selectedAgentId)
+    conversations.value = data.sessions || []
+  } catch {
+    conversations.value = []
+    MessagePlugin.error('加载会话列表失败')
+  }
+}
+
 onMounted(() => {
   agentStore.fetchAgents()
-  if (agentStore.agents.length > 0) {
-    selectedAgentId.value = agentStore.agents[0].id
+})
+
+watch(() => agentStore.selectedAgentId, () => {
+  selectedModel.value = ''
+  currentConvId.value = null
+  fetchSessions()
+})
+
+watch(() => agentStore.selectedAgentModels, (models) => {
+  if (models.length > 0 && !models.includes(selectedModel.value)) {
+    selectedModel.value = models[0]
   }
 })
 </script>
@@ -265,5 +382,198 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background: transparent;
+}
+
+.conversation-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-list :deep(.t-list-item .t-link) {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.conversation-list :deep(.t-list-item:hover .t-link) {
+  opacity: 1;
+}
+
+.welcome {
+  overflow: hidden;
+}
+
+.welcome-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: welcome-float 9s ease-in-out infinite;
+}
+
+.welcome-glow-1 {
+  width: 420px;
+  height: 420px;
+  top: 18%;
+  left: 24%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--td-brand-color) 22%, transparent), transparent 70%);
+}
+
+.welcome-glow-2 {
+  width: 380px;
+  height: 380px;
+  bottom: 12%;
+  right: 22%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--td-brand-color-hover) 20%, transparent), transparent 70%);
+  animation-delay: -4.5s;
+}
+
+@keyframes welcome-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(24px, -18px, 0) scale(1.08);
+  }
+}
+
+.welcome-logo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome-logo-ring {
+  position: absolute;
+  inset: -10px;
+  border-radius: 9999px;
+  border: 2px solid color-mix(in srgb, var(--td-brand-color) 35%, transparent);
+  animation: welcome-ring 2.6s ease-out infinite;
+}
+
+.welcome-logo-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -26px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--td-brand-color) 20%, transparent), transparent 68%);
+  animation: welcome-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes welcome-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes welcome-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+.welcome-title {
+  background: linear-gradient(100deg, var(--td-brand-color), color-mix(in srgb, var(--td-brand-color) 40%, #fff) 55%, var(--td-brand-color));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: welcome-title 5s linear infinite;
+}
+
+@keyframes welcome-title {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.welcome-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+  max-width: 560px;
+}
+
+.welcome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 13px;
+  color: var(--td-brand-color);
+  background: var(--td-brand-color-light);
+  border: 1px solid var(--td-brand-color-2);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  animation: welcome-chip-in 0.5s ease backwards;
+}
+
+.welcome-chip:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.welcome-chip:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+@keyframes welcome-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--td-brand-color) 25%, transparent);
+  background: var(--td-brand-color-light-hover);
+}
+</style>
+
+<style>
+:root {
+  --td-chat-item-primary-bg: var(--td-brand-color);
+  --td-chat-item-user-text-color: #fff;
+}
+
+.t-chat__detail {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.t-chat__list {
+  scrollbar-width: thin !important;
+}
+
+.t-chat__list::-webkit-scrollbar {
+  display: block !important;
+  width: 6px;
+}
+
+.t-chat__list::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: var(--td-scrollbar-color, rgba(0, 0, 0, 0.2));
 }
 </style>

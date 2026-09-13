@@ -1,2 +1,22 @@
 class KnowledgeAlreadyExists(Exception):
     pass
+
+
+class AgentNotExists(Exception):
+    def __init__(self, agent_uuid: str) -> None:
+        super().__init__(f"agnet {agent_uuid} not found")
+
+
+class LLMNotExists(Exception):
+    def __init__(self, llm_uuid: str) -> None:
+        super().__init__(f"LLM {llm_uuid} not found")
+
+
+class LLMIsInvalid(Exception):
+    def __init__(self, llm_uuid: str) -> None:
+        super().__init__(f"LLM {llm_uuid} is invalid")
+
+
+class LLMRateLimitError(Exception):
+    def __init__(self, detail: str) -> None:
+        super().__init__(f"LLM API rate limit: {detail}")

@@ -1,10 +1,13 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-from nap.db.models import Agents
+from pystonic.common import context
+from pystonic.utils.strutil import text_shorten
+from nap.db.models import Agents, Session
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
+from sse_starlette import EventSourceResponse
+
 
 router = APIRouter(prefix="/agents")
 
@@ -44,23 +47,20 @@ class QueryRequest(BaseModel):
     model: str = ""
 
 
-def _to_response(a: Agents) -> AgentResponse:
-    return AgentResponse(
-        uuid=a.uuid,
-        name=a.name,
-        description=a.description,
-        instruction=a.instruction,
-        llm=a.llm,
-        status=a.status,
-        tools=a.tools,
-        created_at=a.created_at.isoformat(),
-        updated_at=a.updated_at.isoformat(),
-    )
+class ChatRequest(BaseModel):
+    query: str
+    model: str = ""
+    session: str | None = ""
+
+
+class ChatSSE(BaseModel):
+    type: str
+    msg: str = ""
 
 
 @router.get("")
 async def list_agents():
-    return {"agents": [_to_response(a) for a in Agents.query()]}
+    return {"agents": Agents.query()}
 
 
 @router.get("/{uuid}")
@@ -82,7 +82,7 @@ async def create_agent(body: AgentCreate):
         tools=body.tools,
     )
     a.create()
-    return _to_response(a)
+    return a
 
 
 @router.put("/{uuid}")
@@ -105,7 +105,7 @@ async def update_agent(uuid: str, body: AgentUpdate):
         a.tools = body.tools
 
     a.save()
-    return _to_response(a)
+    return a
 
 
 @router.delete("/{uuid}", status_code=204)
@@ -116,23 +116,20 @@ async def delete_agent(uuid: str):
     a.delete()
 
 
-@router.post("/{session_id}/chat")
-async def query(
-    session_id: str,
-    req: QueryRequest,
-):
-    async def event_stream():
-        async for chunk in MANAGER.streaming_llm_query(
-            req.text, session_id=session_id, model=req.model
-        ):
-            yield chunk
+@router.post("/{agent_uuid}/chat")
+async def chat(agent_uuid: str, body: ChatRequest):
 
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+    async def event_generator():
+        async for delta in MANAGER.chat(
+            Agents.get_by_uuid(agent_uuid), body.query, session_id=body.session
+        ):
+            reasoning_content = delta.additional_kwargs.get("reasoning_content")
+            data = ChatSSE(
+                type="thinking" if reasoning_content else "text",
+                msg=reasoning_content if reasoning_content else str(delta.content),
+            )
+            if not data.msg:
+                continue
+            yield data.model_dump_json()
+
+    return EventSourceResponse(event_generator())

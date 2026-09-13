@@ -43,6 +43,6 @@ export default defineConfig({
     'nap-card': 'bg-nap-surface border border-nap-border rounded-xl p-4',
     'nap-btn': 'bg-nap-primary text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity',
     'nap-input': 'bg-nap-surface border border-nap-border rounded-lg px-3 py-2 text-nap-text focus:border-nap-primary outline-none',
-    'bg-nap-gradient': 'bg-gradient-to-br from-[#6366f1] to-[#8b5cf6]'
+    'bg-nap-gradient': 'bg-gradient-to-br from-[#296266] to-[#a8824a]'
   }
 })

@@ -72,7 +72,7 @@
         </div>
         <div>
           <p class="text-lg font-semibold text-nap-text" style="font-family: var(--font-display)">NAP</p>
-          <p class="text-sm text-nap-text-secondary">把任务交给我们，安心打个盹</p>
+          <p class="text-sm text-nap-text-secondary">Hand it over while you take a nap</p>
         </div>
       </div>
       <div class="space-y-0 divide-y divide-nap-border">

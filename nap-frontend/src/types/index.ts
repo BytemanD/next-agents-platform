@@ -41,6 +41,22 @@ export interface Conversation {
   updatedAt: string
 }
 
+export interface Session {
+  uuid: string
+  user: string
+  agent: string
+  title: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SessionMessage {
+  id: string
+  type: string
+  content: string | null
+  thinking: string | null
+}
+
 export interface KnowledgeDocument {
   id: string
   name: string

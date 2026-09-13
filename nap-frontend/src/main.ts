@@ -7,9 +7,15 @@ import '@fontsource-variable/space-grotesk'
 
 import '@unocss/reset/tailwind.css'
 import 'uno.css'
-import './styles/global.css'
+import 'tdesign-vue-next/es/style/index.css'
+import 'tdesign-vue-next/es/grid/style/index.css'
+import './styles/theme1.css'
+
+import TDesignChat from '@tdesign-vue-next/chat'
+
 
 const app = createApp(App)
+app.use(TDesignChat)
 
 app.use(createPinia())
 app.use(router)

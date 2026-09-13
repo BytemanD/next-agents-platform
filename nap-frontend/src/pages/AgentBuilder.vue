@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <t-space :size="12">
+      <t-space size="12">
         <t-button variant="outline" @click="$router.back()">
           <template #icon><t-icon name="arrow-left" /></template>
         </t-button>
@@ -10,7 +10,7 @@
           <p class="text-nap-text-secondary mt-1">配置你的智能体行为与能力</p>
         </div>
       </t-space>
-      <t-space :size="12">
+      <t-space size="12">
         <t-button @click="handleSave('draft')">保存草稿</t-button>
         <t-button @click="handleSave('active')">发布</t-button>
       </t-space>

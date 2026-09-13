@@ -45,9 +45,35 @@ export class Api {
     return data as T
   }
 
+  async deleteAgent<T = unknown>(uuid: string) {
+    const { data } = await axios.delete(`/api/v1/agents/${uuid}`)
+    return data as T
+  }
+
+  // ---------- Sessions ----------
+  async fetchSessions<T = unknown>(agentUuid: string) {
+    const { data } = await axios.get('/api/v1/sessions', { params: { agent: agentUuid } })
+    return data as T
+  }
+
+  async deleteSession<T = unknown>(uuid: string) {
+    const { data } = await axios.delete(`/api/v1/sessions/${uuid}`)
+    return data as T
+  }
+
+  async fetchSessionMessages<T = unknown>(uuid: string) {
+    const { data } = await axios.get(`/api/v1/sessions/${uuid}/messages`)
+    return data as T
+  }
+
   // ---------- LLMs ----------
   async fetchLLMs<T = unknown>() {
     const { data } = await axios.get('/api/v1/llms')
+    return data as T
+  }
+
+  async fetchLLM<T = unknown>(uuid: string) {
+    const { data } = await axios.get(`/api/v1/llms/${uuid}`)
     return data as T
   }
 

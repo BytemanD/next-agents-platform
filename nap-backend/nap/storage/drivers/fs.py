@@ -12,14 +12,13 @@ class FSDriver:
         self.path.mkdir(parents=True, exist_ok=True)
 
     def save(self, doc: Knowledge, content: bytes):
-        doc.path = str(Path(doc.creator or "default", doc.name))
+        file_path = self.path.joinpath(doc.creator or "default", doc.name)
 
-        abs_path = self.path / doc.path
-        abs_path.parent.mkdir(parents=True, exist_ok=True)
-
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         doc.status = KnowledgeStatus.saving
+        doc.path = str(file_path)
         doc.save()
-        abs_path.write_bytes(content)
+        file_path.write_bytes(content)
         doc.status = KnowledgeStatus.saved
         doc.save()
 

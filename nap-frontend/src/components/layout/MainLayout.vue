@@ -1,9 +1,9 @@
 <template>
   <t-layout class="h-full">
     <Sidebar />
-    <t-layout>
+    <t-layout class="min-h-0 flex flex-col flex-1">
       <TopBar />
-      <t-content class="px-6 pt-4 overflow-y-auto">
+      <t-content class="p-2 min-h-0 flex-1 overflow-hidden">
         <router-view />
       </t-content>
     </t-layout>

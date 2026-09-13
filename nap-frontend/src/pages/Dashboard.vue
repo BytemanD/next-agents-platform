@@ -8,7 +8,7 @@
 
     <t-row :gutter="[16, 16]">
       <t-col :xs="24" :sm="12" :xl="4">
-        <t-card class="hero-stat nap-rise" size="small" :style="{ animationDelay: '0ms' }">
+        <t-card class="hero-stat" size="small" :style="{ animationDelay: '0ms' }">
           <div class="flex items-start justify-between relative z-10">
             <div>
               <p class="text-sm text-white/75">{{ stats[0].label }}</p>
@@ -17,7 +17,7 @@
               </p>
             </div>
             <span class="inline-flex items-center gap-1 text-xs text-white rounded-full bg-white/15 px-2 py-1">
-              <t-icon :name="stats[0].change >= 0 ? 'trend-up' : 'trend-down'" :size="12" />
+              <t-icon :name="stats[0].change >= 0 ? 'trend-up' : 'trend-down'" size="12" />
               <span class="tabular">{{ stats[0].change >= 0 ? '+' : '' }}{{ stats[0].change }}%</span>
             </span>
           </div>
@@ -39,12 +39,12 @@
       </t-col>
 
       <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="6" :xl="2">
-        <t-card :bordered="false" class="metric-card nap-rise" size="large"
+        <t-card :bordered="false" class="metric-card nap-rise"
           :style="{ animationDelay: `${(i + 1) * 60}ms` }"
           style="min-height: 150px; border-radius: var(--nap-radius-lg)">
           <t-statistic :title="stat.label" :value="stat.value" />
           <div class="mt-3 flex items-center gap-1 text-xs" :class="stat.changeClass">
-            <t-icon :name="stat.change >= 0 ? 'trend-up' : 'trend-down'" size="14" />
+            <!-- <t-icon :name="stat.change >= 0 ? 'trend-up' : 'trend-down'" size="14" /> -->
             <span class="tabular">较上周 {{ stat.change >= 0 ? '+' : '' }}{{ stat.change }}%</span>
           </div>
         </t-card>
@@ -69,7 +69,7 @@
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                  <h3 class="font-medium text-nap-text truncate text-sm">{{ agent.name }}</h3>
+                  <h3 class="font-medium truncate text-sm">{{ agent.name }}</h3>
                   <StatusBadge :status="agent.status" />
                 </div>
                 <p class="text-xs text-nap-text-secondary mt-0.5 truncate">{{ agent.description }}</p>
@@ -77,12 +77,12 @@
               <div class="hidden md:flex items-center gap-2 flex-shrink-0">
                 <span
                   class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
-                  <t-icon name="cpu" :size="12" />
+                  <t-icon name="cpu" size="12" />
                   {{ agent.model }}
                 </span>
                 <span
                   class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
-                  <t-icon name="tools" :size="12" />
+                  <t-icon name="tools" size="12" />
                   {{ agent.tools.length }} 个工具
                 </span>
               </div>
@@ -103,7 +103,7 @@
 
               <t-list-item-meta :title="template.name">
                 <template #image>
-                  <t-icon class="mt-4 ml-4" :name="template.icon" :size="26" :class="template.iconClass" />
+                  <t-icon class="mt-4 ml-4" :name="template.icon" size="26" :class="template.iconClass" />
                 </template>
                 <template #description>
                   <p>{{ template.description }}</p>
@@ -114,14 +114,13 @@
         </t-card>
       </t-col>
       <t-col :xs="24" :xl="4">
-        <t-card :bordered="true" class="nap-rise" :style="{ animationDelay: '360ms' }">
-          <h2 class="text-base font-semibold text-nap-text leading-none mb-4">动态</h2>
+        <t-card :bordered="true" :style="{ animationDelay: '360ms' }" title="动态" size="small">
           <div class="activity-list">
             <div v-for="(activity, i) in activities" :key="i" class="relative flex gap-3 activity-item">
-              <div v-if="i < activities.length - 1" class="absolute left-[3px] top-3 bottom-0 w-px bg-nap-border" />
-              <div class="w-[7px] h-[7px] rounded-full mt-1.5 flex-shrink-0 relative z-10" :class="activity.dotClass" />
+              <div v-if="i < activities.length - 1" class="absolute left-[3px] top-3 bottom-0 w-px" />
+              <div class="w-[7px] h-[7px] rounded-full mt-1.5 flex-shrink-0  z-10" :class="activity.dotClass" />
               <div class="pb-4">
-                <p class="text-sm text-nap-text">{{ activity.text }}</p>
+                <p class="text-sm">{{ activity.text }}</p>
                 <p class="text-xs text-nap-text-secondary mt-0.5">{{ activity.time }}</p>
               </div>
             </div>
@@ -140,10 +139,10 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 const router = useRouter()
 
 const stats = ref([
-  { label: '知识文档', value: '48', change: 8, icon: 'book', tint: 'bg-emerald-50', iconClass: 'text-nap-success', changeClass: 'text-nap-success' },
-  { label: '会话数', value: '1,284', change: 15, icon: 'chat', tint: 'bg-nap-accent-soft', iconClass: 'text-nap-primary', changeClass: 'text-nap-success' },
-  { label: '智能体总数', value: '12', change: 20 },
-  { label: '总 Token 数', value: '2.4M', change: -5, icon: 'bolt', tint: 'bg-amber-50', iconClass: 'text-nap-warning', changeClass: 'text-nap-error' }
+  { label: '知识文档', value: 48, change: 8, icon: 'book', tint: 'bg-emerald-50', iconClass: 'text-nap-success', changeClass: 'text-nap-success' },
+  { label: '会话数', value: 1284, change: 15, icon: 'chat', tint: 'bg-nap-accent-soft', iconClass: 'text-nap-primary', changeClass: 'text-nap-success' },
+  { label: '智能体总数', value: 2, change: 20 },
+  { label: '总 Token 数', value: 2.4, change: -5, icon: 'bolt', tint: 'bg-amber-50', iconClass: 'text-nap-warning', changeClass: 'text-nap-error' }
 ])
 
 const recentAgents = ref([
@@ -177,7 +176,7 @@ function createFromTemplate(_template: any) {
   position: relative;
   border-radius: var(--nap-radius-lg);
   overflow: hidden;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #296266 0%, #589094 100%);
   box-shadow: 0 12px 32px rgba(79, 70, 229, 0.28);
 }
 

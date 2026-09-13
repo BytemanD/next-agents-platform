@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { API } from '@/api'
 import type { Agent } from '@/types'
 
@@ -18,10 +18,16 @@ interface AgentAPI {
 export const useAgentStore = defineStore('agent', () => {
   const agents = ref<Agent[]>([])
   const currentAgent = ref<Agent | null>(null)
+  const selectedAgentId = ref<string | null>(null)
+  const selectedAgentModels = ref<string[]>([])
   const loading = ref(false)
 
   const activeAgents = computed(() => agents.value.filter(a => a.status === 'active'))
   const draftAgents = computed(() => agents.value.filter(a => a.status === 'draft'))
+
+  const selectedAgent = computed(() =>
+    agents.value.find(a => a.id === selectedAgentId.value) || null
+  )
 
   async function fetchAgents() {
     loading.value = true
@@ -39,10 +45,25 @@ export const useAgentStore = defineStore('agent', () => {
         createdAt: a.created_at,
         updatedAt: a.updated_at
       }))
+      if (!selectedAgentId.value && agents.value.length > 0) {
+        selectedAgentId.value = agents.value[0].id
+      }
     } finally {
       loading.value = false
     }
   }
+
+  watch(selectedAgentId, async (id) => {
+    selectedAgentModels.value = []
+    const agent = agents.value.find(a => a.id === id)
+    if (!agent?.model) return
+    try {
+      const data = await API.fetchLLM<{ models: string[] }>(agent.model)
+      selectedAgentModels.value = data.models || []
+    } catch {
+      selectedAgentModels.value = []
+    }
+  })
 
   function setCurrentAgent(agent: Agent | null) {
     currentAgent.value = agent
@@ -51,9 +72,12 @@ export const useAgentStore = defineStore('agent', () => {
   return {
     agents,
     currentAgent,
+    selectedAgentId,
+    selectedAgentModels,
     loading,
     activeAgents,
     draftAgents,
+    selectedAgent,
     fetchAgents,
     setCurrentAgent
   }

@@ -1,21 +1,12 @@
 <template>
-  <t-aside :width="uiStore.collapsed ? '64px' : '232px'" style="height: 100vh;">
-    <t-menu :collapsed="uiStore.collapsed" @change="handleMenuChange" class='border-r' v-model:value="currentPath">
+  <t-aside :class="uiStore.collapsed ? 'w-16' : 'w-58' " >
+    <t-menu :value="currentPath" :collapsed="uiStore.collapsed" @change="handleMenuChange" class='border-r'>
       <template #logo>
-        <div
-          class="w-8 h-8 rounded-[10px] bg-nap-gradient flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-[0_4px_12px_rgba(79,70,229,0.35)]">
-          N
-        </div>
-        <t-space direction="vertical" size="" v-if="!uiStore.collapsed">
-          <div class="text-sm font-semibold text-nap-text leading-none" style="font-family: var(--font-display)">
-            NAP
-          </div>
-          <div class="text-xs text-nap-text-secondary mt-1">Take a NAP</div>
-        </t-space>
+        <AppLogo :show-text="!uiStore.collapsed" />
       </template>
 
       <t-button block shape="round" @click="handleMenuChange('/playground')" style="margin-bottom: 20px;">
-        <template #icon><chat-icon /></template>
+        <template #icon><ChatBubbleIcon /></template>
         <span v-if="!uiStore.collapsed">对话</span>
       </t-button>
 
@@ -25,16 +16,9 @@
       </t-menu-item>
       <template #operations>
         <t-card size="small" v-if="!uiStore.collapsed">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-nap-text">本月 Token 额度</span>
-            <span class="text-xs text-nap-text-secondary tabular">68%</span>
-          </div>
-          <div class="mt-2.5 h-1.5 rounded-full bg-nap-border/70 overflow-hidden">
-            <div class="h-full rounded-full bg-nap-gradient" style="width: 68%" />
-          </div>
-          <p class="mt-2 text-xs text-nap-text-secondary">
-            已使用 <span class="tabular text-nap-text">1.6M</span> / 2.4M
-          </p>
+          <h3 class="text-xs font-medium">本月 Token 额度</h3>
+          <t-progress :percentage="50" color="var(--accent-100)" />
+          <span>已使用: 1.6M / 2.4M</span> 
         </t-card>
       </template>
     </t-menu>
@@ -42,11 +26,12 @@
 </template>
 
 <script setup lang="ts">
-import { ChatIcon } from 'tdesign-icons-vue-next';
+import { ChatBubbleIcon } from 'tdesign-icons-vue-next';
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { NavItem } from '@/types'
 import { useUIStore } from '@/stores/ui';
+import AppLogo from '@/components/common/AppLogo.vue';
 
 const route = useRoute()
 const router = useRouter()

@@ -11,7 +11,7 @@
       <t-col v-for="stat in stats" :key="stat.label" :xs="12" :sm="6" :lg="3">
         <t-card :bordered="true" class="settings-card">
           <p class="text-sm text-nap-text-secondary">{{ stat.label }}</p>
-          <p class="text-2xl font-bold text-nap-text mt-1 tabular" style="font-family: var(--font-display)">{{
+          <p class="text-2xl font-bold mt-1 tabular" style="font-family: var(--font-display)">{{
             stat.value }}</p>
           <p class="text-xs mt-2" :class="stat.changeClass">{{ stat.change }}</p>
         </t-card>
@@ -20,16 +20,14 @@
 
     <t-row :gutter="[16, 16]">
       <t-col :xs="24" :lg="6">
-        <t-card :bordered="true" class="settings-card">
-          <template #title><span class="text-nap-text">Token 使用量</span></template>
+        <t-card :bordered="true" class="settings-card" title="Token 使用量" size="small">
           <div class="h-64">
             <v-chart :option="tokenChartOption" autoresize />
           </div>
         </t-card>
       </t-col>
       <t-col :xs="24" :lg="6">
-        <t-card :bordered="true" class="settings-card">
-          <template #title><span class="text-nap-text">延迟分布</span></template>
+        <t-card :bordered="true" title="延迟分布" size="small">
           <div class="h-64">
             <v-chart :option="latencyChartOption" autoresize />
           </div>
@@ -37,12 +35,11 @@
       </t-col>
     </t-row>
 
-    <t-card :bordered="true" class="settings-card">
-      <template #title><span class="text-nap-text">最近追踪</span></template>
+    <t-card :bordered="true" class="settings-card" title="最近追踪" size="small">
       <template #actions>
         <t-input v-model="searchQuery" placeholder="搜索追踪..." size="small" clearable class="w-64" />
       </template>
-      <t-table :data="traces" :columns="traceColumns" :pagination="{ pageSize: 10 }" hover />
+      <t-table size="small" :data="traces" :columns="traceColumns" row-key="id" :pagination="{ pageSize: 10 }" hover />
     </t-card>
   </div>
 </template>

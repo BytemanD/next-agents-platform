@@ -1,7 +1,13 @@
 from enum import IntEnum
 
+from nap.common.exceptions import AgentNotExists
 from pystonic.orm.models import DBModel, get_session
-from sqlmodel import JSON, Field, Text, col, func, select
+from sqlmodel import JSON, Field, Text, col, desc, func, select
+from pystonic.common import context
+
+
+def _get_account():
+    return context.getvar("account") or "guest"
 
 
 class Users(DBModel, table=True):
@@ -32,6 +38,13 @@ class Agents(DBModel, table=True):
     status: str = Field(nullable=False, default="draft")
     tools: list[str] = Field(nullable=False, default=[], sa_type=JSON)
 
+    @classmethod
+    def get_first(cls, uuid: str):
+        items = cls.query(cls.uuid == uuid)
+        if not items:
+            raise AgentNotExists(uuid)
+        return items[0]
+
 
 class KnowledgeBase(DBModel, table=True):
     __tablename__ = "knowledge_bases"  # type: ignore
@@ -57,7 +70,7 @@ class KnowledgeStatus(IntEnum):
 class Knowledge(DBModel, table=True):
     __tablename__ = "knowledges"  # type: ignore
 
-    knowledge: str = Field(nullable=False, description="knowledge UUID")
+    knowledge_base: str = Field(nullable=False, description="knowledge base UUID")
     creator: str = Field(nullable=False, description="knowledge creator")
     name: str = Field(nullable=False)
     size: int = Field(nullable=False)
@@ -77,6 +90,9 @@ class Knowledge(DBModel, table=True):
         ),
     )
 
+    def __str__(self):
+        return f"{self.uuid}({self.name})"
+
     @classmethod
     def count(cls, *criterion, **filters):
         """返回一个 QueryBuilder 用于链式查询"""
@@ -84,3 +100,25 @@ class Knowledge(DBModel, table=True):
         with get_session() as session:
             query = session.exec(stm)
             return query.one()
+
+
+class Session(DBModel, table=True):
+    __tablename__ = "sessions"  # type: ignore
+
+    user: str = Field(nullable=False, default="guest")
+    agent: str = Field(nullable=False)
+    title: str = Field(nullable=True, default="")
+
+    @classmethod
+    def get_recent(cls, agent_uuid: str):
+        stm = (
+            select(cls)
+            .where(
+                cls.user == _get_account(),
+                cls.agent == agent_uuid,
+            )
+            .order_by(desc(cls.created_at))
+        )
+
+        with get_session() as session:
+            return session.exec(stm).all()

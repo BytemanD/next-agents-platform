@@ -82,12 +82,12 @@ async def delete_kb(uuid: str):
 
 @router.get("/{kb_id}/stats", status_code=200)
 async def get_kb_stats(kb_id: str):
-    return {"total": Knowledge.count(Knowledge.knowledge == kb_id)}
+    return {"total": Knowledge.count(Knowledge.knowledge_base == kb_id)}
 
 
 @router.get("/{kb_id}/knowledges", status_code=200)
 async def list_kb_knowledges(kb_id: str):
-    knowledges = Knowledge.query(Knowledge.knowledge == kb_id)
+    knowledges = Knowledge.query(Knowledge.knowledge_base == kb_id)
     return {"items": knowledges}
 
 
