@@ -7,12 +7,9 @@ from langchain_text_splitters import (
 from langchain_chroma import Chroma
 from loguru import logger
 from pydantic import BaseModel
-from pystonic.utils.strutil import text_shorten
 
 from nap.db.models import Knowledge, KnowledgeStatus
 from nap.common.conf import CONF
-
-import markitdown
 
 
 class Collection(BaseModel):
@@ -23,13 +20,15 @@ class Collection(BaseModel):
 
 class Document(BaseModel):
     id: str = ""
-    path: str = ""
-    content: str = ""
+    metadata: dict = {}
 
 
 class ChromadbDriver:
     def __init__(self) -> None:
-        self.data_path = Path(CONF.store, "knowledge")
+        if CONF.chromadb.data_path:
+            self.data_path = Path(CONF.chromadb.data_path)
+        else:
+            self.data_path = Path(CONF.store, "knowledge")
         self.data_path.mkdir(parents=True, exist_ok=True)
         self.vectorstore = Chroma(
             collection_name="default",
@@ -43,37 +42,42 @@ class ChromadbDriver:
             docs.append(
                 Document(
                     id=id,
-                    path=collection.metadatas[index].get("source_path", ""),
-                    content=text_shorten(collection.documents[index], wide=10),
+                    metadata=collection.metadatas[index],
                 )
             )
         return docs
 
-    def add_konwledge(self, knowledge: Knowledge):
+    def add_konwledge(self, knowledge: Knowledge, content: str):
         logger.info("ingest knowledge {}", knowledge)
+        knowledge.set_status(KnowledgeStatus.vector_running)
 
-        md = markitdown.MarkItDown()
-        logger.info("{} conver ...", knowledge)
-        knowledge.status = KnowledgeStatus.parsing.value
-        knowledge.save()
-        content = md.convert(knowledge.path).text_content
         headers_to_split_on = [
             ("#", "Header 1"),
             ("##", "Header 2"),
             ("###", "Header 3"),
         ]
-
         logger.info("{} split ...", knowledge)
         md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on)
         chunks = md_splitter.split_text(content)
         for chunk in chunks:
-            chunk.metadata["source_path"] = knowledge.path
+            chunk.metadata["knowledge_path"] = knowledge.path
+            chunk.metadata["knowledge_id"] = knowledge.uuid
 
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
         self.vectorstore.add_documents(text_splitter.split_documents(chunks))
         logger.success("{} parsed success", knowledge)
-        knowledge.status = KnowledgeStatus.parsed.value
-        knowledge.save()
+        knowledge.set_status(KnowledgeStatus.vector_completed)
+
+    def delete_knowledge(self, knowledge: Knowledge):
+        knowledge.set_status(KnowledgeStatus.delete_running)
+
+        results = self.vectorstore.get(where={"knowledge_id": knowledge.uuid})
+        logger.debug("get vector: {}", results)
+
+        if results.get("ids"):
+            logger.info("delete vector by ids: {}", results.get("ids"))
+            self.vectorstore.delete(results.get("ids"))
+        knowledge.set_status(KnowledgeStatus.delete_completed)
 
     def retrieve(self, query: str, k: int = 2):
         results = self.vectorstore.similarity_search_with_score(query, k=k)

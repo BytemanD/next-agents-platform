@@ -28,6 +28,6 @@ def ingest(knowledge_base):
     pass
 
 
-@root.command("sync", help="sync from db")
-def sync():
-    MANAGER.handle_saved()
+# @root.command("sync", help="sync from db")
+# def sync():
+#     MANAGER.handle_saved()

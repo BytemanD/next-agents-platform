@@ -15,11 +15,11 @@ class FSDriver:
         file_path = self.path.joinpath(doc.creator or "default", doc.name)
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        doc.status = KnowledgeStatus.saving
+        doc.status = KnowledgeStatus.save_running
         doc.path = str(file_path)
         doc.save()
         file_path.write_bytes(content)
-        doc.status = KnowledgeStatus.saved
+        doc.status = KnowledgeStatus.save_completed
         doc.save()
 
     def delete(self, doc: Knowledge):

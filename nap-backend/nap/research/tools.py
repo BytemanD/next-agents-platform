@@ -1,8 +1,8 @@
 from typing import List
 
 from agents import function_tool
-from nap.vector.manager import get_vector_driver
-from nap.vector.models import Doc, RetrivalDoc
+# from nap.vector.manager import get_vector_driver
+# from nap.vector.models import Doc, RetrivalDoc
 
 vector_driver = get_vector_driver()
 

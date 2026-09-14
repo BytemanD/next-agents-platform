@@ -44,6 +44,9 @@
     <template #title><span class="text-nap-text">文档列表</span></template>
     <template #actions>
       <t-space :size="12">
+        <t-button size="small" variant="outline" shape="square" @click="handleRefresh">
+          <template #icon><t-icon name="refresh" /></template>
+        </t-button>
         <t-input v-model="searchQuery" placeholder="搜索文档..." size="small" clearable class="w-64">
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
@@ -93,6 +96,18 @@ const searchQuery = ref('')
 const showUpload = ref(false)
 const uploading = ref(false)
 const uploadFiles = ref<any[]>([])
+
+async function handleRefresh() {
+  try {
+    await Promise.all([
+      knowledgeStore.fetchKnowledgeBases(),
+      knowledgeStore.fetchKnowledgeItems(baseUuid.value)
+    ])
+    MessagePlugin.success('已刷新')
+  } catch {
+    MessagePlugin.error('刷新失败')
+  }
+}
 
 const docs = computed<KnowledgeItem[]>(() => knowledgeStore.items)
 

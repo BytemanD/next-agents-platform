@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from nap.db.models import Knowledge
+from nap.db.models import Knowledge, KnowledgeStatus
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/knowledges")
@@ -35,7 +35,9 @@ class KnowledgeResponse(BaseModel):
 
 @router.get("")
 async def list_knowledge():
-    return {"items": Knowledge.query()}
+    return {
+        "items": Knowledge.query(Knowledge.status != KnowledgeStatus.delete_completed)
+    }
 
 
 @router.get("/{uuid}")
@@ -70,4 +72,4 @@ async def delete_knowledge(uuid: str):
     k = Knowledge.get_by_uuid(uuid)
     if not k:
         raise HTTPException(status_code=404, detail="Knowledge not found")
-    k.delete()
+    k.set_status(KnowledgeStatus.delete)

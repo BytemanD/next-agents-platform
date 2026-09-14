@@ -1,9 +1,33 @@
-from enum import IntEnum
+from enum import IntEnum, auto
+from typing import Sequence
 
 from nap.common.exceptions import AgentNotExists
 from pystonic.orm.models import DBModel, get_session
-from sqlmodel import JSON, Field, Text, col, desc, func, select
+from sqlmodel import JSON, Field, Text, col, desc, func, select, update
 from pystonic.common import context
+
+
+class KnowledgeStatus(IntEnum):
+    save_waiting = 0
+    save_running = auto()
+    save_completed = auto()
+    save_failed = auto()
+
+    parse_pending = 100
+    parse_running = auto()
+    parse_completed = auto()
+    parse_failed = auto()
+
+    vector_pending = 200
+    vector_running = auto()
+    vector_completed = auto()
+    vector_failed = auto()
+
+    delete = 900
+    delete_pending = auto()
+    delete_running = auto()
+    delete_completed = auto()
+    delete_failed = auto()
 
 
 def _get_account():
@@ -56,17 +80,6 @@ class KnowledgeBase(DBModel, table=True):
     )
 
 
-class KnowledgeStatus(IntEnum):
-    queue = 0
-    saving = 1
-    saved = 2
-    parsing = 3
-    parsed = 4
-    parse_failed = 5
-    deleting = 100
-    deleted = 101
-
-
 class Knowledge(DBModel, table=True):
     __tablename__ = "knowledges"  # type: ignore
 
@@ -78,16 +91,7 @@ class Knowledge(DBModel, table=True):
     status: int = Field(
         nullable=False,
         default=0,
-        description=(
-            "  0: queue, "
-            "  1: saving, "
-            "  2: saved, "
-            "  3: parsing, "
-            "  4: parsed, "
-            "  5: parse_failed, "
-            "100: deleting, "
-            "101: deleted"
-        ),
+        description="知识状态(保存, 解析, 向量化, ...,  删除)",
     )
 
     def __str__(self):
@@ -100,6 +104,52 @@ class Knowledge(DBModel, table=True):
         with get_session() as session:
             query = session.exec(stm)
             return query.one()
+
+    @classmethod
+    def get_saved(cls, limits: int = 100):
+        """返回一个 QueryBuilder 用于链式查询"""
+        stm = (
+            select(cls)
+            .where(cls.status == KnowledgeStatus.save_completed.value)
+            .limit(limits)
+        )
+
+        with get_session() as session:
+            query = session.exec(stm)
+            return query.all()
+
+    @classmethod
+    def get_todo(cls, limits: int = 100):
+        """返回一个 QueryBuilder 用于链式查询"""
+        stm = (
+            select(cls)
+            .where(
+                col(cls.status).in_(
+                    [
+                        KnowledgeStatus.save_completed.value,
+                        KnowledgeStatus.delete,
+                    ]
+                )
+            )
+            .limit(limits)
+        )
+
+        with get_session() as session:
+            query = session.exec(stm)
+            return query.all()
+
+    def set_status(self, status: KnowledgeStatus):
+        self.status = status.value
+        self.save()
+
+    @classmethod
+    def batch_set_status(cls, uuids: Sequence[str], status: KnowledgeStatus | int):
+        stm = (
+            update(cls).where(col(cls.uuid).in_(uuids)).values({"status": int(status)})
+        )
+        with get_session() as session:
+            session.exec(stm)
+            session.commit()
 
 
 class Session(DBModel, table=True):

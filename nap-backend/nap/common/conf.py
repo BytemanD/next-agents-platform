@@ -7,7 +7,7 @@ class VectorConfig(BaseModel):
 
 
 class ChromaDBConfig(BaseModel):
-    path: str = "./data/chromadb"
+    data_path: str | None = None
 
 
 class FSStorageConfig(BaseModel):

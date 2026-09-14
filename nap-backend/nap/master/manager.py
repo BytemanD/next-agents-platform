@@ -1,6 +1,3 @@
-from typing import Optional
-
-from fastapi import HTTPException
 from loguru import logger
 from langchain.agents import create_agent
 from nap.db.models import Session
@@ -11,20 +8,16 @@ from pystonic.common import context
 from langchain_openai.chat_models.base import OpenAIRateLimitError
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
+from pystonic.utils.strutil import text_shorten
 
 from nap.common.exceptions import (
     LLMIsInvalid,
     LLMRateLimitError,
 )
-from pystonic.utils.strutil import text_shorten
-
 from nap.db.models import Agents, Knowledge, KnowledgeBase, LLMs
-from nap.research.ai import ResearchAI
 from nap.storage.manager import get_storage_driver
-from nap.vector.manager import get_vector_driver
-
-from langchain_core.messages import AIMessageChunk
 
 
 class Message(BaseModel):
@@ -64,15 +57,8 @@ class ReasoningChatOpenAI(ChatOpenAI):
 
 class MasterManager:
     def __init__(self):
-        self.vector_driver = get_vector_driver()
         self.storage_driver = get_storage_driver()
-        self.llm = ResearchAI()
-
-    def list_docs(self):
-        pid = context.project_id.get()
-        if pid:
-            return Knowledge.query(Knowledge.project_uuid == pid)
-        return Knowledge.query()
+        # self.llm = ResearchAI()
 
     def get_doc_path(self, path: str):
         logger.info("get doc path: {}", path)
@@ -98,44 +84,9 @@ class MasterManager:
         self.storage_driver.save(doc, content)
         return doc
 
-    def create_project(self, name: str, description: Optional[str]):
-        item = Project(name=name, description=description)
-        item.create()
-        return item
-
-    def list_project(self):
-        return Project.query()
-
-    def delete_project(self, uuid: str):
-        db_model = Project.get_by_uuid(uuid)
-        if not db_model:
-            raise Exception(f"Project {uuid} not found")
-        db_model.delete()
-
     def list_session(self):
         """Project manager"""
         return Session.query()
-
-    def create_session(self, name: str, project: Optional[str]):
-        db_project = Project.get_by_uuid(project)
-        if not db_project:
-            raise Exception(f"Project {project} not found")
-        item = Session(project_uuid=project, name=name)
-        item.create()
-        return item
-
-    def retrival(self, text: str):
-        return self.vector_driver.query(text)
-
-    async def delete_session(self, session_id: str):
-        session = Session.get_by_uuid(session_id)
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
-        session.delete()
-        await self.llm.clear_session_items(session_id)
-
-    def get_models(self):
-        return self.llm.list_model()
 
     def _build_agent(
         self,

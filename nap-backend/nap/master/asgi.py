@@ -6,6 +6,7 @@ from loguru import logger
 # from nap.master.api.v1 import doc, project, session
 from nap.master.api.v1 import agents, knowledge, knowledge_base, llms, sessions, users
 from pystonic.orm.database import create_all_tables
+from pystonic.asgi.app import create_app
 
 
 @asynccontextmanager
@@ -16,7 +17,7 @@ async def lifespan(app: FastAPI):
     logger.info("stop Master ...")
 
 
-APP = FastAPI(lifespan=lifespan)
+APP = create_app(lifespan=lifespan)
 
 
 for module in (agents, knowledge, knowledge_base, llms, users, sessions):
