@@ -56,13 +56,48 @@
         </t-button>
       </t-space>
     </template>
-    <t-table size="small" :data="filteredDocs" :columns="columns" :pagination="{ pageSize: 10 }" hover />
+    <t-table size="small" :data="filteredDocs" :columns="columns" :pagination="{ pageSize: 10 }" hover>
+      <template #status="{ row }">
+        <t-tag shape="round" v-if="row.status == 'save_waiting'" variant="light-outline">等待保存</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'save_running'" variant="light-outline">保存中</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'save_completed'" variant="light-outline"
+          theme="success">保存完成</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'save_failed'" variant="light-outline" theme="danger">保存失败</t-tag>
+
+        <t-tag shape="round" v-else-if="row.status == 'parse_pending'" variant="light-outline">等待解析</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'parse_running'" variant="light-outline">解析中</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'parse_completed'" variant="light-outline"
+          theme="success">解析完成</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'parse_failed'" variant="light-outline" theme="danger">解释</t-tag>
+
+        <t-tag shape="round" v-else-if="row.status == 'vector_pending'" variant="light-outline">等待向量化</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'vector_running'" variant="light-outline">向量化中</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'vector_completed'" variant="light-outline"
+          theme="success">向量化完成</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'vector_failed'" variant="light-outline"
+          theme="danger">向量化失败</t-tag>
+
+        <t-tag shape="round" v-else-if="row.status == 'delete'" variant="light-outline">等待删除</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'delete_pending'" variant="light-outline">等待删除</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'delete_running'" variant="light-outline">删除中</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'delete_completed'" variant="light-outline"
+          theme="success">删除完成</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'delete_failed'" variant="light-outline"
+          theme="danger">删除完成</t-tag>
+
+        <t-tag shape="round" v-else variant="light-outline">{{ row.status }}</t-tag>
+      </template>
+      <template #operation="{ row }">
+        <t-popconfirm :content="`确定删除文档「${row.name}」吗？`" theme="danger" @confirm="handleDelete(row)">
+          <t-button variant="text" theme="danger">删除</t-button>
+        </t-popconfirm>
+      </template>
+    </t-table>
   </t-card>
 
   <t-dialog v-model:visible="showUpload" footer header="上传文档" placement="center" width="600px"
     :on-confirm="handleUpload" :confirm-on-enter="false" :confirm-btn="uploadFiles.length == 0 ? null : '上传'">
-    <t-upload v-model="uploadFiles" multiple accept=".pdf,.txt,.md,.docx,.csv" :max="10"
-      :auto-upload="false">
+    <t-upload v-model="uploadFiles" multiple accept=".pdf,.txt,.md,.docx,.csv" :max="10" :auto-upload="false">
       <template #default>
         <t-space direction="vertical" align="center" class="pa-4" style="border: 3px dashed #dcdcdc;">
           <t-icon name="upload" size="48" class="text-nap-primary mx-auto mb-4" />
@@ -77,11 +112,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { MessagePlugin, Popconfirm, Button as TButton } from 'tdesign-vue-next'
+import { MessagePlugin, Button as TButton } from 'tdesign-vue-next'
 import { API } from '@/api'
-import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useKnowledgeStore } from '@/stores/knowledge'
-import { KNOWLEDGE_STATUS } from '@/types'
 import type { KnowledgeItem, KnowledgeBase } from '@/types'
 
 const route = useRoute()
@@ -141,27 +174,26 @@ const columns = [
     colKey: 'creator', title: '上传者', width: 120, cell: (h: any, { row }: any) => h('span', row.creator || '-')
   },
   {
-    colKey: 'status', title: '状态', width: 120,
-    cell: (h: any, { row }: any) => h(StatusBadge, { status: KNOWLEDGE_STATUS[row.status] || row.status })
+    colKey: 'status', title: '状态', width: 60,
   },
   {
-    colKey: 'created_at', title: '上传时间', width: 180, cell: (h: any, { row }: any) => h('span', new Date(row.created_at).toLocaleString())
+    colKey: 'created_at', title: '上传时间', width: 100, cell: (h: any, { row }: any) => h('span', new Date(row.created_at).toLocaleString())
   },
   {
     colKey: 'operation', title: '操作', width: 80, fixed: 'right',
-    cell: (h: any, { row }: any) => h('div', { class: 'flex justify-center' }, [
-      h(Popconfirm,
-        {
-          content: `确定删除文档「${row.name}」吗？`,
-          onConfirm: () => handleDelete(row)
-        },
-        {
-          default: () => h(TButton, {
-            variant: 'text',
-            theme: 'danger'
-          }, { default: () => '删除' })
-        })
-    ])
+    // cell: (h: any, { row }: any) => h('div', { class: 'flex justify-center' }, [
+    //   h(Popconfirm,
+    //     {
+    //       content: `确定删除文档「${row.name}」吗？`,
+    //       onConfirm: () => handleDelete(row)
+    //     },
+    //     {
+    //       default: () => h(TButton, {
+    //         variant: 'text',
+    //         theme: 'danger'
+    //       }, { default: () => '删除' })
+    //     })
+    // ])
   }
 ]
 

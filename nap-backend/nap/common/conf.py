@@ -19,10 +19,17 @@ class StorageConfig(BaseModel):
     fs: FSStorageConfig = FSStorageConfig()
 
 
+class MasterConfig(BaseModel):
+    
+    knowledge_base_url: str = "http://localhost:8001"
+
+
 class AppConfig(BaseAppConfig):
     vector: VectorConfig = VectorConfig()
     chromadb: ChromaDBConfig = ChromaDBConfig()
     storage: StorageConfig = StorageConfig()
+
+    master: MasterConfig = MasterConfig()
 
 
 CONF = AppConfig()

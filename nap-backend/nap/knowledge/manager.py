@@ -1,11 +1,13 @@
 import asyncio
 from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 import socket
 from typing import Sequence
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from loguru import logger
+from nap.knowledge.graph import knowledge_handler
 import portalocker
 
 from nap.common.conf import CONF
@@ -62,17 +64,19 @@ class KnowledgeManager:
 
         logger.info("found {} knowledge(s) to handle", len(items))
         for item in items:
-            self.backgroup_scheduler.add_job(self._handle_knowledge, args=(item,))
+            self.backgroup_scheduler.add_job(knowledge_handler.run, args=(item,))
 
-    def _handle_knowledge(self, knowledge: Knowledge):
-        if knowledge.status == KnowledgeStatus.parse_pending.value:
-            content = self.parse_driver.parse(knowledge)
-            self.vector_driver.add_konwledge(knowledge, content)
-            return
-        if knowledge.status == KnowledgeStatus.delete_pending.value:
-            self.vector_driver.delete_knowledge(knowledge)
-            if knowledge.status == KnowledgeStatus.delete_completed.value:
-                knowledge.delete()
+    def delete_knowledge(self, knowledge: Knowledge):
+        def _delete_knowledge():
+
+            self.scheduler.add_job(self.job_handle_saved, "interval", seconds=10)
+            knowledge.set_status(KnowledgeStatus.delete_pending)
+            try:
+                knowledge_handler.run(knowledge)
+            except Exception:
+                knowledge.set_status(KnowledgeStatus.delete)
+
+        self.scheduler.add_job(_delete_knowledge, next_run_time=datetime.now(UTC))
 
 
 MANAGER = KnowledgeManager()

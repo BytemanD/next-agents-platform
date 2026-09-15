@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException
 from nap.db.models import Knowledge, KnowledgeStatus
 from pydantic import BaseModel
 
+from nap.master.manager import MANAGER
+
 router = APIRouter(prefix="/knowledges")
 
 
@@ -69,7 +71,7 @@ async def update_knowledge(uuid: str, body: KnowledgeUpdate):
 
 @router.delete("/{uuid}", status_code=204)
 async def delete_knowledge(uuid: str):
-    k = Knowledge.get_by_uuid(uuid)
-    if not k:
+    khm = Knowledge.get_by_uuid(uuid)
+    if not khm:
         raise HTTPException(status_code=404, detail="Knowledge not found")
-    k.set_status(KnowledgeStatus.delete)
+    MANAGER.delete_knowledge(khm)

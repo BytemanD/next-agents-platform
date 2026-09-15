@@ -2,6 +2,7 @@ from enum import IntEnum, auto
 from typing import Sequence
 
 from nap.common.exceptions import AgentNotExists
+from pydantic import field_serializer
 from pystonic.orm.models import DBModel, get_session
 from sqlmodel import JSON, Field, Text, col, desc, func, select, update
 from pystonic.common import context
@@ -93,6 +94,10 @@ class Knowledge(DBModel, table=True):
         default=0,
         description="知识状态(保存, 解析, 向量化, ...,  删除)",
     )
+
+    @field_serializer("status")
+    def serialize_created_at(self, value: int) -> str:
+        return KnowledgeStatus(value).name
 
     def __str__(self):
         return f"{self.uuid}({self.name})"

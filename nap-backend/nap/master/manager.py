@@ -1,6 +1,10 @@
+import asyncio
+
+import httpx
 from loguru import logger
 from langchain.agents import create_agent
-from nap.db.models import Session
+from nap.common.conf import CONF
+from nap.db.models import KnowledgeStatus, Session
 from pydantic import BaseModel, SecretStr
 from langchain_openai import ChatOpenAI
 
@@ -11,6 +15,8 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
 from pystonic.utils.strutil import text_shorten
+from pystonic.utils.httpclient import default_client
+
 
 from nap.common.exceptions import (
     LLMIsInvalid,
@@ -59,6 +65,9 @@ class MasterManager:
     def __init__(self):
         self.storage_driver = get_storage_driver()
         # self.llm = ResearchAI()
+        self.knowledge_client = default_client(
+            base_url=CONF.master.knowledge_base_url, raise_for_status=True
+        )
 
     def get_doc_path(self, path: str):
         logger.info("get doc path: {}", path)
@@ -191,6 +200,13 @@ class MasterManager:
                     )
 
         return messages
+
+    def delete_knowledge(self, knowledge: Knowledge):
+        try:
+            self.knowledge_client.delete(f"/api/v1/knowledges/{knowledge.uuid}")
+        except httpx.HTTPError as e:
+            logger.error("CALL knowledge service failed: {}", e)
+            knowledge.set_status(KnowledgeStatus.delete)
 
 
 MANAGER = MasterManager()
