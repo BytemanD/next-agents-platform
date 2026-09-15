@@ -20,3 +20,13 @@ class LLMIsInvalid(Exception):
 class LLMRateLimitError(Exception):
     def __init__(self, detail: str) -> None:
         super().__init__(f"LLM API rate limit: {detail}")
+
+
+class EnrichFailed(Exception):
+    def __init__(self, detail: str) -> None:
+        super().__init__(f"enrich documen failed: {detail}")
+
+
+class EnrichmentAlreadyExists(Exception):
+    def __init__(self, knowledge_uuid: str) -> None:
+        super().__init__(f"knowledge({knowledge_uuid}) enrichment already exists")

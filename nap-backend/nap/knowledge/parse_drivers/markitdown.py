@@ -18,6 +18,7 @@ class Document(BaseModel):
 
 
 class MarkitdownDriver:
+
     def __init__(self) -> None:
         self.md = markitdown.MarkItDown()
 

@@ -44,13 +44,14 @@
     <template #title><span class="text-nap-text">文档列表</span></template>
     <template #actions>
       <t-space :size="12">
-        <t-button size="small" variant="outline" shape="square" @click="handleRefresh">
+        <t-button variant="outline" shape="square" @click="handleRefresh">
           <template #icon><t-icon name="refresh" /></template>
         </t-button>
-        <t-input v-model="searchQuery" placeholder="搜索文档..." size="small" clearable class="w-64">
+        <t-input v-model="searchQuery" placeholder="搜索文档..." clearable class="w-64">
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
-        <t-button size="small" @click="showUpload = true">
+        <t-button theme="warning">重置状态</t-button>
+        <t-button @click="showUpload = true">
           <template #icon><t-icon name="upload" /></template>
           上传文档
         </t-button>
@@ -77,6 +78,13 @@
         <t-tag shape="round" v-else-if="row.status == 'vector_failed'" variant="light-outline"
           theme="danger">向量化失败</t-tag>
 
+        <t-tag shape="round" v-else-if="row.status == 'enrich_pending'" variant="light-outline">等待抽取</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'enrich_running'" variant="light-outline">抽取中</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'enrich_completed'" variant="light-outline"
+          theme="success">抽取完成</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'enrich_failed'" variant="light-outline"
+          theme="danger">抽取失败</t-tag>
+
         <t-tag shape="round" v-else-if="row.status == 'delete'" variant="light-outline">等待删除</t-tag>
         <t-tag shape="round" v-else-if="row.status == 'delete_pending'" variant="light-outline">等待删除</t-tag>
         <t-tag shape="round" v-else-if="row.status == 'delete_running'" variant="light-outline">删除中</t-tag>
@@ -91,6 +99,7 @@
         <t-popconfirm :content="`确定删除文档「${row.name}」吗？`" theme="danger" @confirm="handleDelete(row)">
           <t-button variant="text" theme="danger">删除</t-button>
         </t-popconfirm>
+        <t-button variant="text" theme="primary" @click="handleShowDetail(row)">详情</t-button>
       </template>
     </t-table>
   </t-card>
@@ -107,6 +116,37 @@
       </template>
     </t-upload>
   </t-dialog>
+
+  <t-drawer v-model:visible="showDetail" :header="detail?.name || '文档详情'" size="560px" :footer="false">
+    <div v-if="loadingDetail">
+      <t-loading size="large" text="加载中..." />
+    </div>
+    <template v-else-if="detail">
+      <t-descriptions :column="1" size="small" bordered table-layout="auto">
+        <t-descriptions-item label="UUID">{{ detail.uuid }}</t-descriptions-item>
+        <t-descriptions-item label="状态">{{ statusText(detail.status) }}</t-descriptions-item>
+        <t-descriptions-item label="上传者">{{ detail.creator || '-' }}</t-descriptions-item>
+        <t-descriptions-item label="大小">{{ formatSize(detail.size) }}</t-descriptions-item>
+        <t-descriptions-item label="上传时间">{{ new Date(detail.created_at).toLocaleString() }}</t-descriptions-item>
+        <t-descriptions-item label="更新时间">{{ new Date(detail.updated_at).toLocaleString() }}</t-descriptions-item>
+      </t-descriptions>
+      <t-divider>内容抽取摘要</t-divider>
+      <template v-if="detail.enrichment">
+        <h2 class="my-2"><b>关键词</b></h2>
+        <t-space size="small" breakLine>
+          <span v-if="!detail.enrichment.keywords || detail.enrichment.keywords.length === 0">暂无关键词</span>
+          <t-tag v-for="kw in detail.enrichment.keywords || []" :key="kw" theme="warning" variant="light"
+            shape="round">{{ kw }}
+          </t-tag>
+        </t-space>
+        <h2 class="my-2"><b>摘要</b></h2>
+        <p style="white-space: pre-wrap">{{ detail.enrichment.summary || '暂无摘要' }}</p>
+      </template>
+      <div v-else>
+        该文档尚未完成内容抽取，暂无摘要与关键词。
+      </div>
+    </template>
+  </t-drawer>
 </template>
 
 <script setup lang="ts">
@@ -115,7 +155,7 @@ import { useRoute } from 'vue-router'
 import { MessagePlugin, Button as TButton } from 'tdesign-vue-next'
 import { API } from '@/api'
 import { useKnowledgeStore } from '@/stores/knowledge'
-import type { KnowledgeItem, KnowledgeBase } from '@/types'
+import type { KnowledgeItem, KnowledgeBase, KnowledgeDetail } from '@/types'
 
 const route = useRoute()
 const knowledgeStore = useKnowledgeStore()
@@ -129,6 +169,22 @@ const searchQuery = ref('')
 const showUpload = ref(false)
 const uploading = ref(false)
 const uploadFiles = ref<any[]>([])
+const showDetail = ref(false)
+const loadingDetail = ref(false)
+const detail = ref<KnowledgeDetail | null>(null)
+
+async function handleShowDetail(row: any) {
+  showDetail.value = true
+  loadingDetail.value = true
+  detail.value = null
+  try {
+    detail.value = await API.fetchKnowledgeDetail(row.uuid)
+  } catch {
+    MessagePlugin.error('加载文档详情失败')
+  } finally {
+    loadingDetail.value = false
+  }
+}
 
 async function handleRefresh() {
   try {
@@ -234,6 +290,18 @@ function formatSize(bytes: number) {
   if (bytes === 0) return '0 B'
   if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB'
   return (bytes / 1024).toFixed(1) + ' KB'
+}
+
+const STATUS_TEXT: Record<string, string> = {
+  save_waiting: '等待保存', save_running: '保存中', save_completed: '保存完成', save_failed: '保存失败',
+  parse_pending: '等待解析', parse_running: '解析中', parse_completed: '解析完成', parse_failed: '解析失败',
+  vector_pending: '等待向量化', vector_running: '向量化中', vector_completed: '向量化完成', vector_failed: '向量化失败',
+  enrich_pending: '等待抽取', enrich_running: '抽取中', enrich_completed: '抽取完成', enrich_failed: '抽取失败',
+  delete: '等待删除', delete_pending: '等待删除', delete_running: '删除中', delete_completed: '删除完成', delete_failed: '删除失败'
+}
+
+function statusText(status: string | number): string {
+  return STATUS_TEXT[String(status)] || String(status)
 }
 
 watch(baseUuid, () => knowledgeStore.fetchKnowledgeItems(baseUuid.value))

@@ -88,6 +88,15 @@ export interface KnowledgeItem {
   updated_at: string
 }
 
+export interface KnowledgeEnrichment {
+  keywords: string[]
+  summary: string
+}
+
+export interface KnowledgeDetail extends KnowledgeItem {
+  enrichment: KnowledgeEnrichment | null
+}
+
 export const KNOWLEDGE_STATUS: Record<number, string> = {
   // 0: '排队中',
   // 1: '保存中',

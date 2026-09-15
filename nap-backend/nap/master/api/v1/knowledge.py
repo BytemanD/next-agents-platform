@@ -47,7 +47,17 @@ async def get_knowledge(uuid: str):
     k = Knowledge.get_by_uuid(uuid)
     if not k:
         raise HTTPException(status_code=404, detail="Knowledge not found")
-    return k
+    data = k.model_dump()
+    enrichment = k.get_enrichment()
+    data["enrichment"] = (
+        {
+            "keywords": enrichment.keywords,
+            "summary": enrichment.summary,
+        }
+        if enrichment
+        else None
+    )
+    return data
 
 
 @router.put("/{uuid}")

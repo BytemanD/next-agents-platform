@@ -5,7 +5,8 @@ from langgraph.graph import StateGraph, START, END
 
 from loguru import logger
 from nap.db.models import Knowledge, KnowledgeStatus
-from nap.knowledge.drivers.chromadb import ChromadbDriver
+from nap.knowledge.enrich_drivers.agent import EnrichmentAgentDriver
+from nap.knowledge.vector_drivers.chromadb import ChromadbDriver
 from nap.knowledge.parse_drivers.markitdown import MarkitdownDriver
 from pydantic import BaseModel
 
@@ -23,15 +24,16 @@ vector_driver = ChromadbDriver()
 def _judge_knowledge_status(state: State):
     return KnowledgeStatus(state["knowledge"].status).name
 
+
 def _node_root(state: State):
-    state['root_count'] += 1
+    state["root_count"] += 1
     return state
 
 
 def _node_parse(state: State):
     try:
         state["content"] = parse_driver.parse(state["knowledge"])
-        logger.success('parse success ...')
+        logger.success("parse success ...")
     except Exception:
         state["knowledge"].set_status(KnowledgeStatus.parse_failed)
     return state
@@ -44,6 +46,18 @@ def _node_vector(state: State):
     return state
 
 
+def _node_enrich(state: State):
+    driver = EnrichmentAgentDriver()
+    try:
+        driver.enrich(state["knowledge"], replace=True, content=state["content"])
+    except Exception as e:
+        logger.error("enrich failed: {}", e)
+        state["knowledge"].set_status(KnowledgeStatus.enrich_failed)
+    else:
+        state["knowledge"].set_status(KnowledgeStatus.enrich_completed)
+    return state
+
+
 def _node_delete_from_vector(state: State):
     vector_driver.delete_knowledge(state["knowledge"])
     return state
@@ -52,8 +66,6 @@ def _node_delete_from_vector(state: State):
 def _node_delete_from_db(state: State):
     state["knowledge"].delete()
     return state
-
-
 
 
 """
@@ -69,34 +81,39 @@ graph = StateGraph(State)
 graph.add_node("root", _node_root)
 graph.add_node("parse", _node_parse)
 graph.add_node("vector", _node_vector)
+graph.add_node("enrich", _node_enrich)
 graph.add_node("delete_from_vector", _node_delete_from_vector)
 graph.add_node("delete_from_db", _node_delete_from_db)
 
-graph.add_edge(START, 'root')
+graph.add_edge(START, "root")
 graph.add_conditional_edges(
-    'root',
+    "root",
     _judge_knowledge_status,
     {
         KnowledgeStatus.parse_pending.name: "parse",
         KnowledgeStatus.parse_completed.name: "vector",
+        KnowledgeStatus.vector_completed.name: "enrich",
         KnowledgeStatus.delete_pending.name: "delete_from_vector",
         KnowledgeStatus.delete_completed.name: "delete_from_db",
         # 其他状态
-        KnowledgeStatus.vector_completed.name: END,
         KnowledgeStatus.save_waiting.name: END,
         KnowledgeStatus.save_running.name: END,
         KnowledgeStatus.save_failed.name: END,
         KnowledgeStatus.save_completed.name: END,
         KnowledgeStatus.parse_running.name: END,
         KnowledgeStatus.parse_failed.name: END,
+        KnowledgeStatus.enrich_pending.name: END,
+        KnowledgeStatus.enrich_running.name: END,
+        KnowledgeStatus.enrich_completed.name: END,
+        KnowledgeStatus.enrich_failed.name: END,
         KnowledgeStatus.delete.name: END,
         KnowledgeStatus.delete_failed.name: END,
         KnowledgeStatus.delete_running.name: END,
     },
 )
-graph.add_edge("parse", 'root')
-graph.add_edge("vector", 'root')
-graph.add_edge("delete_from_vector", 'root')
+graph.add_edge("parse", "root")
+graph.add_edge("vector", "root")
+graph.add_edge("delete_from_vector", "root")
 graph.add_edge("delete_from_db", END)
 
 # graph.invoke(knowledge)

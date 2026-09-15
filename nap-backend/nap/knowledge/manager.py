@@ -12,7 +12,7 @@ import portalocker
 
 from nap.common.conf import CONF
 from nap.db.models import Knowledge, KnowledgeStatus
-from nap.knowledge.drivers.chromadb import ChromadbDriver
+from nap.knowledge.vector_drivers.chromadb import ChromadbDriver
 from nap.knowledge.parse_drivers.markitdown import MarkitdownDriver
 
 
