@@ -3,27 +3,28 @@ from pathlib import Path
 
 from loguru import logger
 from nap.common.conf import CONF
-from nap.db.models import Knowledge, KnowledgeStatus
+from nap.db.models import Knowledge
 
 
 class FSDriver:
     def __init__(self):
-        self.path = Path(CONF.storage.fs.path)
-        self.path.mkdir(parents=True, exist_ok=True)
+        self.root_path = Path(CONF.store)
+        self.root_path.mkdir(parents=True, exist_ok=True)
 
-    def save(self, doc: Knowledge, content: bytes):
-        file_path = self.path.joinpath(doc.creator or "default", doc.name)
-
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        doc.status = KnowledgeStatus.save_running
-        doc.path = str(file_path)
-        doc.save()
-        file_path.write_bytes(content)
-        doc.status = KnowledgeStatus.save_completed
-        doc.save()
+    def save(self, file_path: str, content: bytes | str):
+        save_path = self.root_path.joinpath(file_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(content, bytes):
+            save_path.write_bytes(content)
+        else:
+            save_path.write_text(content)
+        return save_path
 
     def delete(self, doc: Knowledge):
-        abs_path = self.path / doc.path
+        if not doc.raw_path:
+            logger.warning('knowledge {} raw_path is empty')
+            return
+        abs_path = self.root_path.joinpath(doc.raw_path)
 
         if not abs_path.exists():
             logger.warning("file {} does not exist", abs_path)
@@ -32,8 +33,10 @@ class FSDriver:
         os.remove(abs_path)
 
     def get_content(self, doc: Knowledge):
-        abs_path = self.path / doc.path
+        if not doc.raw_path:
+            raise FileExistsError('knowledge raw_path is empty')
+        abs_path = self.root_path / doc.raw_path
         return abs_path.read_bytes()
 
-    def get_path(self, doc: Knowledge):
-        return self.path / doc.path
+    def get_path(self, file_path: str):
+        return self.root_path / file_path

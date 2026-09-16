@@ -1,13 +1,9 @@
 import asyncio
-from collections import defaultdict
-from datetime import UTC, datetime, timedelta
-import socket
-from typing import Sequence
+from datetime import UTC, datetime
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.schedulers.background import BackgroundScheduler
 from loguru import logger
-from nap.knowledge.graph import knowledge_handler
+from nap.common.manager import BaseManager
+from nap.knowledge.graph import knowledge_process
 import portalocker
 
 from nap.common.conf import CONF
@@ -23,60 +19,67 @@ def get_vector_driver():
     raise Exception(f"{CONF.vector.driver} is not supported")
 
 
-class KnowledgeManager:
+class KnowledgeManager(BaseManager):
     def __init__(self) -> None:
-        self.hostname = socket.gethostname()
+        super().__init__()
         self.vector_driver = get_vector_driver()
-        self.scheduler = AsyncIOScheduler()
-        self.scheduler.add_job(self.job_handle_saved, "interval", seconds=10)
 
-        self.backgroup_scheduler = BackgroundScheduler()
+        self.asyncio_scheduler.add_job(
+            self.job_process_knowledges, "interval", seconds=10
+        )
+        self.asyncio_scheduler.add_job(
+            self.job_delete_knowledges, "interval", seconds=10
+        )
+
         self.parse_driver = MarkitdownDriver()
-
-    def start(self):
-        self.scheduler.start()
-        self.backgroup_scheduler.start()
 
     def list_documents(self, content_width: int | None = None):
         return self.vector_driver.list_knowledges()
 
-    def _batch_update_knowledge_status(self, items: Sequence[Knowledge]):
-        status_items = defaultdict(list)
-        for item in items:
-            if item.status == KnowledgeStatus.save_completed.value:
-                item.status = KnowledgeStatus.parse_pending.value
-            elif item.status == KnowledgeStatus.delete.value:
-                item.status = KnowledgeStatus.delete_pending.value
-            status_items[item.status].append(item.uuid)
-
-        for status, uuids in status_items.items():
-            logger.info("update {} knowledge(s) status to {}", len(uuids), status)
-            Knowledge.batch_set_status(uuids, status)
-
-    async def job_handle_saved(self):
+    async def job_process_knowledges(self):
         items = []
         if CONF.db.is_sqlite():
             db_file = CONF.db.url.lstrip("sqlite:///")
             logger.info("get lock ...")
-            with portalocker.Lock(db_file + ".lock"):
-                items = await asyncio.to_thread(Knowledge.get_todo)
-                await asyncio.to_thread(self._batch_update_knowledge_status, items)
+            with portalocker.Lock(db_file + ".process.lock"):
+                items = await asyncio.to_thread(Knowledge.get_pending_process)
+                Knowledge.batch_set_status(
+                    [x.uuid for x in items], KnowledgeStatus.processing.value
+                )
 
-        logger.info("found {} knowledge(s) to handle", len(items))
+        logger.info("found {} knowledge(s) to process", len(items))
         for item in items:
-            self.backgroup_scheduler.add_job(knowledge_handler.run, args=(item,))
+            self.backgroup_scheduler.add_job(knowledge_process.run, args=(item,))
+
+    async def job_delete_knowledges(self):
+        items = []
+        if CONF.db.is_sqlite():
+            db_file = CONF.db.url.lstrip("sqlite:///")
+            logger.info("get lock ...")
+            with portalocker.Lock(db_file + ".delete.lock"):
+                items = await asyncio.to_thread(Knowledge.get_pending_delete)
+                Knowledge.batch_set_status(
+                    [x.uuid for x in items], KnowledgeStatus.deleting.value
+                )
+
+        logger.info("found {} knowledge(s) to delete", len(items))
+        for item in items:
+            await asyncio.to_thread(self.delete_knowledge, item)
 
     def delete_knowledge(self, knowledge: Knowledge):
-        def _delete_knowledge():
+        try:
+            self.vector_driver.delete_knowledge(knowledge)
+        except:
+            logger.exception("delete vector failed")
+            raise
+        else:
+            knowledge.delete()
 
-            self.scheduler.add_job(self.job_handle_saved, "interval", seconds=10)
-            knowledge.set_status(KnowledgeStatus.delete_pending)
-            try:
-                knowledge_handler.run(knowledge)
-            except Exception:
-                knowledge.set_status(KnowledgeStatus.delete)
-
-        self.scheduler.add_job(_delete_knowledge, next_run_time=datetime.now(UTC))
+    def delete_knowledge_backgroup(self, knowledge: Knowledge):
+        knowledge.set_status(KnowledgeStatus.deleting)
+        self.backgroup_scheduler.add_job(
+            self.delete_knowledge, args=(knowledge,), next_run_time=datetime.now(UTC)
+        )
 
 
 MANAGER = KnowledgeManager()

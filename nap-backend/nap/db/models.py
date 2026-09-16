@@ -1,4 +1,4 @@
-from enum import IntEnum, auto
+from enum import IntEnum, StrEnum, auto
 from typing import Sequence
 
 from nap.common.exceptions import AgentNotExists
@@ -9,57 +9,23 @@ from pystonic.common import context
 
 
 class KnowledgeStatus(IntEnum):
-    save_waiting = 0
-    save_running = auto()
-    save_completed = auto()
-    save_failed = auto()
+    pending_process = 0
+    processing = auto()
+    process_failed = auto()
 
-    parse_pending = 100
-    parse_running = auto()
-    parse_completed = auto()
-    parse_failed = auto()
+    pending_delete = auto()
+    deleting = auto()
+    deleted = auto()
 
-    vector_pending = 200
-    vector_running = auto()
-    vector_completed = auto()
-    vector_failed = auto()
+    active = auto()
 
-    enrich_pending = 300
-    enrich_running = auto()
-    enrich_completed = auto()
-    enrich_failed = auto()
 
-    delete = 900
-    delete_pending = auto()
-    delete_running = auto()
-    delete_completed = auto()
-    delete_failed = auto()
-
-    @classmethod
-    def describe(cls, v: "KnowledgeStatus") -> str:
-        return {
-            cls.save_waiting: "等待保存",
-            cls.save_running: "保存中",
-            cls.save_completed: "保存完成",
-            cls.save_failed: "保存失败",
-            cls.parse_pending: "等待解析",
-            cls.parse_running: "解析中",
-            cls.parse_completed: "解析完成",
-            cls.parse_failed: "解析失败",
-            cls.vector_pending: "等待向量化",
-            cls.vector_running: "向量化中",
-            cls.vector_completed: "向量化完成",
-            cls.vector_failed: "向量化失败",
-            cls.enrich_pending: "等待抽取",
-            cls.enrich_running: "抽取中",
-            cls.enrich_completed: "抽取完成",
-            cls.enrich_failed: "抽取失败",
-            cls.delete: "等待删除",
-            cls.delete_pending: "等待删除",
-            cls.delete_running: "删除中",
-            cls.delete_completed: "删除完成",
-            cls.delete_failed: "删除失败",
-        }.get(v, str(v))
+class KnowledgeAction(StrEnum):
+    save = "saving"
+    parse = "parse"
+    vector = "vector"
+    enrich = "enrich"
+    deleting = "delete"
 
 
 def _get_account():
@@ -80,7 +46,9 @@ class LLMs(DBModel, table=True):
     name: str = Field(nullable=False, default="", description="LLM 名称/备注")
     base_url: str = Field(nullable=False, description="API Base URL")
     api_key: str = Field(nullable=False, description="API Key")
-    models: list[str] = Field(nullable=False, default=[], sa_type=JSON, description="支持的模型列表")
+    models: list[str] = Field(
+        nullable=False, default=[], sa_type=JSON, description="支持的模型列表"
+    )
 
 
 class Agents(DBModel, table=True):
@@ -93,7 +61,9 @@ class Agents(DBModel, table=True):
     )
     llm: str = Field(nullable=False, description="LLM UUID")
     status: str = Field(nullable=False, default="draft", description="智能体状态")
-    tools: list[str] = Field(nullable=False, default=[], sa_type=JSON, description="启用的工具列表")
+    tools: list[str] = Field(
+        nullable=False, default=[], sa_type=JSON, description="启用的工具列表"
+    )
 
     @classmethod
     def get_first(cls, uuid: str):
@@ -114,12 +84,13 @@ class KnowledgeBase(DBModel, table=True):
     # enrich_llm: str = Field(nullable=True)
 
 
-
 class KnowledgeEnrichmen(DBModel, table=True):
     __tablename__ = "knowledge_enrichments"  # type: ignore
     knowledge: str = Field(nullable=False, description="文档 UUID")
 
-    keywords: list[str] = Field(nullable=False, sa_type=JSON, description="抽取的关键词列表")
+    keywords: list[str] = Field(
+        nullable=False, sa_type=JSON, description="抽取的关键词列表"
+    )
     summary: str = Field(nullable=False, description="文档摘要")
 
 
@@ -130,7 +101,8 @@ class Knowledge(DBModel, table=True):
     creator: str = Field(nullable=False, description="knowledge creator")
     name: str = Field(nullable=False, description="文档文件名称")
     size: int = Field(nullable=False, description="文档文件大小(bytes)")
-    path: str = Field(nullable=True, description="文档存储路径")
+    raw_path: str = Field(nullable=False, description="源文档存储路径")
+    convert_path: str | None = Field(nullable=True, description="转化后文档存储路径")
     status: int = Field(
         nullable=False,
         default=0,
@@ -153,11 +125,11 @@ class Knowledge(DBModel, table=True):
             return query.one()
 
     @classmethod
-    def get_saved(cls, limits: int = 100):
+    def get_pending_process(cls, limits: int = 100):
         """返回一个 QueryBuilder 用于链式查询"""
         stm = (
             select(cls)
-            .where(cls.status == KnowledgeStatus.save_completed.value)
+            .where(cls.status == KnowledgeStatus.pending_process.value)
             .limit(limits)
         )
 
@@ -166,24 +138,18 @@ class Knowledge(DBModel, table=True):
             return query.all()
 
     @classmethod
-    def get_todo(cls, limits: int = 100):
+    def get_pending_delete(cls, limits: int = 100):
         """返回一个 QueryBuilder 用于链式查询"""
         stm = (
             select(cls)
-            .where(
-                col(cls.status).in_(
-                    [
-                        KnowledgeStatus.save_completed.value,
-                        KnowledgeStatus.delete,
-                    ]
-                )
-            )
+            .where(cls.status == KnowledgeStatus.pending_delete.value)
             .limit(limits)
         )
 
         with get_session() as session:
             query = session.exec(stm)
             return query.all()
+
     @classmethod
     def batch_set_status(cls, uuids: Sequence[str], status: KnowledgeStatus | int):
         stm = (
@@ -202,6 +168,47 @@ class Knowledge(DBModel, table=True):
         if not items:
             return None
         return items[0]
+
+    def add_todo(self, name: str):
+        item = KnowledgeTodo(knowlwdge_uuid=self.uuid, name=name, status='pending')
+        item.create()
+        return item
+
+    def get_or_create_todo(self, name: str):
+        items = KnowledgeTodo.query(
+            KnowledgeTodo.knowlwdge_uuid == self.uuid, KnowledgeTodo.name == name
+        )
+        return items[0] if items else self.add_todo(name)
+
+    def is_active(self):
+        return self.status == KnowledgeStatus.active.value
+
+
+class KnowledgeTodo(DBModel, table=True):
+    __tablename__ = "knowledge_todos"  # type: ignore
+
+    knowlwdge_uuid: str = Field(nullable=False, default="guest", description="知识UUID")
+    name: str = Field(nullable=False, description="任务名称")
+    status: str = Field(nullable=False, default='pending', description="代办状态")
+    detail: str = Field(nullable=False, default="", description="待办详情")
+
+    def is_completed(self):
+        return self.status == 'completed'
+
+    def set_status(self, status: str):
+        self.status = status
+        self.save()
+
+    def set_running(self):
+        self.set_status('running')
+
+    def set_failed(self, detail: str):
+        self.detail = detail
+        self.set_status('failed')
+
+    def set_completed(self):
+        self.detail = ''
+        self.set_status('completed')
 
 
 class Session(DBModel, table=True):

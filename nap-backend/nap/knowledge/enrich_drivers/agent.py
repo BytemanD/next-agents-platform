@@ -44,11 +44,9 @@ ENRICH_TEMPLATE = """
 
 
 class EnrichmentAgentDriver:
-
-
     @funcutil.timeit
     def enrich(
-        self, knowledge: Knowledge, content: str | None = None, replace: bool = False
+        self, knowledge: Knowledge, content: str, replace: bool = False
     ):
         # TODO: use config
         items = LLMs.query(LLMs.user == knowledge.creator)
@@ -73,11 +71,6 @@ class EnrichmentAgentDriver:
             if khm_enrichment and khm_enrichment.keywords and khm_enrichment.summary:
                 raise EnrichmentAlreadyExists(knowledge.uuid)
 
-        if not content:
-            md_driver = MarkitdownDriver()
-            content = md_driver.parse(knowledge)
-
-        knowledge.set_status(KnowledgeStatus.enrich_running)
         logger.info("CALL agent to make knowledge entichment and save db ...")
         result = agent.invoke(
             {
@@ -91,5 +84,4 @@ class EnrichmentAgentDriver:
                 ]
             },
         )
-        knowledge.set_status(KnowledgeStatus.enrich_completed)
-        logger.debug('Agent Return: {}', result['messages'][-1])
+        logger.debug("Agent Return: {}", result["messages"][-1])

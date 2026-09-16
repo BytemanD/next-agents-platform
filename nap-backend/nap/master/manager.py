@@ -1,9 +1,8 @@
-import asyncio
-
 import httpx
 from loguru import logger
 from langchain.agents import create_agent
 from nap.common.conf import CONF
+from nap.common.manager import BaseManager
 from nap.db.models import KnowledgeStatus, Session
 from pydantic import BaseModel, SecretStr
 from langchain_openai import ChatOpenAI
@@ -23,7 +22,7 @@ from nap.common.exceptions import (
     LLMRateLimitError,
 )
 from nap.db.models import Agents, Knowledge, KnowledgeBase, LLMs
-from nap.storage.manager import get_storage_driver
+from nap.storage import get_storage_driver
 
 
 class Message(BaseModel):
@@ -61,36 +60,41 @@ class ReasoningChatOpenAI(ChatOpenAI):
         return generation_chunk
 
 
-class MasterManager:
+class MasterManager(BaseManager):
     def __init__(self):
+        super().__init__()
         self.storage_driver = get_storage_driver()
-        # self.llm = ResearchAI()
         self.knowledge_client = default_client(
             base_url=CONF.master.knowledge_base_url, raise_for_status=True
         )
 
     def get_doc_path(self, path: str):
         logger.info("get doc path: {}", path)
-        docs = Knowledge.query(Knowledge.path == path)
+        docs = Knowledge.query(Knowledge.raw_path == path)
         if not docs:
             return None
-        return self.storage_driver.get_path(docs[0])
+        return self.storage_driver.get_path(docs[0].raw_path)
 
     def upload_doc(
         self, kb: KnowledgeBase, creator: str, filename: str, content: bytes
     ) -> Knowledge:
         """创建 doc 记录， 保存 doc 内容到本地存储"""
 
+        raw_path = f"raw/{creator}/{filename}"
+        self.storage_driver.save(f"{creator}/{filename}", content)
         doc = Knowledge(
             knowledge_base=kb.uuid,
             creator=creator,
             name=filename,
             size=len(content),
-            path="",
-            status=0,
+            raw_path=raw_path,
+            convert_path='',
+            status=KnowledgeStatus.pending_process.value,
         )
         doc.create()
-        self.storage_driver.save(doc, content)
+        doc.add_todo('convert')
+        doc.add_todo('vector')
+        doc.add_todo('enrich')
         return doc
 
     def list_session(self):
@@ -186,7 +190,6 @@ class MasterManager:
             config = RunnableConfig(configurable={"thread_id": session.uuid})
             item = await checkpointer.aget_tuple(config)
             if item:
-                print("===============================")
                 for msg in item.checkpoint.get("channel_values", {}).get(
                     "messages", []
                 ):
@@ -206,7 +209,7 @@ class MasterManager:
             self.knowledge_client.delete(f"/api/v1/knowledges/{knowledge.uuid}")
         except httpx.HTTPError as e:
             logger.error("CALL knowledge service failed: {}", e)
-            knowledge.set_status(KnowledgeStatus.delete)
+            knowledge.set_status(KnowledgeStatus.pending_delete)
 
 
 MANAGER = MasterManager()

@@ -1,4 +1,5 @@
 from loguru import logger
+from nap.common.exceptions import KnowledgeProcessFailed
 from pydantic import BaseModel
 import markitdown
 
@@ -18,15 +19,10 @@ class Document(BaseModel):
 
 
 class MarkitdownDriver:
-
     def __init__(self) -> None:
         self.md = markitdown.MarkItDown()
 
-    def parse(self, knowledge: Knowledge):
-        logger.info("ingest knowledge {}", knowledge)
-
-        logger.info("{} parsing ...", knowledge)
-        knowledge.set_status(KnowledgeStatus.save_running)
-        content = self.md.convert(knowledge.path).text_content
-        knowledge.set_status(KnowledgeStatus.parse_completed)
+    def convert(self, file_path: str):
+        logger.info("convert file {}", file_path)
+        content = self.md.convert(file_path).text_content
         return content

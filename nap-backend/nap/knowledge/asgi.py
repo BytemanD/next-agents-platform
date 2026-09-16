@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
     MANAGER.start()
     yield
     logger.info("stop Knowledge ...")
+    MANAGER.stop()
 
 
 APP = create_app(lifespan=lifespan)

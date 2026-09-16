@@ -29,7 +29,7 @@ def list_knowledge(vectorstore: bool = False):
 @root.command()
 @click.argument("knowledge_uuid")
 @click.option("--force", "-f", is_flag=True, help="force")
-def enrich(knowledge_uuid, force: bool=False):
+def enrich(knowledge_uuid, force: bool = False):
     driver = EnrichmentAgentDriver()
     item = Knowledge.get_by_uuid(knowledge_uuid)
     driver.enrich(item, replace=force)

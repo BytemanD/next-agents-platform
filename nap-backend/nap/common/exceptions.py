@@ -30,3 +30,8 @@ class EnrichFailed(Exception):
 class EnrichmentAlreadyExists(Exception):
     def __init__(self, knowledge_uuid: str) -> None:
         super().__init__(f"knowledge({knowledge_uuid}) enrichment already exists")
+
+
+class KnowledgeProcessFailed(Exception):
+    def __init__(self, knowledge_uuid: str, detail: str) -> None:
+        super().__init__(f"knowledge({knowledge_uuid}) process faield: {detail}")

@@ -1,7 +1,7 @@
 """系统内部使用的工具"""
 
 from loguru import logger
-from nap.db.models import KnowledgeEnrichmen, LLMs
+from nap.db.models import KnowledgeEnrichmen
 
 from langchain_core.tools import tool
 
@@ -24,7 +24,7 @@ def update_knowledge_enrichment(doc_uuid: str, keywords: list[str], summary: str
 
     items = KnowledgeEnrichmen.query(KnowledgeEnrichmen.knowledge == doc_uuid)
     if not items:
-        logger.info('create KnowledgeEnrichmen')
+        logger.info("create KnowledgeEnrichmen")
         item = KnowledgeEnrichmen(
             knowledge=doc_uuid,
             keywords=keywords,
@@ -32,7 +32,7 @@ def update_knowledge_enrichment(doc_uuid: str, keywords: list[str], summary: str
         )
         item.create()
     else:
-        logger.info('update KnowledgeEnrichmen')
+        logger.info("update KnowledgeEnrichmen")
         item = items[0]
         item.keywords = keywords
         item.summary = summary

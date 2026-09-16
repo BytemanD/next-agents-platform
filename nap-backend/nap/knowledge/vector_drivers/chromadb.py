@@ -49,8 +49,6 @@ class ChromadbDriver:
 
     def add_konwledge(self, knowledge: Knowledge, content: str):
         logger.info("ingest knowledge {}", knowledge)
-        knowledge.set_status(KnowledgeStatus.vector_running)
-
         headers_to_split_on = [
             ("#", "Header 1"),
             ("##", "Header 2"),
@@ -60,24 +58,20 @@ class ChromadbDriver:
         md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on)
         chunks = md_splitter.split_text(content)
         for chunk in chunks:
-            chunk.metadata["knowledge_path"] = knowledge.path
+            chunk.metadata["knowledge_path"] = knowledge.raw_path
             chunk.metadata["knowledge_id"] = knowledge.uuid
 
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
         self.vectorstore.add_documents(text_splitter.split_documents(chunks))
         logger.success("{} add documents success", knowledge)
-        knowledge.set_status(KnowledgeStatus.vector_completed)
 
     def delete_knowledge(self, knowledge: Knowledge):
-        knowledge.set_status(KnowledgeStatus.delete_running)
-
         results = self.vectorstore.get(where={"knowledge_id": knowledge.uuid})
         logger.debug("get vector: {}", results)
 
         if results.get("ids"):
             logger.info("delete vector by ids: {}", results.get("ids"))
             self.vectorstore.delete(results.get("ids"))
-        knowledge.set_status(KnowledgeStatus.delete_completed)
 
     def retrieve(self, query: str, k: int = 2):
         results = self.vectorstore.similarity_search_with_score(query, k=k)

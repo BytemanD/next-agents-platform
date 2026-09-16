@@ -1,8 +1,10 @@
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from starlette import status
+from pystonic.common import context
 
 from nap.db.models import Knowledge, KnowledgeBase
 from nap.master.manager import MANAGER
@@ -104,8 +106,12 @@ async def add_knowledge_from_file(kb_id: str, file: UploadFile = File(...)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"knowledge base {kb_id} not found",
         )
-    item = MANAGER.upload_doc(
-        kb, "guest", file.filename or file.file.name, await file.read()
+    item = await asyncio.to_thread(
+        MANAGER.upload_doc,
+        kb,
+        context.getvar("account") or "guest",
+        file.filename or file.file.name,
+        await file.read(),
     )
     return item
 

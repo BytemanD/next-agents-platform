@@ -59,40 +59,17 @@
     </template>
     <t-table size="small" :data="filteredDocs" :columns="columns" :pagination="{ pageSize: 10 }" hover>
       <template #status="{ row }">
-        <t-tag shape="round" v-if="row.status == 'save_waiting'" variant="light-outline">等待保存</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'save_running'" variant="light-outline">保存中</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'save_completed'" variant="light-outline"
-          theme="success">保存完成</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'save_failed'" variant="light-outline" theme="danger">保存失败</t-tag>
+        <t-tag shape="round" v-if="row.status == 'pending_process'" variant="light-outline">等待处理</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'processing'" theme="warning" variant="light-outline">处理中</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'process_failed'" theme="danter"
+          variant="light-outline">处理失败</t-tag>
 
-        <t-tag shape="round" v-else-if="row.status == 'parse_pending'" variant="light-outline">等待解析</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'parse_running'" variant="light-outline">解析中</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'parse_completed'" variant="light-outline"
-          theme="success">解析完成</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'parse_failed'" variant="light-outline" theme="danger">解释</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'pending_delete'" variant="light-outline"
+          theme="danger">等待删除</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'deleting'" variant="light-outline">删除中</t-tag>
+        <t-tag shape="round" v-else-if="row.status == 'deleted'" variant="light-outline">已删除</t-tag>
 
-        <t-tag shape="round" v-else-if="row.status == 'vector_pending'" variant="light-outline">等待向量化</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'vector_running'" variant="light-outline">向量化中</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'vector_completed'" variant="light-outline"
-          theme="success">向量化完成</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'vector_failed'" variant="light-outline"
-          theme="danger">向量化失败</t-tag>
-
-        <t-tag shape="round" v-else-if="row.status == 'enrich_pending'" variant="light-outline">等待抽取</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'enrich_running'" variant="light-outline">抽取中</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'enrich_completed'" variant="light-outline"
-          theme="success">抽取完成</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'enrich_failed'" variant="light-outline"
-          theme="danger">抽取失败</t-tag>
-
-        <t-tag shape="round" v-else-if="row.status == 'delete'" variant="light-outline">等待删除</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'delete_pending'" variant="light-outline">等待删除</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'delete_running'" variant="light-outline">删除中</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'delete_completed'" variant="light-outline"
-          theme="success">删除完成</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'delete_failed'" variant="light-outline"
-          theme="danger">删除完成</t-tag>
-
+        <t-tag shape="round" v-else-if="row.status == 'active'" variant="light-outline" theme="success">完成</t-tag>
         <t-tag shape="round" v-else variant="light-outline">{{ row.status }}</t-tag>
       </template>
       <template #operation="{ row }">

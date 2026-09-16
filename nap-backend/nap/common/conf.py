@@ -20,7 +20,6 @@ class StorageConfig(BaseModel):
 
 
 class MasterConfig(BaseModel):
-    
     knowledge_base_url: str = "http://localhost:8001"
 
 
