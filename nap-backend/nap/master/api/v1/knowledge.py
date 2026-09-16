@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from nap.db.models import Knowledge, KnowledgeStatus
+from nap.db.models import Knowledge, KnowledgeStatus, KnowledgeTodo
 from pydantic import BaseModel
 
 from nap.master.manager import MANAGER
@@ -58,6 +58,15 @@ async def get_knowledge(uuid: str):
         else None
     )
     return data
+
+
+@router.get("/{uuid}/todos")
+async def get_knowledge_todos(uuid: str):
+    k = Knowledge.get_by_uuid(uuid)
+    if not k:
+        raise HTTPException(status_code=404, detail="Knowledge not found")
+    items = KnowledgeTodo.query(KnowledgeTodo.knowlwdge_uuid == uuid)
+    return {"items": items}
 
 
 @router.put("/{uuid}")

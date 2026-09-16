@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { KnowledgeBase, KnowledgeDetail, KnowledgeItem } from '@/types'
+import type { KnowledgeBase, KnowledgeDetail, KnowledgeItem, KnowledgeTodo } from '@/types'
 
 export interface AgentPayload {
   name: string
@@ -126,6 +126,11 @@ export class Api {
 
   async fetchKnowledgeDetail<T = KnowledgeDetail>(uuid: string) {
     const { data } = await axios.get<T>(`/api/v1/knowledges/${uuid}`)
+    return data
+  }
+
+  async fetchKnowledgeTodos<T = KnowledgeTodo>(uuid: string) {
+    const { data } = await axios.get<{ items: T[] }>(`/api/v1/knowledges/${uuid}/todos`)
     return data
   }
 

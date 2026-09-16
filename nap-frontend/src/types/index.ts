@@ -97,6 +97,16 @@ export interface KnowledgeDetail extends KnowledgeItem {
   enrichment: KnowledgeEnrichment | null
 }
 
+export interface KnowledgeTodo {
+  id: string
+  knowlwdge_uuid: string
+  name: string
+  status: string
+  detail: string
+  created_at: string
+  updated_at: string
+}
+
 export const KNOWLEDGE_STATUS: Record<number, string> = {
   // 0: '排队中',
   // 1: '保存中',

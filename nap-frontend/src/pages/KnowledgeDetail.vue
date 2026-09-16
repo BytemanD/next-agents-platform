@@ -61,7 +61,7 @@
       <template #status="{ row }">
         <t-tag shape="round" v-if="row.status == 'pending_process'" variant="light-outline">等待处理</t-tag>
         <t-tag shape="round" v-else-if="row.status == 'processing'" theme="warning" variant="light-outline">处理中</t-tag>
-        <t-tag shape="round" v-else-if="row.status == 'process_failed'" theme="danter"
+        <t-tag shape="round" v-else-if="row.status == 'process_failed'" theme="danger"
           variant="light-outline">处理失败</t-tag>
 
         <t-tag shape="round" v-else-if="row.status == 'pending_delete'" variant="light-outline"
@@ -107,6 +107,16 @@
         <t-descriptions-item label="上传时间">{{ new Date(detail.created_at).toLocaleString() }}</t-descriptions-item>
         <t-descriptions-item label="更新时间">{{ new Date(detail.updated_at).toLocaleString() }}</t-descriptions-item>
       </t-descriptions>
+
+      <t-collapse v-model="todosCollapse" class="my-3">
+        <t-collapse-panel value="todos" header="处理进度">
+          <t-steps layout="vertical" :current="currentTodo" theme="dot" readonly>
+            <t-step-item v-for="todo in todos" :key="todo.id" :title="todoName(todo.name)" :status="todoStatus(todo.status)"
+              :content="todo.detail" />
+          </t-steps>
+        </t-collapse-panel>
+      </t-collapse>
+
       <t-divider>内容抽取摘要</t-divider>
       <template v-if="detail.enrichment">
         <h2 class="my-2"><b>关键词</b></h2>
@@ -132,7 +142,7 @@ import { useRoute } from 'vue-router'
 import { MessagePlugin, Button as TButton } from 'tdesign-vue-next'
 import { API } from '@/api'
 import { useKnowledgeStore } from '@/stores/knowledge'
-import type { KnowledgeItem, KnowledgeBase, KnowledgeDetail } from '@/types'
+import type { KnowledgeItem, KnowledgeBase, KnowledgeDetail, KnowledgeTodo } from '@/types'
 
 const route = useRoute()
 const knowledgeStore = useKnowledgeStore()
@@ -149,13 +159,21 @@ const uploadFiles = ref<any[]>([])
 const showDetail = ref(false)
 const loadingDetail = ref(false)
 const detail = ref<KnowledgeDetail | null>(null)
+const todos = ref<KnowledgeTodo[]>([])
+const todosCollapse = ref([])
 
 async function handleShowDetail(row: any) {
   showDetail.value = true
   loadingDetail.value = true
   detail.value = null
+  todos.value = []
   try {
-    detail.value = await API.fetchKnowledgeDetail(row.uuid)
+    const [d, t] = await Promise.all([
+      API.fetchKnowledgeDetail(row.uuid),
+      API.fetchKnowledgeTodos(row.uuid)
+    ])
+    detail.value = d
+    todos.value = t.items
   } catch {
     MessagePlugin.error('加载文档详情失败')
   } finally {
@@ -183,7 +201,11 @@ const filteredDocs = computed(() => {
   return docs.value.filter(d => d.name.toLowerCase().includes(q))
 })
 
-const readyCount = computed(() => docs.value.filter(d => d.status === 2 || d.status === 4).length)
+const isDone = (s: any) => {
+  const v = String(s || '')
+  return v === 'active' || v === '6'
+}
+const readyCount = computed(() => docs.value.filter(d => isDone(d.status)).length)
 const pendingCount = computed(() => docs.value.length - readyCount.value)
 const totalSizeText = computed(() => formatSize(docs.value.reduce((sum, d) => sum + d.size, 0)))
 
@@ -270,16 +292,34 @@ function formatSize(bytes: number) {
 }
 
 const STATUS_TEXT: Record<string, string> = {
-  save_waiting: '等待保存', save_running: '保存中', save_completed: '保存完成', save_failed: '保存失败',
-  parse_pending: '等待解析', parse_running: '解析中', parse_completed: '解析完成', parse_failed: '解析失败',
-  vector_pending: '等待向量化', vector_running: '向量化中', vector_completed: '向量化完成', vector_failed: '向量化失败',
-  enrich_pending: '等待抽取', enrich_running: '抽取中', enrich_completed: '抽取完成', enrich_failed: '抽取失败',
-  delete: '等待删除', delete_pending: '等待删除', delete_running: '删除中', delete_completed: '删除完成', delete_failed: '删除失败'
+  pending_process: '待处理', processing: '处理中', process_failed: '处理失败',
+  pending_delete: '待删除', deleting: '删除中', deleted: '已删除',
+  active: '已就绪'
 }
 
 function statusText(status: string | number): string {
   return STATUS_TEXT[String(status)] || String(status)
 }
+
+const TODO_NAME_TEXT: Record<string, string> = {
+  convert: '内容转换', vector: '向量化', enrich: '内容抽取'
+}
+
+function todoName(name: string): string {
+  return TODO_NAME_TEXT[name] || name
+}
+
+function todoStatus(status: string): 'default' | 'process' | 'finish' | 'error' {
+  if (status === 'running') return 'process'
+  if (status === 'completed') return 'finish'
+  if (status === 'failed') return 'error'
+  return 'default'
+}
+
+const currentTodo = computed(() => {
+  const idx = todos.value.findIndex(t => t.status !== 'completed')
+  return idx === -1 ? todos.value.length - 1 : idx
+})
 
 watch(baseUuid, () => knowledgeStore.fetchKnowledgeItems(baseUuid.value))
 
