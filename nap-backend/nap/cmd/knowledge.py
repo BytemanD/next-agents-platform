@@ -1,6 +1,6 @@
 import click
 from nap.db.models import Knowledge
-from nap.knowledge.enrich_drivers.agent import EnrichmentAgentDriver
+from nap.services.enrich import ENRICH_SERVICE
 from pystonic.pretty.output import print_models
 
 from nap.knowledge.manager import MANAGER
@@ -30,9 +30,8 @@ def list_knowledge(vectorstore: bool = False):
 @click.argument("knowledge_uuid")
 @click.option("--force", "-f", is_flag=True, help="force")
 def enrich(knowledge_uuid, force: bool = False):
-    driver = EnrichmentAgentDriver()
     item = Knowledge.get_by_uuid(knowledge_uuid)
-    driver.enrich(item, replace=force)
+    ENRICH_SERVICE.enrich(item, replace=force)
 
 
 # @root.command("sync", help="sync from db")

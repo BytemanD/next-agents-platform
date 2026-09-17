@@ -1,13 +1,12 @@
 from langchain_openai import ChatOpenAI
 from loguru import logger
-from nap.knowledge.parse_drivers.markitdown import MarkitdownDriver
 from langchain.agents import create_agent
 from pydantic import SecretStr
 from pystonic.utils import funcutil
 
 from nap.llm.tools.internal import update_knowledge_enrichment
 from nap.common.exceptions import EnrichFailed, EnrichmentAlreadyExists
-from nap.db.models import Knowledge, KnowledgeStatus, LLMs
+from nap.db.models import Knowledge, LLMs
 
 ENRICH_TEMPLATE = """
 请阅读以下文档内容，完成三项任务：
@@ -43,11 +42,9 @@ ENRICH_TEMPLATE = """
 """
 
 
-class EnrichmentAgentDriver:
+class EnrichmentService:
     @funcutil.timeit
-    def enrich(
-        self, knowledge: Knowledge, content: str, replace: bool = False
-    ):
+    def enrich(self, knowledge: Knowledge, content: str, replace: bool = False):
         # TODO: use config
         items = LLMs.query(LLMs.user == knowledge.creator)
         if not items:
@@ -85,3 +82,6 @@ class EnrichmentAgentDriver:
             },
         )
         logger.debug("Agent Return: {}", result["messages"][-1])
+
+
+ENRICH_SERVICE = EnrichmentService()

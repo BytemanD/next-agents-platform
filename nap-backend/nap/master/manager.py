@@ -1,12 +1,8 @@
 import httpx
 from loguru import logger
 from langchain.agents import create_agent
-from nap.common.conf import CONF
-from nap.common.manager import BaseManager
-from nap.db.models import KnowledgeStatus, Session
 from pydantic import BaseModel, SecretStr
 from langchain_openai import ChatOpenAI
-
 from pystonic.common import context
 from langchain_openai.chat_models.base import OpenAIRateLimitError
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -16,13 +12,17 @@ from langchain_core.runnables.config import RunnableConfig
 from pystonic.utils.strutil import text_shorten
 from pystonic.utils.httpclient import default_client
 
+from nap.common.conf import CONF
+from nap.common.manager import BaseManager
+from nap.db.models import KnowledgeStatus, Session
+from nap.llm.tools import vector
+from nap.services.storage import STORE_SERVICE
 
 from nap.common.exceptions import (
     LLMIsInvalid,
     LLMRateLimitError,
 )
 from nap.db.models import Agents, Knowledge, KnowledgeBase, LLMs
-from nap.storage import get_storage_driver
 
 
 class Message(BaseModel):
@@ -63,39 +63,32 @@ class ReasoningChatOpenAI(ChatOpenAI):
 class MasterManager(BaseManager):
     def __init__(self):
         super().__init__()
-        self.storage_driver = get_storage_driver()
         self.knowledge_client = default_client(
             base_url=CONF.master.knowledge_base_url, raise_for_status=True
         )
 
-    def get_doc_path(self, path: str):
-        logger.info("get doc path: {}", path)
-        docs = Knowledge.query(Knowledge.raw_path == path)
-        if not docs:
-            return None
-        return self.storage_driver.get_path(docs[0].raw_path)
-
-    def upload_doc(
+    def upload_knowledge(
         self, kb: KnowledgeBase, creator: str, filename: str, content: bytes
     ) -> Knowledge:
         """创建 doc 记录， 保存 doc 内容到本地存储"""
 
-        raw_path = f"raw/{creator}/{filename}"
-        self.storage_driver.save(f"{creator}/{filename}", content)
-        doc = Knowledge(
+        knowledge = Knowledge(
             knowledge_base=kb.uuid,
             creator=creator,
             name=filename,
             size=len(content),
-            raw_path=raw_path,
-            convert_path='',
+            raw_path="",
+            convert_path="",
             status=KnowledgeStatus.pending_process.value,
         )
-        doc.create()
-        doc.add_todo('convert')
-        doc.add_todo('vector')
-        doc.add_todo('enrich')
-        return doc
+        knowledge.create()
+
+        STORE_SERVICE.save_raw(knowledge, content)
+
+        knowledge.add_todo("convert")
+        knowledge.add_todo("vector")
+        knowledge.add_todo("enrich")
+        return knowledge
 
     def list_session(self):
         """Project manager"""
@@ -122,7 +115,12 @@ class MasterManager(BaseManager):
             # use_responses_api=False,
         )
 
-        return create_agent(model=agent_model, checkpointer=checkpointer)
+        return create_agent(
+            model=agent_model,
+            system_prompt=agent.instruction,
+            checkpointer=checkpointer,
+            tools=[vector.retrival],
+        )
 
     async def chat(
         self,
@@ -143,7 +141,7 @@ class MasterManager(BaseManager):
             session.create()
 
         async with AsyncSqliteSaver.from_conn_string(
-            "data/checkpoint.sqlite"
+            CONF.store + "/checkpoint.sqlite"
         ) as checkpointer:
             agent = self._build_agent(
                 db_agent,
@@ -164,6 +162,7 @@ class MasterManager(BaseManager):
                     },
                 },
                 # version="v3"
+                context=vector.Context(),
             )
 
             try:
@@ -181,6 +180,9 @@ class MasterManager(BaseManager):
 
     async def list_sessions(self, agent_uuid: str):
         return Session.get_recent(agent_uuid)
+
+    async def delete_session(self, session_id: str):
+        return Session.delete_by_uuid(session_id)
 
     async def list_messages(self, session: Session):
         messages = []

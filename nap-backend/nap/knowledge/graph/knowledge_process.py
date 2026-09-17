@@ -6,20 +6,15 @@ START --> convert --> vector --+-->  active --> END
 ```
 """
 
-import os
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
 from langgraph.graph import StateGraph, START, END
-from pystonic.common import context
-
-from nap.storage import get_storage_driver
-from nap.common.conf import CONF
 from nap.common.exceptions import KnowledgeProcessFailed
 from nap.db.models import Knowledge, KnowledgeStatus
-from nap.knowledge.enrich_drivers.agent import EnrichmentAgentDriver
-from nap.knowledge.vector_drivers.chromadb import ChromadbDriver
-from nap.knowledge.parse_drivers.markitdown import MarkitdownDriver
+from nap.services.convert import CONVERT_SERVICE
+from nap.services.vector import VECTOR_SERVICE
+from nap.services.enrich import ENRICH_SERVICE
 
 
 class State(TypedDict):
@@ -31,11 +26,6 @@ class State(TypedDict):
     enrich: NotRequired[bool]
 
 
-parse_driver = MarkitdownDriver()
-vector_driver = ChromadbDriver()
-storage_driver = get_storage_driver()
-
-
 def _node_convert(state: State):
     todo = state["knowledge"].get_or_create_todo("convert")
     if todo.is_completed() and state["knowledge"].convert_path:
@@ -44,23 +34,10 @@ def _node_convert(state: State):
             "content": Path(state["knowledge"].convert_path).read_text(),
         }
 
-    convert_path = Path(
-        CONF.store,
-        "convert",
-        state["knowledge"].uuid,
-        os.path.basename(state["knowledge"].raw_path),
-    )
-    convert_path.parent.mkdir(parents=True, exist_ok=True)
-
     todo.set_running()
-    file_path = storage_driver.get_path(state["knowledge"].raw_path)
-    content = parse_driver.convert(str(file_path))
-    storage_driver.save(str(convert_path), content)
-
-    state["knowledge"].convert_path = str(convert_path)
-    state["knowledge"].save()
+    content = CONVERT_SERVICE.convert(state["knowledge"])
     todo.set_completed()
-    return {"convert": True, 'content': content}
+    return {"convert": True, "content": content}
 
 
 def _node_vector(state: State):
@@ -69,7 +46,7 @@ def _node_vector(state: State):
         return {"vector": True}
 
     todo.set_running()
-    vector_driver.add_konwledge(state["knowledge"], state["content"])
+    VECTOR_SERVICE.add_konwledge(state["knowledge"], state["content"])
     todo.set_completed()
     return {"vector": True}
 
@@ -79,8 +56,7 @@ def _node_enrich(state: State):
     if todo.is_completed():
         return {"enrich": True}
     todo.set_running()
-    driver = EnrichmentAgentDriver()
-    driver.enrich(state["knowledge"], replace=True, content=state["content"])
+    ENRICH_SERVICE.enrich(state["knowledge"], replace=True, content=state["content"])
     todo.set_completed()
     return {"enrich": True}
 

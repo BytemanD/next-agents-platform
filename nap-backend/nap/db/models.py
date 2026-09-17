@@ -1,4 +1,6 @@
 from enum import IntEnum, StrEnum, auto
+import os
+from pathlib import Path
 from typing import Sequence
 
 from nap.common.exceptions import AgentNotExists
@@ -101,7 +103,7 @@ class Knowledge(DBModel, table=True):
     creator: str = Field(nullable=False, description="knowledge creator")
     name: str = Field(nullable=False, description="文档文件名称")
     size: int = Field(nullable=False, description="文档文件大小(bytes)")
-    raw_path: str = Field(nullable=False, description="源文档存储路径")
+    raw_path: str | None = Field(nullable=True, description="源文档存储路径")
     convert_path: str | None = Field(nullable=True, description="转化后文档存储路径")
     status: int = Field(
         nullable=False,
@@ -115,6 +117,13 @@ class Knowledge(DBModel, table=True):
 
     def __str__(self):
         return f"{self.uuid}({self.name})"
+
+    def get_conver_path(self):
+        if self.convert_path:
+            return self.convert_path
+        if not self.raw_path:
+            raise ValueError("raw_path is missing")
+        return str(Path("convert", self.uuid, os.path.basename(self.raw_path)))
 
     @classmethod
     def count(cls, *criterion, **filters):
@@ -170,7 +179,7 @@ class Knowledge(DBModel, table=True):
         return items[0]
 
     def add_todo(self, name: str):
-        item = KnowledgeTodo(knowlwdge_uuid=self.uuid, name=name, status='pending')
+        item = KnowledgeTodo(knowlwdge_uuid=self.uuid, name=name, status="pending")
         item.create()
         return item
 
@@ -189,26 +198,26 @@ class KnowledgeTodo(DBModel, table=True):
 
     knowlwdge_uuid: str = Field(nullable=False, default="guest", description="知识UUID")
     name: str = Field(nullable=False, description="任务名称")
-    status: str = Field(nullable=False, default='pending', description="代办状态")
+    status: str = Field(nullable=False, default="pending", description="代办状态")
     detail: str = Field(nullable=False, default="", description="待办详情")
 
     def is_completed(self):
-        return self.status == 'completed'
+        return self.status == "completed"
 
     def set_status(self, status: str):
         self.status = status
         self.save()
 
     def set_running(self):
-        self.set_status('running')
+        self.set_status("running")
 
     def set_failed(self, detail: str):
         self.detail = detail
-        self.set_status('failed')
+        self.set_status("failed")
 
     def set_completed(self):
-        self.detail = ''
-        self.set_status('completed')
+        self.detail = ""
+        self.set_status("completed")
 
 
 class Session(DBModel, table=True):

@@ -11,13 +11,12 @@
         </div>
       </t-space>
       <t-space size="12">
-        <t-button @click="handleSave('draft')">保存草稿</t-button>
-        <t-button @click="handleSave('active')">发布</t-button>
+        <t-button @click="handleSave('active')">保存</t-button>
       </t-space>
     </div>
 
     <t-row :gutter="[24, 24]">
-      <t-col :xs="24" :lg="16">
+      <t-col :xs="12" :lg="4">
         <t-space direction="vertical" size="24" style="width: 100%">
           <t-card :bordered="true" class="settings-card">
             <template #title><span class="text-nap-text">基本信息</span></template>
@@ -39,22 +38,15 @@
           </t-card>
 
           <t-card :bordered="true" class="settings-card">
-            <template #title><span class="text-nap-text">系统提示词</span></template>
-            <t-textarea v-model="form.systemPrompt" :autosize="{ minRows: 10, maxRows: 20 }"
-              placeholder="你是一位乐于助人的助理..." class="font-mono text-sm" />
-            <p class="text-xs text-nap-text-secondary mt-2">定义智能体的性格、知识和行为规则。</p>
-          </t-card>
-
-          <t-card :bordered="true" class="settings-card">
             <template #title><span class="text-nap-text">参数设置</span></template>
             <t-row :gutter="16">
               <t-col :xs="24" :sm="12">
-                <t-form-item label="温度">
+                <t-form-item label="温度" label-align="left" :label-width="72">
                   <t-slider v-model="form.temperature" :min="0" :max="2" :step="0.1" show-step />
                 </t-form-item>
               </t-col>
               <t-col :xs="24" :sm="12">
-                <t-form-item label="最大 Token 数">
+                <t-form-item label="最大 Token 数" label-align="left" :label-width="96">
                   <t-input-number v-model="form.maxTokens" :min="256" :max="128000" :step="256" theme="normal" />
                 </t-form-item>
               </t-col>
@@ -63,7 +55,16 @@
         </t-space>
       </t-col>
 
-      <t-col :xs="24" :lg="8">
+      <t-col :xs="12" :lg="4">
+        <t-card :bordered="true" class="settings-card h-full">
+          <template #title><span class="text-nap-text">系统提示词</span></template>
+          <t-textarea v-model="form.systemPrompt" :autosize="{ minRows: 10, maxRows: 20 }"
+            placeholder="你是一位乐于助人的助理..." class="font-mono text-sm" />
+          <p class="text-xs text-nap-text-secondary mt-2">定义智能体的性格、知识和行为规则。</p>
+        </t-card>
+      </t-col>
+
+      <t-col :xs="12" :lg="4">
         <t-space direction="vertical" size="24" style="width: 100%">
           <t-card :bordered="true" class="settings-card">
             <template #title><span class="text-nap-text">工具</span></template>
@@ -98,12 +99,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { API } from '@/api'
 
 const route = useRoute()
-const router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 
 const form = ref({
@@ -118,6 +118,20 @@ const form = ref({
 })
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
+const knowledgeOptions = ref<{ label: string; value: string }[]>([])
+
+function defaultForm() {
+  return {
+    name: '',
+    description: '',
+    model: null as string | null,
+    systemPrompt: '',
+    temperature: 0.7,
+    maxTokens: 4096,
+    tools: [] as string[],
+    knowledgeBaseIds: [] as string[]
+  }
+}
 
 async function fetchLLMs() {
   try {
@@ -133,19 +147,42 @@ async function fetchLLMs() {
   }
 }
 
-const availableTools = [
-  { id: 'web_search', name: '联网搜索', description: '搜索互联网', icon: 'search' },
-  { id: 'code_exec', name: '代码执行', description: '运行 Python 代码', icon: 'code' },
-  { id: 'file_read', name: '文件读取', description: '读取文件与文档', icon: 'file' },
-  { id: 'file_write', name: '文件写入', description: '创建和编辑文件', icon: 'edit' },
-  { id: 'database', name: '数据库查询', description: '查询数据库', icon: 'database' },
-  { id: 'api_call', name: 'API 调用', description: '发起 HTTP 请求', icon: 'link' }
-]
+async function fetchKnowledgeBases() {
+  try {
+    const data = await API.fetchKnowledgeBases()
+    knowledgeOptions.value = (data.items || []).map(
+      (kb) => ({ label: kb.name, value: kb.uuid })
+    )
+  } catch {
+    knowledgeOptions.value = []
+  }
+}
 
-const knowledgeOptions = [
-  { label: '我的文档', value: 'kb-1' },
-  { label: '代码库', value: 'kb-2' },
-  { label: '研究论文', value: 'kb-3' }
+async function fetchAgent(agentUuid: string) {
+  try {
+    const agent = await API.fetchAgent<{
+      uuid: string
+      name: string
+      description: string
+      instruction: string
+      llm: string
+      status: string
+      tools: string[]
+    }>(agentUuid)
+    const f = defaultForm()
+    f.name = agent.name
+    f.description = agent.description
+    f.systemPrompt = agent.instruction
+    f.model = agent.llm || null
+    f.tools = agent.tools || []
+    form.value = f
+  } catch {
+    MessagePlugin.error('加载智能体失败')
+  }
+}
+
+const availableTools = [
+  { id: 'retrival', name: '知识库检索', description: '从知识库检索相关内容', icon: 'search' }
 ]
 
 function toggleTool(toolId: string) {
@@ -174,7 +211,6 @@ async function handleSave(status: string) {
       await API.createAgent(payload)
       MessagePlugin.success('创建成功')
     }
-    router.push('/agents')
   } catch {
     MessagePlugin.error(route.params.id ? '更新失败' : '创建失败')
   }
@@ -182,17 +218,9 @@ async function handleSave(status: string) {
 
 onMounted(() => {
   fetchLLMs()
+  fetchKnowledgeBases()
   if (isEdit.value) {
-    form.value = {
-      name: '研究助理',
-      description: '协助进行研究和文献综述',
-      model: 'gpt-4o',
-      systemPrompt: '你是一位乐于助人的研究助理...',
-      temperature: 0.7,
-      maxTokens: 4096,
-      tools: ['web_search', 'file_read'],
-      knowledgeBaseIds: ['kb-1']
-    }
+    fetchAgent(route.params.id as string)
   }
 })
 </script>

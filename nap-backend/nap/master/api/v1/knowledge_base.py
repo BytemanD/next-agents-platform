@@ -107,7 +107,7 @@ async def add_knowledge_from_file(kb_id: str, file: UploadFile = File(...)):
             detail=f"knowledge base {kb_id} not found",
         )
     item = await asyncio.to_thread(
-        MANAGER.upload_doc,
+        MANAGER.upload_knowledge,
         kb,
         context.getvar("account") or "guest",
         file.filename or file.file.name,

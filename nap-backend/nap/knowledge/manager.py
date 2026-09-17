@@ -8,22 +8,13 @@ import portalocker
 
 from nap.common.conf import CONF
 from nap.db.models import Knowledge, KnowledgeStatus
-from nap.knowledge.vector_drivers.chromadb import ChromadbDriver
-from nap.knowledge.parse_drivers.markitdown import MarkitdownDriver
-
-
-def get_vector_driver():
-    if CONF.vector.driver == "chromadb":
-        return ChromadbDriver()
-
-    raise Exception(f"{CONF.vector.driver} is not supported")
+from nap.services.vector import VECTOR_SERVICE
+from nap.services.storage import STORE_SERVICE
 
 
 class KnowledgeManager(BaseManager):
     def __init__(self) -> None:
         super().__init__()
-        self.vector_driver = get_vector_driver()
-
         self.asyncio_scheduler.add_job(
             self.job_process_knowledges, "interval", seconds=10
         )
@@ -31,10 +22,8 @@ class KnowledgeManager(BaseManager):
             self.job_delete_knowledges, "interval", seconds=10
         )
 
-        self.parse_driver = MarkitdownDriver()
-
     def list_documents(self, content_width: int | None = None):
-        return self.vector_driver.list_knowledges()
+        return VECTOR_SERVICE.list_knowledges()
 
     async def job_process_knowledges(self):
         items = []
@@ -68,12 +57,16 @@ class KnowledgeManager(BaseManager):
 
     def delete_knowledge(self, knowledge: Knowledge):
         try:
-            self.vector_driver.delete_knowledge(knowledge)
+            VECTOR_SERVICE.delete_knowledge(knowledge)
         except:
-            logger.exception("delete vector failed")
+            logger.exception("delete knowledge vector failed")
             raise
-        else:
-            knowledge.delete()
+        try:
+            STORE_SERVICE.remove(knowledge)
+        except:
+            logger.exception("remove knowledge storage failed")
+            raise
+        knowledge.delete()
 
     def delete_knowledge_backgroup(self, knowledge: Knowledge):
         knowledge.set_status(KnowledgeStatus.deleting)

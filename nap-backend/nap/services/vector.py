@@ -8,7 +8,7 @@ from langchain_chroma import Chroma
 from loguru import logger
 from pydantic import BaseModel
 
-from nap.db.models import Knowledge, KnowledgeStatus
+from nap.db.models import Knowledge
 from nap.common.conf import CONF
 
 
@@ -23,7 +23,7 @@ class Document(BaseModel):
     metadata: dict = {}
 
 
-class ChromadbDriver:
+class VectorService:
     def __init__(self) -> None:
         if CONF.chromadb.data_path:
             self.data_path = Path(CONF.chromadb.data_path)
@@ -73,8 +73,12 @@ class ChromadbDriver:
             logger.info("delete vector by ids: {}", results.get("ids"))
             self.vectorstore.delete(results.get("ids"))
 
-    def retrieve(self, query: str, k: int = 2):
+    def retrieval(self, query: str, k: int = 3):
         results = self.vectorstore.similarity_search_with_score(query, k=k)
-        for doc, score in results:
-            print(f"相似度分数: {score:.4f}")
-            print(f"内容: {doc.page_content[:100]}...")
+        return [{"score": score, "content": doc.page_content} for doc, score in results]
+        # for doc, score in results:
+        #     print(f"相似度分数: {score:.4f}")
+        #     print(f"内容: {doc.page_content[:100]}...")
+
+
+VECTOR_SERVICE = VectorService()
