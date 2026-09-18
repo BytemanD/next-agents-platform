@@ -11,6 +11,8 @@ _ALTERS: dict[str, list[tuple[str, str]]] = {
     "agents": [
         ("status", "TEXT NOT NULL DEFAULT 'draft'"),
         ("tools", "TEXT NOT NULL DEFAULT '[]'"),
+        ("config", "TEXT NOT NULL DEFAULT '{}'"),
+        ("knowledge_bases", "TEXT NOT NULL DEFAULT '[]'"),
     ],
     "llms": [
         ("name", "TEXT NOT NULL DEFAULT ''"),

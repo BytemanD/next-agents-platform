@@ -4,9 +4,10 @@ from pathlib import Path
 from typing import Sequence
 
 from nap.common.exceptions import AgentNotExists
+from nap.db.types import AgentConfig, PydanticType
 from pydantic import field_serializer
 from pystonic.orm.models import DBModel, get_session
-from sqlmodel import JSON, Field, Text, col, desc, func, select, update
+from sqlmodel import JSON, Column, Field, Text, col, desc, func, select, update
 from pystonic.common import context
 
 
@@ -63,6 +64,21 @@ class Agents(DBModel, table=True):
     )
     llm: str = Field(nullable=False, description="LLM UUID")
     status: str = Field(nullable=False, default="draft", description="智能体状态")
+
+    config: AgentConfig = Field(
+        default_factory=AgentConfig,
+        # nullable=False,
+        sa_column=Column(
+            PydanticType(AgentConfig),
+            nullable=False,
+        ),
+        description="参数配置",
+    )
+
+    knowledge_bases: list[str] = Field(
+        nullable=False, default=[], sa_type=JSON, description="知识库"
+    )
+
     tools: list[str] = Field(
         nullable=False, default=[], sa_type=JSON, description="启用的工具列表"
     )
@@ -240,3 +256,14 @@ class Session(DBModel, table=True):
 
         with get_session() as session:
             return session.exec(stm).all()
+
+
+class AgentCallback(DBModel, table=True):
+    __tablename__ = "agent_callbacks"  # type: ignore
+
+    agent_uuid: str = Field(nullable=False, description="Agent UUID")
+    session_uuid: str = Field(nullable=False, description="Session UUID")
+    total_tokens: int = Field(nullable=True, default=0,description="Total tokens")
+    prompt_tokens: int = Field(nullable=True, default=0, description="Prompt_tokens")
+    completion_tokens: int = Field(nullable=True, default=0, description="Completion tokens")
+    total_cost: float = Field(nullable=True, default=0.0, description="Total Fost")

@@ -1,15 +1,14 @@
 export interface Agent {
-  id: string
+  uuid: string
   name: string
   description: string
-  avatar: string
-  model: string
+  llm: string
+  instruction?: string
   status: 'active' | 'draft' | 'error'
+  config: Object
+  knowledge_bases: string[]
   tools: string[]
-  systemPrompt?: string
-  temperature?: number
-  maxTokens?: number
-  knowledgeBaseIds?: string[]
+
   createdAt: string
   updatedAt: string
 }

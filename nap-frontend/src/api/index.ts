@@ -7,6 +7,8 @@ export interface AgentPayload {
   instruction: string
   llm: string
   status: string
+  config?: { temperature: number; max_tokens: number }
+  knowledge_bases?: string[]
   tools: string[]
 }
 

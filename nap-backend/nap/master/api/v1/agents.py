@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from nap.db.models import Agents
+from nap.db.models import AgentConfig, Agents
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
@@ -16,6 +16,8 @@ class AgentCreate(BaseModel):
     instruction: str = ""
     llm: str = ""
     status: str = "draft"
+    config: AgentConfig = AgentConfig()
+    knowledge_bases: list[str] = []
     tools: list[str] = []
 
 
@@ -25,6 +27,8 @@ class AgentUpdate(BaseModel):
     instruction: Optional[str] = None
     llm: Optional[str] = None
     status: Optional[str] = None
+    config: Optional[AgentConfig | dict] = None
+    knowledge_bases: Optional[list[str]] = None
     tools: Optional[list[str]] = None
 
 
@@ -35,6 +39,8 @@ class AgentResponse(BaseModel):
     instruction: str
     llm: str
     status: str
+    config: dict
+    knowledge_bases: list[str]
     tools: list[str]
     created_at: str
     updated_at: str
@@ -71,12 +77,19 @@ async def get_agent(uuid: str):
 
 @router.post("", status_code=201)
 async def create_agent(body: AgentCreate):
+    config = (
+        body.config.model_dump()
+        if isinstance(body.config, AgentConfig)
+        else dict(body.config)
+    )
     a = Agents(
         name=body.name,
         description=body.description,
         instruction=body.instruction,
         llm=body.llm,
         status=body.status,
+        config=config,
+        knowledge_bases=body.knowledge_bases,
         tools=body.tools,
     )
     a.create()
@@ -99,6 +112,14 @@ async def update_agent(uuid: str, body: AgentUpdate):
         a.llm = body.llm
     if body.status is not None:
         a.status = body.status
+    if body.config is not None:
+        a.config = (
+            body.config.model_dump()
+            if isinstance(body.config, AgentConfig)
+            else dict(body.config)
+        )
+    if body.knowledge_bases is not None:
+        a.knowledge_bases = body.knowledge_bases
     if body.tools is not None:
         a.tools = body.tools
 

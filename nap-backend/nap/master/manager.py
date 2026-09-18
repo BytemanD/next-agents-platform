@@ -9,12 +9,13 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
+from langchain_community.callbacks import get_openai_callback
 from pystonic.utils.strutil import text_shorten
 from pystonic.utils.httpclient import default_client
 
 from nap.common.conf import CONF
 from nap.common.manager import BaseManager
-from nap.db.models import KnowledgeStatus, Session
+from nap.db.models import AgentCallback, KnowledgeStatus, Session
 from nap.llm.tools import vector
 from nap.services.storage import STORE_SERVICE
 
@@ -109,7 +110,9 @@ class MasterManager(BaseManager):
             model=model or llm.models[0],
             api_key=SecretStr(llm.api_key),
             base_url=llm.base_url,
-            temperature=temperature,
+            temperature=agent.config.temperature,
+            stream_usage=True,
+            model_kwargs={"stream_options": {"include_usage": True}},
             # use_responses_api=True,
             # reasoning_effort="medium",
             # use_responses_api=False,
@@ -140,6 +143,30 @@ class MasterManager(BaseManager):
             )
             session.create()
 
+        with get_openai_callback() as cb:
+            async for event in self._chat(
+                db_agent, session, query, model=model, temperature=temperature
+            ):
+                yield event
+
+            callback = AgentCallback(
+                agent_uuid=db_agent.uuid,
+                session_uuid=session.uuid,
+                total_tokens=cb.total_tokens,
+                prompt_tokens=cb.prompt_tokens,
+                completion_tokens=cb.completion_tokens,
+                total_cost=cb.total_cost,
+            )
+            self.run_background_job(callback.create)
+
+    async def _chat(
+        self,
+        db_agent: Agents,
+        session: Session,
+        query: str,
+        model: str | None = None,
+        temperature: int | None = None,
+    ):
         async with AsyncSqliteSaver.from_conn_string(
             CONF.store + "/checkpoint.sqlite"
         ) as checkpointer:
