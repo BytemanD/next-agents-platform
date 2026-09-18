@@ -147,6 +147,12 @@ export class Api {
     const { data } = await axios.delete(`/api/v1/knowledges/${uuid}`)
     return data as T
   }
+
+  // ---------- Monitoring ----------
+  async fetchTokenUsage<T = unknown>(days = 7) {
+    const { data } = await axios.get<T>('/api/v1/monitoring/token-usage', { params: { days } })
+    return data
+  }
 }
 
 export const API = new Api()

@@ -45,30 +45,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h } from 'vue'
+import { ref, h, watch, onMounted } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { API } from '@/api'
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
+interface TokenUsage {
+  days: string[]
+  prompt: number[]
+  completion: number[]
+  total_prompt: number
+  total_completion: number
+  total_tokens: number
+  total_calls: number
+}
+
 const searchQuery = ref('')
 const timeRange = ref('7d')
+const tokenUsage = ref<TokenUsage>({
+  days: [], prompt: [], completion: [],
+  total_prompt: 0, total_completion: 0, total_tokens: 0, total_calls: 0
+})
 
 const timeOptions = [
-  { label: '最近 24 小时', value: '24h' },
+  { label: '最近 24 小时', value: '1d' },
   { label: '最近 7 天', value: '7d' },
   { label: '最近 30 天', value: '30d' }
 ]
 
 const stats = ref([
-  { label: '总追踪数', value: '12,847', change: '+15.2% 较上周期', changeClass: 'text-nap-success' },
-  { label: '错误率', value: '0.3%', change: '-0.1% 较上周期', changeClass: 'text-nap-success' },
-  { label: '平均延迟', value: '1.2s', change: '+0.1s 较上周期', changeClass: 'text-nap-error' },
-  { label: '总成本', value: '$24.50', change: '+$3.20 较上周期', changeClass: 'text-nap-error' }
+  { label: '总追踪数', value: '0', change: '', changeClass: '' },
+  { label: '输入 Token', value: '0', change: '', changeClass: '' },
+  { label: '输出 Token', value: '0', change: '', changeClass: '' },
+  { label: '总 Token', value: '0', change: '', changeClass: '' }
 ])
 
 const traces = ref([
@@ -103,17 +118,39 @@ const traceColumns = [
   { colKey: 'createdAt', title: '时间', width: 120 }
 ]
 
-const tokenChartOption = ref({
+const tokenChartOption = ref<any>({
   backgroundColor: 'transparent',
   tooltip: { trigger: 'axis' },
   grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-  xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'], axisLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478' } },
+  xAxis: { type: 'category', data: [], axisLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478' } },
   yAxis: { type: 'value', axisLine: { lineStyle: { color: '#e7e9f2' } }, splitLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478' } },
   series: [
-    { name: '输入 Token', type: 'bar', stack: 'total', data: [12000, 15000, 13000, 18000, 16000, 8000, 9000], itemStyle: { color: '#4f46e5', borderRadius: [4, 4, 0, 0] } },
-    { name: '输出 Token', type: 'bar', stack: 'total', data: [4000, 5000, 4500, 6000, 5500, 2500, 3000], itemStyle: { color: '#c7d2fe' } }
+    { name: '输入 Token', type: 'bar', stack: 'total', data: [], itemStyle: { color: '#4f46e5', borderRadius: [4, 4, 0, 0] } },
+    { name: '输出 Token', type: 'bar', stack: 'total', data: [], itemStyle: { color: '#c7d2fe' } }
   ]
 })
+
+const loadTokenUsage = async () => {
+  const days = timeRange.value === '1d' ? 1 : timeRange.value === '30d' ? 30 : 7
+  try {
+    const data = await API.fetchTokenUsage<TokenUsage>(days)
+    tokenUsage.value = data
+    tokenChartOption.value.xAxis.data = data.days
+    tokenChartOption.value.series[0].data = data.prompt
+    tokenChartOption.value.series[1].data = data.completion
+    stats.value = [
+      { label: '总调用次数', value: data.total_calls.toLocaleString(), change: '', changeClass: '' },
+      { label: '输入 Token', value: data.total_prompt.toLocaleString(), change: '', changeClass: '' },
+      { label: '输出 Token', value: data.total_completion.toLocaleString(), change: '', changeClass: '' },
+      { label: '总 Token', value: data.total_tokens.toLocaleString(), change: '', changeClass: '' }
+    ]
+  } catch (e) {
+    console.error('load token usage failed', e)
+  }
+}
+
+watch(timeRange, loadTokenUsage)
+onMounted(loadTokenUsage)
 
 const latencyChartOption = ref({
   backgroundColor: 'transparent',

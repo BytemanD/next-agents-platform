@@ -12,6 +12,7 @@ class AgentConfig(BaseModel):
 
 AgentConfig.model_validate_json
 
+
 # ---------- 通用 TypeDecorator ----------
 class PydanticType(TypeDecorator):
     impl = JSON

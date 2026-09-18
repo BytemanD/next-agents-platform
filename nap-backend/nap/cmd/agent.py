@@ -57,5 +57,5 @@ def sessions(agent_uuid: str):
 @root.command("messages")
 @click.argument("session")
 def list_messages(session: str):
-    items = asyncio.run(MANAGER.list_sessions(agent_uuid))
+    items = asyncio.run(MANAGER.list_messages(session))
     print_models(items)

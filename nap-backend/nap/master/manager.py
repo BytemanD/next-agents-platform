@@ -10,6 +10,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
 from langchain_community.callbacks import get_openai_callback
+
 from pystonic.utils.strutil import text_shorten
 from pystonic.utils.httpclient import default_client
 
@@ -98,28 +99,11 @@ class MasterManager(BaseManager):
     def _build_agent(
         self,
         agent: Agents,
-        model: str | None = None,
+        model: ChatOpenAI,
         checkpointer: BaseCheckpointSaver | None = None,
-        temperature: float | None = None,
     ):
-        llm = LLMs.get_by_uuid(agent.llm)
-        if not llm.models:
-            raise LLMIsInvalid(llm.uuid)
-
-        agent_model = ReasoningChatOpenAI(
-            model=model or llm.models[0],
-            api_key=SecretStr(llm.api_key),
-            base_url=llm.base_url,
-            temperature=agent.config.temperature,
-            stream_usage=True,
-            model_kwargs={"stream_options": {"include_usage": True}},
-            # use_responses_api=True,
-            # reasoning_effort="medium",
-            # use_responses_api=False,
-        )
-
         return create_agent(
-            model=agent_model,
+            model=model,
             system_prompt=agent.instruction,
             checkpointer=checkpointer,
             tools=[vector.retrival],
@@ -131,8 +115,11 @@ class MasterManager(BaseManager):
         query: str,
         session_id: str | None = None,
         model: str | None = None,
-        temperature: int | None = None,
     ):
+        llm = LLMs.get_by_uuid(db_agent.llm)
+        if not llm.models:
+            raise LLMIsInvalid(llm.uuid)
+
         if session_id:
             session = Session.get_by_uuid(session_id)
         else:
@@ -142,16 +129,26 @@ class MasterManager(BaseManager):
                 title=text_shorten(query, wide=10),
             )
             session.create()
+        runtime_model = ReasoningChatOpenAI(
+            model=model or llm.models[0],
+            api_key=SecretStr(llm.api_key),
+            base_url=llm.base_url,
+            temperature=db_agent.config.temperature,
+            stream_usage=True,
+            model_kwargs={"stream_options": {"include_usage": True}},
+            # use_responses_api=True,
+            # reasoning_effort="medium",
+            # use_responses_api=False,
+        )
 
         with get_openai_callback() as cb:
-            async for event in self._chat(
-                db_agent, session, query, model=model, temperature=temperature
-            ):
+            async for event in self._chat(db_agent, session, runtime_model, query):
                 yield event
 
             callback = AgentCallback(
                 agent_uuid=db_agent.uuid,
                 session_uuid=session.uuid,
+                model=runtime_model.model,
                 total_tokens=cb.total_tokens,
                 prompt_tokens=cb.prompt_tokens,
                 completion_tokens=cb.completion_tokens,
@@ -160,12 +157,7 @@ class MasterManager(BaseManager):
             self.run_background_job(callback.create)
 
     async def _chat(
-        self,
-        db_agent: Agents,
-        session: Session,
-        query: str,
-        model: str | None = None,
-        temperature: int | None = None,
+        self, db_agent: Agents, session: Session, model: ChatOpenAI, query: str
     ):
         async with AsyncSqliteSaver.from_conn_string(
             CONF.store + "/checkpoint.sqlite"
@@ -173,7 +165,6 @@ class MasterManager(BaseManager):
             agent = self._build_agent(
                 db_agent,
                 model=model,
-                temperature=temperature,
                 checkpointer=checkpointer,
             )
             stream = agent.astream(
@@ -211,7 +202,10 @@ class MasterManager(BaseManager):
     async def delete_session(self, session_id: str):
         return Session.delete_by_uuid(session_id)
 
-    async def list_messages(self, session: Session):
+    async def list_messages(self, session: Session | str):
+        session = (
+            session if isinstance(session, Session) else Session.get_by_uuid(session)
+        )
         messages = []
         async with AsyncSqliteSaver.from_conn_string(
             "data/checkpoint.sqlite"

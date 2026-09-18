@@ -1,11 +1,12 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from loguru import logger
 from nap.db.models import AgentConfig, Agents
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
-
+from langchain_openai.chat_models.base import OpenAIInvalidRequestError
 
 router = APIRouter(prefix="/agents")
 
@@ -77,18 +78,13 @@ async def get_agent(uuid: str):
 
 @router.post("", status_code=201)
 async def create_agent(body: AgentCreate):
-    config = (
-        body.config.model_dump()
-        if isinstance(body.config, AgentConfig)
-        else dict(body.config)
-    )
     a = Agents(
         name=body.name,
         description=body.description,
         instruction=body.instruction,
         llm=body.llm,
         status=body.status,
-        config=config,
+        config=body.config,
         knowledge_bases=body.knowledge_bases,
         tools=body.tools,
     )
@@ -114,9 +110,9 @@ async def update_agent(uuid: str, body: AgentUpdate):
         a.status = body.status
     if body.config is not None:
         a.config = (
-            body.config.model_dump()
+            body.config
             if isinstance(body.config, AgentConfig)
-            else dict(body.config)
+            else AgentConfig.model_validate(body.config)
         )
     if body.knowledge_bases is not None:
         a.knowledge_bases = body.knowledge_bases
@@ -139,16 +135,27 @@ async def delete_agent(uuid: str):
 async def chat(agent_uuid: str, body: ChatRequest):
 
     async def event_generator():
-        async for delta in MANAGER.chat(
-            Agents.get_by_uuid(agent_uuid), body.query, session_id=body.session
-        ):
-            reasoning_content = delta.additional_kwargs.get("reasoning_content")
+        try:
+            async for delta in MANAGER.chat(
+                Agents.get_by_uuid(agent_uuid),
+                body.query,
+                session_id=body.session,
+                model=body.model,
+            ):
+                reasoning_content = delta.additional_kwargs.get("reasoning_content")
+                data = ChatSSE(
+                    type="thinking" if reasoning_content else "text",
+                    msg=reasoning_content if reasoning_content else str(delta.content),
+                )
+                if not data.msg:
+                    continue
+                yield data.model_dump_json()
+        except OpenAIInvalidRequestError as e:
+            logger.error("openai invalid request: {}", e)
             data = ChatSSE(
-                type="thinking" if reasoning_content else "text",
-                msg=reasoning_content if reasoning_content else str(delta.content),
+                type="text",
+                msg=f"Error: openai invalid request: {e}",
             )
-            if not data.msg:
-                continue
             yield data.model_dump_json()
 
     return EventSourceResponse(event_generator())

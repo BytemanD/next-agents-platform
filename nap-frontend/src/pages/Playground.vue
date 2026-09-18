@@ -188,74 +188,9 @@ const modelOptions = computed(() =>
 )
 
 const conversations = ref<Session[]>([])
-
-const messages = computed(() => chatStore.messages)
-
 const agentOptions = computed(() =>
   agentStore.agents.map(a => ({ label: a.name, value: a.id }))
 )
-
-function renderMarkdown(content: string) {
-  return content
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-nap-surface-hover border border-nap-border rounded-lg p-3 my-2 overflow-x-auto text-[13px]"><code>$2</code></pre>')
-    .replace(/`([^`]+)`/g, '<code class="bg-nap-surface-hover px-1.5 py-0.5 rounded text-nap-primary">$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>')
-}
-
-function getSpanIcon(type: string) {
-  switch (type) {
-    case 'llm': return 'bolt'
-    case 'tool': return 'code'
-    case 'retrieval': return 'search'
-    default: return 'database'
-  }
-}
-
-function scrollToBottom() {
-  nextTick(() => {
-    if (chatContainer.value) {
-      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
-    }
-  })
-}
-
-function sendMessage() {
-  if (!inputMessage.value.trim() || chatStore.isStreaming) return
-
-  chatStore.addMessage({
-    id: crypto.randomUUID(),
-    role: 'user',
-    content: inputMessage.value,
-    timestamp: new Date().toISOString()
-  })
-
-  inputMessage.value = ''
-
-  chatStore.startStreaming()
-  scrollToBottom()
-
-  setTimeout(() => {
-    chatStore.updateStreamingContent('我理解你的请求了，让我来处理...')
-    scrollToBottom()
-  }, 500)
-
-  setTimeout(() => {
-    chatStore.updateStreamingContent('我理解你的请求了，让我来处理。\n\n以下是我的发现：')
-    scrollToBottom()
-  }, 1000)
-
-  setTimeout(() => {
-    chatStore.updateStreamingContent('我理解你的请求了，让我来处理。\n\n以下是我的发现：\n\n**关键要点：**\n1. 第一点，包含一些细节\n2. 第二点，包含重要信息\n3. 第三点，总结结论')
-    scrollToBottom()
-  }, 1500)
-
-  setTimeout(() => {
-    chatStore.stopStreaming()
-    scrollToBottom()
-  }, 2000)
-}
-
 function newConversation() {
   currentConvId.value = null
   hasMessages.value = false

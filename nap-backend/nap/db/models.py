@@ -1,3 +1,4 @@
+from datetime import date, datetime, timedelta
 from enum import IntEnum, StrEnum, auto
 import os
 from pathlib import Path
@@ -263,7 +264,63 @@ class AgentCallback(DBModel, table=True):
 
     agent_uuid: str = Field(nullable=False, description="Agent UUID")
     session_uuid: str = Field(nullable=False, description="Session UUID")
-    total_tokens: int = Field(nullable=True, default=0,description="Total tokens")
+    model: str = Field(nullable=False, description="Model name")
+    total_tokens: int = Field(nullable=True, default=0, description="Total tokens")
     prompt_tokens: int = Field(nullable=True, default=0, description="Prompt_tokens")
-    completion_tokens: int = Field(nullable=True, default=0, description="Completion tokens")
+    completion_tokens: int = Field(
+        nullable=True, default=0, description="Completion tokens"
+    )
     total_cost: float = Field(nullable=True, default=0.0, description="Total Fost")
+
+    @classmethod
+    def token_usage(cls, days: int = 7):
+        since = datetime.now() - timedelta(days=days)
+        stm = (
+            select(
+                func.date(AgentCallback.created_at).label("day"),
+                func.coalesce(func.sum(AgentCallback.prompt_tokens), 0).label("prompt"),
+                func.coalesce(func.sum(AgentCallback.completion_tokens), 0).label(
+                    "completion"
+                ),
+                func.count(col(AgentCallback.id)).label("calls"),
+            )
+            .where(col(AgentCallback.created_at) >= since)
+            .group_by(func.date(AgentCallback.created_at))
+            .order_by(func.date(AgentCallback.created_at))
+        )
+
+        with get_session() as session:
+            rows = session.exec(stm).all()
+        daily = {
+            row.day.isoformat() if isinstance(row.day, date) else str(row.day): {
+                "prompt": int(row.prompt),
+                "completion": int(row.completion),
+                "calls": int(row.calls),
+            }
+            for row in rows
+        }
+
+        labels, prompt, completion = [], [], []
+        for i in range(days - 1, -1, -1):
+            day = (datetime.now() - timedelta(days=i)).date()
+            key = day.isoformat()
+            labels.append(day.strftime("%m-%d"))
+            entry = daily.get(key, {"prompt": 0, "completion": 0, "calls": 0})
+            prompt.append(entry["prompt"])
+            completion.append(entry["completion"])
+
+        totals = {
+            "prompt": sum(v["prompt"] for v in daily.values()),
+            "completion": sum(v["completion"] for v in daily.values()),
+            "calls": sum(v["calls"] for v in daily.values()),
+        }
+
+        return {
+            "days": labels,
+            "prompt": prompt,
+            "completion": completion,
+            "total_prompt": totals["prompt"],
+            "total_completion": totals["completion"],
+            "total_tokens": totals["prompt"] + totals["completion"],
+            "total_calls": totals["calls"],
+        }

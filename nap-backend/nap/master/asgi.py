@@ -4,7 +4,15 @@ from fastapi import FastAPI
 from loguru import logger
 
 # from nap.master.api.v1 import doc, project, session
-from nap.master.api.v1 import agents, knowledge, knowledge_base, llms, sessions, users
+from nap.master.api.v1 import (
+    agents,
+    knowledge,
+    knowledge_base,
+    llms,
+    monitoring,
+    sessions,
+    users,
+)
 from nap.master.manager import MANAGER
 from pystonic.orm.database import create_all_tables
 from pystonic.asgi.app import create_app
@@ -23,5 +31,5 @@ async def lifespan(app: FastAPI):
 APP = create_app(lifespan=lifespan)
 
 
-for module in (agents, knowledge, knowledge_base, llms, users, sessions):
+for module in (agents, knowledge, knowledge_base, llms, users, sessions, monitoring):
     APP.include_router(module.router, prefix="/api/v1")
