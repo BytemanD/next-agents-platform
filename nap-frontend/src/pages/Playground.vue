@@ -51,11 +51,15 @@
           :chat-service-config="chatServiceConfig" :message-props="messageItemProps" ref="chatRef"
           class="flex-1 min-h-0 min-w-0" @message-change="onMessageChange">
           <template #sender-footer-prefix>
-            <t-space>
+            <t-space class="flex j">
               <t-button shape="round" variant="outline">深度思考</t-button>
               <!-- 选择模型 -->
-              <t-select v-model="selectedModel" :options="modelOptions" placeholder="选择模型" class="border-rounded-10"
+              <t-select label="模型：" v-model="selectedModel" :options="modelOptions" placeholder="选择模型" class="border-rounded-10"
                 clearable>
+              </t-select>
+              <!-- 选择工具 -->
+              <t-select v-model="selectedTools" :options="toolOptions" placeholder="无" multiple label="工具:" :min-collapsed-num="1">
+
               </t-select>
             </t-space>
           </template>
@@ -135,6 +139,7 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
         query: params.prompt,        // 默认可能是 messages 数组
         model: selectedModel.value || undefined,
         session: currentConvId.value || undefined,
+        tools: selectedTools.value,
       }),
     };
   },
@@ -176,6 +181,25 @@ function onMessageChange(e: any) {
 }
 
 const selectedModel = ref('')
+const selectedTools = ref<string[]>([])
+
+const toolOptions = computed(() =>
+  availableTools.value.map(t => ({ label: t.name, value: t.id }))
+)
+
+const availableTools = ref<{ id: string; name: string }[]>([])
+
+async function fetchTools() {
+  try {
+    const data = await API.fetchTools<{ tools: { name: string; description: string; detail?: string; extras?: { title?: string; type?: string } }[] }>()
+    availableTools.value = (data.tools || []).map(t => ({
+      id: t.name,
+      name: t.extras?.title || t.name
+    }))
+  } catch {
+    availableTools.value = []
+  }
+}
 
 const welcomeSuggestions = [
   '帮我总结这份文档的重点',
@@ -270,11 +294,13 @@ async function fetchSessions() {
 
 onMounted(() => {
   agentStore.fetchAgents()
+  fetchTools()
 })
 
 watch(() => agentStore.selectedAgentId, () => {
   selectedModel.value = ''
   currentConvId.value = null
+  selectedTools.value = [...(agentStore.selectedAgent?.tools || [])]
   fetchSessions()
 })
 

@@ -11,6 +11,7 @@ from nap.master.api.v1 import (
     llms,
     monitoring,
     sessions,
+    tools,
     users,
 )
 from nap.master.manager import MANAGER
@@ -31,5 +32,5 @@ async def lifespan(app: FastAPI):
 APP = create_app(lifespan=lifespan)
 
 
-for module in (agents, knowledge, knowledge_base, llms, users, sessions, monitoring):
+for module in (agents, knowledge, knowledge_base, llms, users, sessions, tools, monitoring):
     APP.include_router(module.router, prefix="/api/v1")

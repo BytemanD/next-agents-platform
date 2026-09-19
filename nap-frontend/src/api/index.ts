@@ -153,6 +153,12 @@ export class Api {
     const { data } = await axios.get<T>('/api/v1/monitoring/token-usage', { params: { days } })
     return data
   }
+
+  // ---------- Tools ----------
+  async fetchTools<T = unknown>() {
+    const { data } = await axios.get<T>('/api/v1/tools')
+    return data
+  }
 }
 
 export const API = new Api()

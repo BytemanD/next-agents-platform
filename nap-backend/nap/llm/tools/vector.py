@@ -14,7 +14,7 @@ class Context(BaseModel):
     knowledge_base: KnowledgeBase | None = None
 
 
-@tool
+@tool(parse_docstring=True, extras={'title': '向量召回', 'type': 'search'})
 def retrival(runtime: ToolRuntime[Context], query: str, top_k: int = 3):
     """搜索向量库，返回与查询语义最相关的文档片段。
 
@@ -35,11 +35,14 @@ def retrival(runtime: ToolRuntime[Context], query: str, top_k: int = 3):
     return VECTOR_SERVICE.retrieval(query, k=top_k)
 
 
-@tool
-async def list_docs() -> List[Document]:
-    """列出ChromaDB中的文档
+@tool(parse_docstring=True, extras={'title': '查看向量库文档', 'type': 'search'})
+async def list_documents(runtime: ToolRuntime[Context]) -> List[Document]:
+    """列出向量库中的中的文档。
+
+    从向量库中获取所有文档列表
 
     Returns:
         List[Document]: 文档列表
     """
+    logger.info("list documents for knowledge base:", runtime.context.knowledge_base)
     return VECTOR_SERVICE.list_knowledges()

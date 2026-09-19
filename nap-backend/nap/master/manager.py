@@ -10,6 +10,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
 from langchain_community.callbacks import get_openai_callback
+from langchain_core.tools.base import BaseTool
 
 from pystonic.utils.strutil import text_shorten
 from pystonic.utils.httpclient import default_client
@@ -32,6 +33,26 @@ class Message(BaseModel):
     type: str
     content: str | None = None
     thinking: str | None = None
+
+
+class ToolModel(BaseModel):
+    class Extras(BaseModel):
+        title: str = ""
+        type: str = ""
+
+    name: str
+    description: str = ""
+    extras: Extras = Extras()
+    args: dict = {}
+
+    @classmethod
+    def from_llm_tool(cls, t: BaseTool):
+        return cls(
+            name=t.name,
+            description=t.description,
+            extras=cls.Extras.model_validate(t.extras or {}),
+            args=t.args,
+        )
 
 
 class ReasoningChatOpenAI(ChatOpenAI):
@@ -60,6 +81,9 @@ class ReasoningChatOpenAI(ChatOpenAI):
                     prev + reasoning
                 )
         return generation_chunk
+
+
+AGENT_TOOLS = [vector.retrival, vector.list_documents]
 
 
 class MasterManager(BaseManager):
@@ -96,17 +120,29 @@ class MasterManager(BaseManager):
         """Project manager"""
         return Session.query()
 
+    def _get_chat_tools(self, agent: Agents, tools: list[str] | None):
+        if tools is None:
+            tools = agent.tools
+        return [x for x in AGENT_TOOLS if x.name in agent.tools]
+
     def _build_agent(
         self,
         agent: Agents,
         model: ChatOpenAI,
         checkpointer: BaseCheckpointSaver | None = None,
+        tools: list[str] | None = None,
     ):
+        
+        if tools is None:
+            tools = agent.tools
+        logger.info("runtime tools: {}", tools)
+        run_time_tools = [x for x in AGENT_TOOLS if x.name in tools]
+        logger.info("runtime tools: {}", [x.name for x in run_time_tools])
         return create_agent(
             model=model,
             system_prompt=agent.instruction,
             checkpointer=checkpointer,
-            tools=[vector.retrival],
+            tools=run_time_tools,
         )
 
     async def chat(
@@ -115,6 +151,8 @@ class MasterManager(BaseManager):
         query: str,
         session_id: str | None = None,
         model: str | None = None,
+        tools: list[str] | None = None,
+        knowledge_bases: list[str] | None = None,
     ):
         llm = LLMs.get_by_uuid(db_agent.llm)
         if not llm.models:
@@ -142,7 +180,9 @@ class MasterManager(BaseManager):
         )
 
         with get_openai_callback() as cb:
-            async for event in self._chat(db_agent, session, runtime_model, query):
+            async for event in self._chat(
+                db_agent, session, runtime_model, query, tools=tools
+            ):
                 yield event
 
             callback = AgentCallback(
@@ -157,7 +197,13 @@ class MasterManager(BaseManager):
             self.run_background_job(callback.create)
 
     async def _chat(
-        self, db_agent: Agents, session: Session, model: ChatOpenAI, query: str
+        self,
+        db_agent: Agents,
+        session: Session,
+        model: ChatOpenAI,
+        query: str,
+        tools: list[str] | None = None,
+        knowledge_bases: list[str] | None = None,
     ):
         async with AsyncSqliteSaver.from_conn_string(
             CONF.store + "/checkpoint.sqlite"
@@ -166,6 +212,7 @@ class MasterManager(BaseManager):
                 db_agent,
                 model=model,
                 checkpointer=checkpointer,
+                tools=tools,
             )
             stream = agent.astream(
                 {"messages": [{"role": "user", "content": query}]},
@@ -233,6 +280,10 @@ class MasterManager(BaseManager):
         except httpx.HTTPError as e:
             logger.error("CALL knowledge service failed: {}", e)
             knowledge.set_status(KnowledgeStatus.pending_delete)
+
+    def list_tools(self):
+        tools = [vector.retrival, vector.list_documents]
+        return [ToolModel.from_llm_tool(x) for x in tools]
 
 
 MANAGER = MasterManager()

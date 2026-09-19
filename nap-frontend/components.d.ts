@@ -55,6 +55,7 @@ declare module 'vue' {
     Tools: typeof import('./src/components/common/Tools.vue')['default']
     TopBar: typeof import('./src/components/layout/TopBar.vue')['default']
     TPopconfirm: typeof import('tdesign-vue-next')['Popconfirm']
+    TPopup: typeof import('tdesign-vue-next')['Popup']
     TProgress: typeof import('tdesign-vue-next')['Progress']
     TRadioButton: typeof import('tdesign-vue-next')['RadioButton']
     TRadioGroup: typeof import('tdesign-vue-next')['RadioGroup']
@@ -70,7 +71,9 @@ declare module 'vue' {
     TTabPanel: typeof import('tdesign-vue-next')['TabPanel']
     TTabs: typeof import('tdesign-vue-next')['Tabs']
     TTag: typeof import('tdesign-vue-next')['Tag']
+    TText: typeof import('tdesign-vue-next')['Text']
     TTextarea: typeof import('tdesign-vue-next')['Textarea']
+    TTypographyTitle: typeof import('tdesign-vue-next')['TypographyTitle']
     TUpload: typeof import('tdesign-vue-next')['Upload']
   }
 }

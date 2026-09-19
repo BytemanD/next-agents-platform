@@ -41,28 +41,33 @@
 
       <t-col :xs="12" :lg="4">
         <t-card size="small" class="my-2">
-          <template #title><span class="text-nap-text">知识库</span></template>
-          <template #description><span class="text-nap-text-secondary">关联知识源</span></template>
+          <template #title>知识库</template>
+          <template #description>关联知识源</template>
           <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
         </t-card>
         <t-card size="small" class="my-2">
-          <template #title><span class="text-nap-text">工具</span></template>
-          <template #description><span class="text-nap-text-secondary">选择这个智能体可以使用的工具</span></template>
-          <t-space direction="vertical" :size="8" style="width: 100%">
-            <div v-for="tool in availableTools" :key="tool.id"
-              class="flex items-center justify-between p-3 rounded-lg border border-nap-border hover:border-nap-primary/30 transition-colors cursor-pointer"
+          <template #title>工具</template>
+          <template #description>选择这个智能体可以使用的工具</template>
+          <t-list size="small">
+            <t-list-item
+              v-for="tool in availableTools" :key="tool.name" size="small"
               :class="form.tools.includes(tool.id) ? 'border-nap-primary/50 bg-nap-primary/5' : ''"
-              @click="toggleTool(tool.id)">
-              <div class="flex items-center gap-3">
-                <t-icon :name="tool.icon" class="text-nap-text-secondary" />
-                <div>
-                  <p class="text-sm font-medium text-nap-text">{{ tool.name }}</p>
-                  <p class="text-xs text-nap-text-secondary">{{ tool.description }}</p>
-                </div>
-              </div>
-              <t-checkbox :checked="form.tools.includes(tool.id)" />
-            </div>
-          </t-space>
+              class="rounded-lg">
+              <template #content>
+                <t-list-item-meta :title="tool.name">
+                  <template #image>
+                    <t-icon :name="tool.icon" class="ml-3 mt-3" size="30" />
+                  </template>
+                  <template #description>
+                    <t-text :content="tool.description" :ellipsis="{ row: 2, expandable: true, collapsible: true }" />
+                  </template>
+                </t-list-item-meta>
+              </template>
+              <template #action>
+                <t-checkbox :checked="form.tools.includes(tool.id)" @change="toggleTool(tool.id)" />
+              </template>
+            </t-list-item>
+          </t-list>
         </t-card>
       </t-col>
 
@@ -114,10 +119,40 @@ function defaultForm(): AgentForm {
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const knowledgeOptions = ref<{ label: string; value: string }[]>([])
+const availableTools = ref<ToolItem[]>([])
 
-const availableTools = [
-  { id: 'retrival', name: '知识库检索', description: '从知识库检索相关内容', icon: 'search' }
-]
+interface ToolItem {
+  id: string
+  name: string
+  description: string
+  icon: string
+}
+
+const TOOL_ICONS: Record<string, string> = {
+  search: 'search',
+  listing: 'list',
+  tool: 'tool'
+}
+
+interface BackendTool {
+  name: string
+  description: string
+  extras?: { title?: string; type?: string }
+}
+
+async function fetchTools() {
+  try {
+    const data = await API.fetchTools<{ tools: BackendTool[] }>()
+    availableTools.value = (data.tools || []).map((tool) => ({
+      id: tool.name,
+      name: tool.extras?.title || tool.name,
+      description: tool.description,
+      icon: TOOL_ICONS[tool.extras?.type || ''] || 'tool'
+    }))
+  } catch {
+    availableTools.value = []
+  }
+}
 
 async function fetchLLMs() {
   try {
@@ -204,6 +239,7 @@ async function handleSave(status: string) {
 onMounted(() => {
   fetchLLMs()
   fetchKnowledgeBases()
+  fetchTools()
   if (isEdit.value) {
     fetchAgent(route.params.id as string)
   }
