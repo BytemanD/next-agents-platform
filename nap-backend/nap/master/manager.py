@@ -7,7 +7,7 @@ from pystonic.common import context
 from langchain_openai.chat_models.base import OpenAIRateLimitError
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langchain_core.messages import AIMessageChunk
+from langchain_core.messages import AIMessageChunk, ToolMessage
 from langchain_core.runnables.config import RunnableConfig
 from langchain_community.callbacks import get_openai_callback
 from langchain_core.tools.base import BaseTool
@@ -26,6 +26,7 @@ from nap.common.exceptions import (
     LLMRateLimitError,
 )
 from nap.db.models import Agents, Knowledge, KnowledgeBase, LLMs
+from nap.llm.tools.context import RuntimeContext
 
 
 class Message(BaseModel):
@@ -125,33 +126,13 @@ class MasterManager(BaseManager):
             tools = agent.tools
         return [x for x in AGENT_TOOLS if x.name in agent.tools]
 
-    def _build_agent(
-        self,
-        agent: Agents,
-        model: ChatOpenAI,
-        checkpointer: BaseCheckpointSaver | None = None,
-        tools: list[str] | None = None,
-    ):
-        
-        if tools is None:
-            tools = agent.tools
-        logger.info("runtime tools: {}", tools)
-        run_time_tools = [x for x in AGENT_TOOLS if x.name in tools]
-        logger.info("runtime tools: {}", [x.name for x in run_time_tools])
-        return create_agent(
-            model=model,
-            system_prompt=agent.instruction,
-            checkpointer=checkpointer,
-            tools=run_time_tools,
-        )
-
     async def chat(
         self,
         db_agent: Agents,
         query: str,
         session_id: str | None = None,
         model: str | None = None,
-        tools: list[str] | None = None,
+        tools: list[str] = [],
         knowledge_bases: list[str] | None = None,
     ):
         llm = LLMs.get_by_uuid(db_agent.llm)
@@ -167,6 +148,15 @@ class MasterManager(BaseManager):
                 title=text_shorten(query, wide=10),
             )
             session.create()
+
+        runtime_context = RuntimeContext(
+            knowledge_bases=KnowledgeBase.get_by_uuids(
+                knowledge_bases or db_agent.knowledge_bases or []
+            )
+        )
+        runtime_tools = [
+            vector.get_available_knowledge_bases,
+        ] + [x for x in AGENT_TOOLS if x.name in tools]
         runtime_model = ReasoningChatOpenAI(
             model=model or llm.models[0],
             api_key=SecretStr(llm.api_key),
@@ -181,7 +171,12 @@ class MasterManager(BaseManager):
 
         with get_openai_callback() as cb:
             async for event in self._chat(
-                db_agent, session, runtime_model, query, tools=tools
+                runtime_context,
+                db_agent,
+                session,
+                runtime_model,
+                query,
+                tools=runtime_tools,
             ):
                 yield event
 
@@ -198,22 +193,28 @@ class MasterManager(BaseManager):
 
     async def _chat(
         self,
+        context: RuntimeContext,
         db_agent: Agents,
         session: Session,
         model: ChatOpenAI,
         query: str,
-        tools: list[str] | None = None,
-        knowledge_bases: list[str] | None = None,
+        tools: list[BaseTool] | None = None,
     ):
+        logger.info(
+            "runtime tools: {}, knowledge bases: {}",
+            [x.name for x in tools or []],
+            [x.name for x in context.knowledge_bases],
+        )
         async with AsyncSqliteSaver.from_conn_string(
             CONF.store + "/checkpoint.sqlite"
         ) as checkpointer:
-            agent = self._build_agent(
-                db_agent,
+            agent = create_agent(
                 model=model,
+                system_prompt=db_agent.instruction,
                 checkpointer=checkpointer,
                 tools=tools,
             )
+
             stream = agent.astream(
                 {"messages": [{"role": "user", "content": query}]},
                 stream_mode="messages",
@@ -227,7 +228,7 @@ class MasterManager(BaseManager):
                     },
                 },
                 # version="v3"
-                context=vector.Context(),
+                context=context,
             )
 
             try:
@@ -237,7 +238,8 @@ class MasterManager(BaseManager):
                     ):
                         yield event[0]
                         continue
-
+                    if isinstance(event, ToolMessage):
+                        logger.debug()
                     logger.warning("unknowd event: {}", event)
             except OpenAIRateLimitError as e:
                 logger.error("request failed because rate limit")

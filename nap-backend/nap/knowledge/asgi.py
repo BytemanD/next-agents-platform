@@ -9,7 +9,7 @@ from pystonic.asgi.app import create_app
 
 
 from nap.knowledge.manager import MANAGER
-from nap.knowledge.api.v1 import knowledge
+from nap.knowledge.api.v1 import knowledge, retrival, document
 
 log.setup_logger(remove=True)
 
@@ -26,5 +26,5 @@ async def lifespan(app: FastAPI):
 
 APP = create_app(lifespan=lifespan)
 
-for module in (knowledge,):
+for module in (retrival, document):
     APP.include_router(module.router, prefix="/api/v1")

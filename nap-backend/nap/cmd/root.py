@@ -1,6 +1,6 @@
 import click
 
-from nap.cmd import agent, session, knowledge, tools
+from nap.cmd import agent, session, knowledge, knowledge_base, tools
 
 
 @click.group()
@@ -9,6 +9,7 @@ def root():
 
 
 def main():
+    root.add_command(knowledge_base.root)
     root.add_command(knowledge.root)
     root.add_command(agent.root)
     root.add_command(session.root)

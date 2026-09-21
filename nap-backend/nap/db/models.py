@@ -102,6 +102,10 @@ class KnowledgeBase(DBModel, table=True):
     )
     # enrich_llm: str = Field(nullable=True)
 
+    @classmethod
+    def get_by_uuids(cls, uuids: list[str]):
+        return cls.query(col(cls.uuid).in_(uuids))
+
 
 class KnowledgeEnrichmen(DBModel, table=True):
     __tablename__ = "knowledge_enrichments"  # type: ignore

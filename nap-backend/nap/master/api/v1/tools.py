@@ -1,9 +1,7 @@
 from fastapi import APIRouter
 from nap.master.manager import MANAGER, ToolModel
 from pydantic import BaseModel
-from langchain_core.tools.base import BaseTool
 
-from nap.llm.tools import vector
 
 router = APIRouter(prefix="/tools")
 

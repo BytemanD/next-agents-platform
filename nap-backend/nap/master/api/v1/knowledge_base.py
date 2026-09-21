@@ -33,6 +33,11 @@ class KnowledgeBaseResponse(BaseModel):
     updated_at: str
 
 
+
+class UploadKnowledgeFromUrl(BaseModel):
+    url: str
+
+
 @router.get("")
 async def list_kbs():
     return {"items": KnowledgeBase.query()}
@@ -123,4 +128,18 @@ async def add_knowledge_from_file(kb_id: str, file: UploadFile = File(...)):
     description="从网络地址下载文件并添加到知识库",
 )
 async def add_knowledge_from_url(kb_id: str):
-    pass
+    kb = KnowledgeBase.get_by_uuid(kb_id)
+    if not kb:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"knowledge base {kb_id} not found",
+        )
+    item = await asyncio.to_thread(
+        MANAGER.upload_knowledge,
+        kb,
+        context.getvar("account") or "guest",
+        file.filename or file.file.name,
+        await file.read(),
+    )
+    return item
+# https://www.cnblogs.com/haoxiaobo/archive/2012/11/30/2795841.html

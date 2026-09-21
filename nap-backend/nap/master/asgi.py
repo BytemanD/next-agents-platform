@@ -16,8 +16,11 @@ from nap.master.api.v1 import (
 )
 from nap.master.manager import MANAGER
 from pystonic.orm.database import create_all_tables
-from pystonic.asgi.app import create_app
 
+from pystonic.asgi.app import create_app
+from pystonic.log import setup_logger
+
+setup_logger(remove=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,5 +35,14 @@ async def lifespan(app: FastAPI):
 APP = create_app(lifespan=lifespan)
 
 
-for module in (agents, knowledge, knowledge_base, llms, users, sessions, tools, monitoring):
+for module in (
+    agents,
+    knowledge,
+    knowledge_base,
+    llms,
+    users,
+    sessions,
+    tools,
+    monitoring,
+):
     APP.include_router(module.router, prefix="/api/v1")

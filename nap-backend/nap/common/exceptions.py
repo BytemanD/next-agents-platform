@@ -35,3 +35,8 @@ class EnrichmentAlreadyExists(Exception):
 class KnowledgeProcessFailed(Exception):
     def __init__(self, knowledge_uuid: str, detail: str) -> None:
         super().__init__(f"knowledge({knowledge_uuid}) process faield: {detail}")
+
+
+class DocumentNotFound(Exception):
+    def __init__(self, doc_id: str) -> None:
+        super().__init__(f"document({doc_id}) not exists")

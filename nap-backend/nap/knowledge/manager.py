@@ -7,7 +7,7 @@ from nap.knowledge.graph import knowledge_process
 import portalocker
 
 from nap.common.conf import CONF
-from nap.db.models import Knowledge, KnowledgeStatus
+from nap.db.models import Knowledge, KnowledgeBase, KnowledgeStatus
 from nap.services.vector import VECTOR_SERVICE
 from nap.services.storage import STORE_SERVICE
 
@@ -22,8 +22,12 @@ class KnowledgeManager(BaseManager):
             self.job_delete_knowledges, "interval", seconds=10
         )
 
-    def list_documents(self, content_width: int | None = None):
+    def list_documents(self, knowledge_base: KnowledgeBase | None = None, content_width: int | None = None):
         return VECTOR_SERVICE.list_knowledges()
+
+    def get_document(self, doc_id: str):
+        docs = VECTOR_SERVICE.list_knowledges(ids=[doc_id])
+        return docs[0] if docs else None
 
     async def job_process_knowledges(self):
         items = []
@@ -73,6 +77,15 @@ class KnowledgeManager(BaseManager):
         self.backgroup_scheduler.add_job(
             self.delete_knowledge, args=(knowledge,), next_run_time=datetime.now(UTC)
         )
+
+    def retrival(self, knowledge_base: KnowledgeBase, query: str, top_k: int = 3):
+        logger.info(
+            "retrival for knowledge base: {}, query={}, top_k={}",
+            knowledge_base.uuid,
+            query,
+            top_k,
+        )
+        return VECTOR_SERVICE.retrieval(query, k=top_k)
 
 
 MANAGER = KnowledgeManager()

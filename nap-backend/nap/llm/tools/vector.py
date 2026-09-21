@@ -2,20 +2,34 @@
 
 from typing import List
 
-from loguru import logger
-from nap.db.models import KnowledgeBase
-
 from langchain.tools import tool, ToolRuntime
-from nap.services.vector import VECTOR_SERVICE, Document
-from pydantic import BaseModel
+from loguru import logger
+
+from nap.common.objects import RetrivalDocument
+from nap.llm.tools.context import RuntimeContext
+from nap.common.knowledge_client import KnowledgeClient
+
+KNOWLEDGE_CLIENT = KnowledgeClient()
 
 
-class Context(BaseModel):
-    knowledge_base: KnowledgeBase | None = None
+@tool
+def get_available_knowledge_bases(runtime: ToolRuntime[RuntimeContext]):
+    """获取本次会话需要可用哪些知识库
+
+    当需要查询知道本次会话可以查询哪些知识库时使用。
+
+    Returns:
+        匹配的文档片段列表，每段包含内容和相似度信息。
+        如果没有找到相关资料，返回空列表
+    """
+    return [
+        x.model_dump(mode="json", exclude={"id", 'created_at', 'updated_at'})
+        for x in runtime.context.knowledge_bases
+    ]
 
 
-@tool(parse_docstring=True, extras={'title': '向量召回', 'type': 'search'})
-def retrival(runtime: ToolRuntime[Context], query: str, top_k: int = 3):
+@tool(parse_docstring=True, extras={"title": "向量召回", "type": "search"})
+def retrival(knowledge_uuid: str, query: str, top_k: int = 3):
     """搜索向量库，返回与查询语义最相关的文档片段。
 
     当需要回答事实性问题、查找特定信息、或需要引用知识库内容时使用。
@@ -31,18 +45,27 @@ def retrival(runtime: ToolRuntime[Context], query: str, top_k: int = 3):
         匹配的文档片段列表，每段包含内容和相似度信息。
         如果没有找到相关资料，返回空列表。
     """
-    logger.info("retrival for knowledge base:", runtime.context.knowledge_base)
-    return VECTOR_SERVICE.retrieval(query, k=top_k)
+    logger.info("retrival for knowledge base: {}", knowledge_uuid)
+    return [
+        x.model_dump(mode="json")
+        for x in KNOWLEDGE_CLIENT.retrival(knowledge_uuid, query, top_k=top_k)
+    ]
 
 
-@tool(parse_docstring=True, extras={'title': '查看向量库文档', 'type': 'search'})
-async def list_documents(runtime: ToolRuntime[Context]) -> List[Document]:
+@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
+async def list_documents(knowledge_uuid: str):
     """列出向量库中的中的文档。
 
     从向量库中获取所有文档列表
 
+    Args:
+        knowledge_uuid: 知识库UUID
+
     Returns:
-        List[Document]: 文档列表
+        文档列表
     """
-    logger.info("list documents for knowledge base:", runtime.context.knowledge_base)
-    return VECTOR_SERVICE.list_knowledges()
+    logger.info("list documents for knowledge base: {}", knowledge_uuid)
+    return [
+        x.model_dump(mode="json")
+        for x in KNOWLEDGE_CLIENT.list_documents(knowledge_uuid)
+    ]
