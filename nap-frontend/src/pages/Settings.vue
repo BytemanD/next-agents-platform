@@ -1,10 +1,10 @@
 <template>
   <t-tabs :value="activeTab" @change="activeTab = $event" class="settings-tabs">
     <t-tab-panel value="api" label="模型">
-      <t-row :gutter="16">
+      <t-row :gutter="12">
         <t-col v-for="endpoint in apiEndpoints" :key="endpoint.uuid" :xs="24" :sm="12" :md="8" :xl="6">
           <t-card :title="endpoint.name || endpoint.base_url" size="small" :bordered="true">
-            <t-descriptions :column="1" size="small" tableLayout="auto">
+            <t-descriptions :column="1" size="small" tableLayout="auto" >
               <t-descriptions-item label="地址">{{ endpoint.base_url }}</t-descriptions-item>
               <t-descriptions-item label="密钥">{{ maskKey(endpoint.api_key) }}</t-descriptions-item>
               <t-descriptions-item label="模型">

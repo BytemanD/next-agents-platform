@@ -9,7 +9,7 @@ from pystonic.asgi.app import create_app
 
 
 from nap.knowledge.manager import MANAGER
-from nap.knowledge.api.v1 import knowledge, retrival, document
+from nap.knowledge.api.v1 import retrival, document
 
 log.setup_logger(remove=True)
 

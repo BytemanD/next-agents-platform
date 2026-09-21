@@ -22,7 +22,11 @@ class KnowledgeManager(BaseManager):
             self.job_delete_knowledges, "interval", seconds=10
         )
 
-    def list_documents(self, knowledge_base: KnowledgeBase | None = None, content_width: int | None = None):
+    def list_documents(
+        self,
+        knowledge_base: KnowledgeBase | None = None,
+        content_width: int | None = None,
+    ):
         return VECTOR_SERVICE.list_knowledges()
 
     def get_document(self, doc_id: str):

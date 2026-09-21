@@ -1,21 +1,20 @@
 import click
 from nap.common.knowledge_client import KnowledgeClient
-from nap.db.models import Knowledge, KnowledgeBase
+from nap.db.models import Knowledge
 from nap.services.enrich import ENRICH_SERVICE
 from pystonic.pretty.output import print_models
 
-from nap.knowledge.manager import MANAGER
 
 KNOWLEDGE_CLIENT = KnowledgeClient()
+
+
 @click.group(name="knowledge")
 def root():
     pass
 
 
 @root.command("list")
-@click.argument(
-    "knowwledge_base", help="knowledge base uuid"
-)
+@click.argument("knowwledge_base", help="knowledge base uuid")
 @click.option(
     "--vectorstore", "-v", is_flag=True, help="list knowledge from vectorstore"
 )

@@ -33,7 +33,6 @@ class KnowledgeBaseResponse(BaseModel):
     updated_at: str
 
 
-
 class UploadKnowledgeFromUrl(BaseModel):
     url: str
 
@@ -142,4 +141,6 @@ async def add_knowledge_from_url(kb_id: str):
         await file.read(),
     )
     return item
+
+
 # https://www.cnblogs.com/haoxiaobo/archive/2012/11/30/2795841.html

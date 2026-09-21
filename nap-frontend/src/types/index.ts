@@ -1,4 +1,5 @@
 export interface Agent {
+  id: string
   uuid: string
   name: string
   description: string

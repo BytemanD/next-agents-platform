@@ -1,11 +1,8 @@
 """系统内部使用的工具"""
 
-from typing import List
-
 from langchain.tools import tool, ToolRuntime
 from loguru import logger
 
-from nap.common.objects import RetrivalDocument
 from nap.llm.tools.context import RuntimeContext
 from nap.common.knowledge_client import KnowledgeClient
 
@@ -23,7 +20,7 @@ def get_available_knowledge_bases(runtime: ToolRuntime[RuntimeContext]):
         如果没有找到相关资料，返回空列表
     """
     return [
-        x.model_dump(mode="json", exclude={"id", 'created_at', 'updated_at'})
+        x.model_dump(mode="json", exclude={"id", "created_at", "updated_at"})
         for x in runtime.context.knowledge_bases
     ]
 

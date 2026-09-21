@@ -41,9 +41,12 @@
           <t-button size="small" variant="text" @click.stop="handleChat()">
             <template #icon><t-icon name="chat" /></template>
           </t-button>
-          <t-button theme="danger" size="small" variant="text" @click.stop="handleDelete(agent)">
-            <t-icon name="delete" />
-          </t-button>
+          <t-popconfirm theme="danger" content="确定删除该智能体吗？删除后不可恢复。"
+            placement="top-right" @confirm="handleDelete(agent)">
+            <t-button theme="danger" size="small" variant="text">
+              <t-icon name="delete" />
+            </t-button>
+          </t-popconfirm>
         </template>
         <p>{{ agent.description }}</p>
         <t-space size="small" class="mt-4">
@@ -75,6 +78,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { MessagePlugin } from 'tdesign-vue-next'
+import { API } from '@/api'
 import { useAgentStore } from '@/stores/agent'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import Tools from '@/components/common/Tools.vue'
@@ -117,8 +122,14 @@ function handleChat() {
   router.push('/playground')
 }
 
-function handleDelete(agent: any) {
-  console.log('删除智能体:', agent.id)
+async function handleDelete(agent: any) {
+  try {
+    await API.deleteAgent(agent.id)
+    MessagePlugin.success('删除成功')
+    await agentStore.fetchAgents()
+  } catch {
+    MessagePlugin.error('删除失败')
+  }
 }
 
 onMounted(() => {

@@ -1,8 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import MainLayout from '@/components/layout/MainLayout.vue'
+import { getToken } from '@/api'
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/pages/Login.vue'),
+    meta: { title: '登录' }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/pages/Register.vue'),
+    meta: { title: '注册' }
+  },
   {
     path: '/',
     component: MainLayout,
@@ -76,6 +89,13 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   document.title = `${to.meta.title || '打包'} - NAP 下一代智能体平台`
+  const token = getToken()
+  if (!token && to.name !== 'Login' && to.name !== 'Register') {
+    return { name: 'Login' }
+  }
+  if (token && (to.name === 'Login' || to.name === 'Register')) {
+    return { name: 'Dashboard' }
+  }
 })
 
 export default router

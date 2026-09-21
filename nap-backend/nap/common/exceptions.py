@@ -40,3 +40,8 @@ class KnowledgeProcessFailed(Exception):
 class DocumentNotFound(Exception):
     def __init__(self, doc_id: str) -> None:
         super().__init__(f"document({doc_id}) not exists")
+
+
+class AuthFailed(Exception):
+    def __init__(self, detail: str) -> None:
+        super().__init__(f"invalid token: {detail}")

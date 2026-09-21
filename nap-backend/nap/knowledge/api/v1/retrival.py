@@ -22,7 +22,10 @@ class PostRetrivalResp(BaseModel):
 
 
 @router.post(
-    "", status_code=200, description="文档召回", response_model=PostRetrivalResp,
+    "",
+    status_code=200,
+    description="文档召回",
+    response_model=PostRetrivalResp,
     response_model_exclude_none=True,
 )
 async def retrival(body: PostRetrival):

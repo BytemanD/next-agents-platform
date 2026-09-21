@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppLogo: typeof import('./src/components/common/AppLogo.vue')['default']
+    AuthLayout: typeof import('./src/components/auth/AuthLayout.vue')['default']
     MainLayout: typeof import('./src/components/layout/MainLayout.vue')['default']
     NapCard: typeof import('./src/components/common/NapCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -18,6 +19,7 @@ declare module 'vue' {
     TAside: typeof import('tdesign-vue-next')['Aside']
     TAvatar: typeof import('tdesign-vue-next')['Avatar']
     TBadge: typeof import('tdesign-vue-next')['Badge']
+    TBaseTable: typeof import('tdesign-vue-next')['BaseTable']
     TButton: typeof import('tdesign-vue-next')['Button']
     TCard: typeof import('tdesign-vue-next')['Card']
     TCheckbox: typeof import('tdesign-vue-next')['Checkbox']

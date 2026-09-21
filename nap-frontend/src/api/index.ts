@@ -1,6 +1,38 @@
 import axios from 'axios'
 import type { KnowledgeBase, KnowledgeDetail, KnowledgeItem, KnowledgeTodo } from '@/types'
 
+export const TOKEN_KEY = 'nap_token'
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export function setToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+const AUTH_EXCLUDE: Array<[string, string]> = [
+  ['post', '/api/v1/auth/login'],
+  ['post', '/api/v1/users']
+]
+
+axios.interceptors.request.use((config) => {
+  const method = (config.method || 'get').toLowerCase()
+  const url = config.url || ''
+  const excluded = AUTH_EXCLUDE.some(([m, u]) => method === m && url.startsWith(u))
+  if (!excluded) {
+    const token = getToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+  }
+  return config
+})
+
 export interface AgentPayload {
   name: string
   description: string
@@ -26,6 +58,17 @@ export interface KnowledgeBasePayload {
 }
 
 export class Api {
+  // ---------- Auth ----------
+  async login<T = unknown>(username: string, password: string) {
+    const { data } = await axios.post<T>('/api/v1/auth/login', { username, password })
+    return data
+  }
+
+  async register<T = unknown>(username: string, password: string, email?: string) {
+    const { data } = await axios.post<T>('/api/v1/users', { username, password, email })
+    return data
+  }
+
   // ---------- Agents ----------
   async fetchAgents<T = unknown>() {
     const { data } = await axios.get('/api/v1/agents')
@@ -149,8 +192,10 @@ export class Api {
   }
 
   // ---------- Monitoring ----------
-  async fetchTokenUsage<T = unknown>(days = 7) {
-    const { data } = await axios.get<T>('/api/v1/monitoring/token-usage', { params: { days } })
+  async fetchTokenUsage<T = unknown>(days = 7, agentUuid?: string) {
+    const { data } = await axios.get<T>('/api/v1/monitoring/token-usage', {
+      params: { days, agent_uuid: agentUuid || undefined }
+    })
     return data
   }
 

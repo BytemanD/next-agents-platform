@@ -36,11 +36,19 @@ def _get_account():
     return context.getvar("account") or "guest"
 
 
-class Users(DBModel, table=True):
+class User(DBModel, table=True):
     __tablename__ = "users"  # type: ignore
 
-    account: str = Field(nullable=False, description="账号")
-    email: str = Field(nullable=False, description="邮箱")
+    username: str = Field(description="username")
+    password: str = Field(description="password")
+    email: str | None = Field(nullable=True, default=None, description="email")
+
+    @classmethod
+    def get_by_username(cls, username: str):
+        items = cls.query(cls.username == username)
+        if not items:
+            return None
+        return items[0]
 
 
 class LLMs(DBModel, table=True):
@@ -277,8 +285,11 @@ class AgentCallback(DBModel, table=True):
     total_cost: float = Field(nullable=True, default=0.0, description="Total Fost")
 
     @classmethod
-    def token_usage(cls, days: int = 7):
+    def token_usage(cls, days: int = 7, agent_uuid: str | None = None):
         since = datetime.now() - timedelta(days=days)
+        filters = [col(AgentCallback.created_at) >= since]
+        if agent_uuid:
+            filters.append(col(AgentCallback.agent_uuid) == agent_uuid)
         stm = (
             select(
                 func.date(AgentCallback.created_at).label("day"),
@@ -288,7 +299,7 @@ class AgentCallback(DBModel, table=True):
                 ),
                 func.count(col(AgentCallback.id)).label("calls"),
             )
-            .where(col(AgentCallback.created_at) >= since)
+            .where(*filters)
             .group_by(func.date(AgentCallback.created_at))
             .order_by(func.date(AgentCallback.created_at))
         )
@@ -296,10 +307,10 @@ class AgentCallback(DBModel, table=True):
         with get_session() as session:
             rows = session.exec(stm).all()
         daily = {
-            row.day.isoformat() if isinstance(row.day, date) else str(row.day): {
-                "prompt": int(row.prompt),
-                "completion": int(row.completion),
-                "calls": int(row.calls),
+            row.day.isoformat() if isinstance(row.day, date) else str(row.day): {  # type: ignore
+                "prompt": int(row.prompt),  # type: ignore
+                "completion": int(row.completion),  # type: ignore
+                "calls": int(row.calls),  # type: ignore
             }
             for row in rows
         }

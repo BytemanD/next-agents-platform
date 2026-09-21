@@ -6,8 +6,7 @@ from langchain_openai import ChatOpenAI
 from pystonic.common import context
 from langchain_openai.chat_models.base import OpenAIRateLimitError
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langchain_core.messages import AIMessageChunk, ToolMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
 from langchain_community.callbacks import get_openai_callback
 from langchain_core.tools.base import BaseTool
@@ -17,7 +16,7 @@ from pystonic.utils.httpclient import default_client
 
 from nap.common.conf import CONF
 from nap.common.manager import BaseManager
-from nap.db.models import AgentCallback, KnowledgeStatus, Session
+from nap.db.models import AgentCallback, KnowledgeStatus, Session, User
 from nap.llm.tools import vector
 from nap.services.storage import STORE_SERVICE
 
@@ -238,8 +237,7 @@ class MasterManager(BaseManager):
                     ):
                         yield event[0]
                         continue
-                    if isinstance(event, ToolMessage):
-                        logger.debug()
+
                     logger.warning("unknowd event: {}", event)
             except OpenAIRateLimitError as e:
                 logger.error("request failed because rate limit")

@@ -1,6 +1,6 @@
 # NAP — Next-generation Agent Platform
 
-> Hand it over and take a nap.
+> Hand it over while you take a nap.
 
 NAP 是一个轻量级的 AI 智能体与知识库融合平台：支持创建、配置多种智能体并与之对话，同时以知识库驱动检索增强，让每一次回答都有据可依。
 

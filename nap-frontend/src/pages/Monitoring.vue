@@ -1,8 +1,10 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <div>
+      <div class="flex items-center gap-3">
         <p class="text-nap-text-secondary mt-1">跟踪智能体运行与用量</p>
+        <t-select v-model="selectedAgentId" :options="agentOptions" clearable size="small" class="w-44"
+          placeholder="全部智能体" />
       </div>
       <t-select v-model="timeRange" :options="timeOptions" size="small" class="w-36" />
     </div>
@@ -10,10 +12,7 @@
     <t-row :gutter="[16, 16]">
       <t-col v-for="stat in stats" :key="stat.label" :xs="12" :sm="6" :lg="3">
         <t-card :bordered="true" class="settings-card">
-          <p class="text-sm text-nap-text-secondary">{{ stat.label }}</p>
-          <p class="text-2xl font-bold mt-1 tabular" style="font-family: var(--font-display)">{{
-            stat.value }}</p>
-          <p class="text-xs mt-2" :class="stat.changeClass">{{ stat.change }}</p>
+          <t-statistic :title="stat.label" :value="stat.value" />
         </t-card>
       </t-col>
     </t-row>
@@ -68,6 +67,8 @@ interface TokenUsage {
 
 const searchQuery = ref('')
 const timeRange = ref('7d')
+const selectedAgentId = ref<string | null>(null)
+const agentOptions = ref<{ label: string; value: string }[]>([])
 const tokenUsage = ref<TokenUsage>({
   days: [], prompt: [], completion: [],
   total_prompt: 0, total_completion: 0, total_tokens: 0, total_calls: 0
@@ -80,10 +81,10 @@ const timeOptions = [
 ]
 
 const stats = ref([
-  { label: '总追踪数', value: '0', change: '', changeClass: '' },
-  { label: '输入 Token', value: '0', change: '', changeClass: '' },
-  { label: '输出 Token', value: '0', change: '', changeClass: '' },
-  { label: '总 Token', value: '0', change: '', changeClass: '' }
+  { label: '总调用次数', value: 0 },
+  { label: '输入 Token', value: 0 },
+  { label: '输出 Token', value: 0 },
+  { label: '总 Token', value: 0 }
 ])
 
 const traces = ref([
@@ -133,16 +134,16 @@ const tokenChartOption = ref<any>({
 const loadTokenUsage = async () => {
   const days = timeRange.value === '1d' ? 1 : timeRange.value === '30d' ? 30 : 7
   try {
-    const data = await API.fetchTokenUsage<TokenUsage>(days)
+    const data = await API.fetchTokenUsage<TokenUsage>(days, selectedAgentId.value || undefined)
     tokenUsage.value = data
     tokenChartOption.value.xAxis.data = data.days
     tokenChartOption.value.series[0].data = data.prompt
     tokenChartOption.value.series[1].data = data.completion
     stats.value = [
-      { label: '总调用次数', value: data.total_calls.toLocaleString(), change: '', changeClass: '' },
-      { label: '输入 Token', value: data.total_prompt.toLocaleString(), change: '', changeClass: '' },
-      { label: '输出 Token', value: data.total_completion.toLocaleString(), change: '', changeClass: '' },
-      { label: '总 Token', value: data.total_tokens.toLocaleString(), change: '', changeClass: '' }
+      { label: '总调用次数', value: data.total_calls },
+      { label: '输入 Token', value: data.total_prompt },
+      { label: '输出 Token', value: data.total_completion },
+      { label: '总 Token', value: data.total_tokens }
     ]
   } catch (e) {
     console.error('load token usage failed', e)
@@ -150,7 +151,20 @@ const loadTokenUsage = async () => {
 }
 
 watch(timeRange, loadTokenUsage)
+watch(selectedAgentId, loadTokenUsage)
 onMounted(loadTokenUsage)
+
+const loadAgents = async () => {
+  try {
+    const data = await API.fetchAgents<{ agents: { uuid: string; name: string; status: string }[] }>()
+    agentOptions.value = (data.agents || [])
+      .filter(a => a.status === 'active')
+      .map(a => ({ label: a.name, value: a.uuid }))
+  } catch {
+    agentOptions.value = []
+  }
+}
+onMounted(loadAgents)
 
 const latencyChartOption = ref({
   backgroundColor: 'transparent',

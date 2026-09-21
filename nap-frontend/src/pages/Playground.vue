@@ -99,7 +99,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { API } from '@/api'
+import { API, TOKEN_KEY } from '@/api'
 import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
 import AppLogo from '@/components/common/AppLogo.vue'
@@ -132,7 +132,7 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // 'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
       },
       body: JSON.stringify({
         // 改成你后端要的格式

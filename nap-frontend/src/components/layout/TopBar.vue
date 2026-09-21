@@ -39,7 +39,7 @@
                 <user-1-icon></user-1-icon>
               </t-avatar>
             </template>
-            <span class="ml-1">BytemanD</span>
+            <span class="ml-1">{{ userName || '用户' }}</span>
           </t-button>
         </t-dropdown>
       </template>
@@ -63,6 +63,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { User1Icon} from 'tdesign-icons-vue-next';
 import { MessagePlugin } from 'tdesign-vue-next';
 import ThemeMode from '../common/ThemeMode.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute()
 const router = useRouter()
@@ -71,6 +72,19 @@ const searchQuery = ref('')
 const uiStore = useUIStore()
 
 const currentTitle = computed(() => route.meta.title as string || '仪表盘')
+
+const authStore = useAuthStore()
+
+const userName = computed(() => {
+  const t = authStore.token
+  if (!t) return ''
+  try {
+    const payload = JSON.parse(atob(t.split('.')[1]))
+    return payload.sub || ''
+  } catch {
+    return ''
+  }
+})
 
 const userMenuOptions = [
   { content: '个人信息', value: 'profile' },
@@ -82,6 +96,11 @@ const userMenuOptions = [
 const userMenuHandler = (data: any) => {
   if (data.value == 'settings') {
     router.push('settings')
+    return
+  }
+  if (data.value == 'signout') {
+    useAuthStore().logout()
+    router.push('/login')
     return
   }
   MessagePlugin.success(`选中【${data.content}】`);
