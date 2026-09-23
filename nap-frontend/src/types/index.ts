@@ -12,6 +12,7 @@ export interface Agent {
 
   createdAt: string
   updatedAt: string
+  model: string
 }
 
 export interface Message {

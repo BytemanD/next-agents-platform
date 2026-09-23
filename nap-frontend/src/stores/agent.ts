@@ -13,6 +13,8 @@ interface AgentAPI {
   tools: string[]
   created_at: string
   updated_at: string
+  config: string
+  knowledge_bases: string[]
 }
 
 export const useAgentStore = defineStore('agent', () => {
@@ -35,6 +37,7 @@ export const useAgentStore = defineStore('agent', () => {
       const data = await API.fetchAgents<{ agents: AgentAPI[] }>()
       agents.value = (data.agents || []).map((a: AgentAPI) => ({
         id: a.uuid,
+        uuid: a.uuid,
         name: a.name,
         description: a.description,
         avatar: '',
@@ -43,7 +46,10 @@ export const useAgentStore = defineStore('agent', () => {
         tools: a.tools || [],
         systemPrompt: a.instruction,
         createdAt: a.created_at,
-        updatedAt: a.updated_at
+        updatedAt: a.updated_at,
+        llm: a.llm,
+        config: a.config,
+        knowledge_bases: a.knowledge_bases,
       }))
       if (!selectedAgentId.value && agents.value.length > 0) {
         selectedAgentId.value = agents.value[0].id

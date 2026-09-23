@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 
-const props = defineProps({
+defineProps({
     title: { type: String, default: '' },
     subtitle: { type: String, default: '' },
 })

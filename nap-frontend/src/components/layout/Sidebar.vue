@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { ChatBubbleIcon } from 'tdesign-icons-vue-next';
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { NavItem } from '@/types'
 import { useUIStore } from '@/stores/ui';

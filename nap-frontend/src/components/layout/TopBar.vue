@@ -60,7 +60,6 @@
 import { useUIStore } from '@/stores/ui'
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { User1Icon} from 'tdesign-icons-vue-next';
 import { MessagePlugin } from 'tdesign-vue-next';
 import ThemeMode from '../common/ThemeMode.vue';
 import { useAuthStore } from '@/stores/auth';

@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps({
+defineProps({
     title: String,
     value: [String, Number],
     unit: { type: String, default: '' },

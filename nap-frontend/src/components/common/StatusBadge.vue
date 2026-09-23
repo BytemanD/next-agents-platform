@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 
-const props = defineProps({
+defineProps({
   status: String,
   theme: { type: String, default: 'default' }
 })

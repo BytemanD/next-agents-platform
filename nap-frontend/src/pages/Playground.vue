@@ -97,10 +97,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { API, TOKEN_KEY } from '@/api'
-import { useChatStore } from '@/stores/chat'
 import { useAgentStore } from '@/stores/agent'
 import AppLogo from '@/components/common/AppLogo.vue'
 import type { Session, SessionMessage } from '@/types'
@@ -109,7 +108,6 @@ import {
   Chatbot as TChatbot,
 } from '@tdesign-vue-next/chat';
 
-const chatStore = useChatStore()
 const agentStore = useAgentStore()
 
 function messageItemProps(msg: any) {
@@ -168,9 +166,6 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
   },
 }))
 
-const chatContainer = ref<HTMLElement>()
-const inputMessage = ref('')
-const showActivity = ref(false)
 const currentConvId = ref<string | null>(null)
 const chatRef = ref<any>(null)
 const hasMessages = ref(false)
@@ -259,9 +254,6 @@ function convertMessages(messages: SessionMessage[]): ChatMessagesData[] {
   }) as any
 }
 
-function clearChat() {
-  chatStore.clearMessages()
-}
 
 async function deleteConversation(id: string) {
   try {
