@@ -2,14 +2,13 @@ import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from pydantic import BaseModel
-from starlette import status
-from pystonic.common import context
-
 from nap.db.models import Knowledge, KnowledgeBase
 from nap.master.manager import MANAGER
+from pydantic import BaseModel
+from pystonic.common import context
+from starlette import status
 
-router = APIRouter(prefix="/knowledge-bases")
+router = APIRouter(prefix="/knowledge-bases", tags=["知识库"])
 
 
 class KnowledgeBaseCreate(BaseModel):
@@ -120,13 +119,18 @@ async def add_knowledge_from_file(kb_id: str, file: UploadFile = File(...)):
     return item
 
 
+class UploadUrlRequest(BaseModel):
+    url: str
+    name: str | None = None
+
+
 @router.post(
     "/{kb_id}/knowledges/url",
     status_code=200,
     summary="从网络获取知识",
     description="从网络地址下载文件并添加到知识库",
 )
-async def add_knowledge_from_url(kb_id: str):
+async def add_knowledge_from_url(kb_id: str, body: UploadUrlRequest):
     kb = KnowledgeBase.get_by_uuid(kb_id)
     if not kb:
         raise HTTPException(
@@ -134,11 +138,11 @@ async def add_knowledge_from_url(kb_id: str):
             detail=f"knowledge base {kb_id} not found",
         )
     item = await asyncio.to_thread(
-        MANAGER.upload_knowledge,
+        MANAGER.upload_knowledge_from_url,
         kb,
         context.getvar("account") or "guest",
-        file.filename or file.file.name,
-        await file.read(),
+        body.url,
+        name=body.name,
     )
     return item
 

@@ -108,8 +108,17 @@
       <t-form-item label="API Key" name="api_key">
         <t-input v-model="createForm.api_key" placeholder="sk-..." type="password" clearable />
       </t-form-item>
-      <t-form-item label="模型（用逗号分隔）" name="models">
-        <t-input v-model="createForm.modelsText" placeholder="gpt-4o, deepseek-v4, kimi" clearable />
+      <t-form-item label="模型" name="models">
+        <t-select-input
+          :value="createForm.models"
+          :input-value="modelInput"
+          multiple
+          allow-input
+          placeholder="输入模型名后回车添加，如 gpt-4o"
+          @input-change="handleInputChange"
+          @enter="handleModelsEnter"
+          @tag-change="handleModelsChange"
+        />
       </t-form-item>
     </t-form>
   </t-dialog>
@@ -154,7 +163,8 @@ const createVisible = ref(false)
 const submitting = ref(false)
 const editingUuid = ref('')
 const formRef = ref()
-const createForm = ref({ name: '', base_url: '', api_key: '', modelsText: '' })
+const createForm = ref({ name: '', base_url: '', api_key: '', models: [] as string[] })
+const modelInput = ref('')
 
 const formRules = {
   base_url: [{ required: true, message: '请填写 Base URL', type: 'error' }],
@@ -163,7 +173,7 @@ const formRules = {
 
 function handleAddKey() {
   editingUuid.value = ''
-  createForm.value = { name: '', base_url: '', api_key: '', modelsText: '' }
+  createForm.value = { name: '', base_url: '', api_key: '', models: [] }
   createVisible.value = true
 }
 
@@ -173,9 +183,23 @@ function handleEdit(endpoint: APIEndpoint) {
     name: endpoint.name,
     base_url: endpoint.base_url,
     api_key: endpoint.api_key,
-    modelsText: endpoint.models.join(', ')
+    models: [...endpoint.models]
   }
   createVisible.value = true
+}
+
+function handleInputChange(v: string) {
+  modelInput.value = v
+}
+
+function handleModelsChange(value: unknown) {
+  createForm.value.models = ((value as Array<string | undefined>) || []).filter(
+    (m): m is string => typeof m === 'string' && m.trim().length > 0
+  )
+}
+
+function handleModelsEnter() {
+  modelInput.value = ''
 }
 
 async function handleCreate() {
@@ -184,10 +208,7 @@ async function handleCreate() {
 
   submitting.value = true
   try {
-    const models = createForm.value.modelsText
-      .split(/[,，]/)
-      .map((s) => s.trim())
-      .filter(Boolean)
+    const models = createForm.value.models.map((s) => s.trim()).filter(Boolean)
     const payload = {
       name: createForm.value.name,
       base_url: createForm.value.base_url,

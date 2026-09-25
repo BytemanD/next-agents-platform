@@ -41,22 +41,14 @@
           <t-button size="small" variant="text" @click.stop="handleChat()">
             <template #icon><t-icon name="chat" /></template>
           </t-button>
-          <t-popconfirm theme="danger" content="确定删除该智能体吗？删除后不可恢复。"
-            placement="top-right" @confirm="handleDelete(agent)">
+          <t-popconfirm theme="danger" content="确定删除该智能体吗？删除后不可恢复。" placement="top-right"
+            @confirm="handleDelete(agent)">
             <t-button theme="danger" size="small" variant="text">
               <t-icon name="delete" />
             </t-button>
           </t-popconfirm>
         </template>
         <p>{{ agent.description }}</p>
-        <t-space size="small" class="mt-4">
-          <t-tag v-for="tool in agent.tools.slice(0, 3)" :key="tool" size="small" variant="light-outline">
-            {{ tool }}
-          </t-tag>
-          <t-tag v-if="agent.tools.length > 3" size="small" variant="light">
-            +{{ agent.tools.length - 3 }}
-          </t-tag>
-        </t-space>
       </nap-card>
     </t-col>
   </t-row>

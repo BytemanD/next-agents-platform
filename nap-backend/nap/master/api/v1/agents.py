@@ -1,14 +1,14 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from langchain_openai.chat_models.base import OpenAIInvalidRequestError
 from loguru import logger
 from nap.db.models import AgentConfig, Agents
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
-from langchain_openai.chat_models.base import OpenAIInvalidRequestError
 
-router = APIRouter(prefix="/agents")
+router = APIRouter(prefix="/agents", tags=["智能体"])
 
 
 class AgentCreate(BaseModel):
@@ -41,10 +41,14 @@ class AgentResponse(BaseModel):
     llm: str
     status: str
     config: dict
-    knowledge_bases: list[str]
-    tools: list[str]
     created_at: str
     updated_at: str
+    knowledge_bases: list[str] = []
+    tools: list[str] = []
+
+
+class AgentsResponse(BaseModel):
+    agents: list[Agents]
 
 
 class QueryRequest(BaseModel):
@@ -65,33 +69,34 @@ class ChatSSE(BaseModel):
     msg: str = ""
 
 
-@router.get("")
+@router.get(
+    "",
+    response_model=AgentsResponse,
+    response_model_exclude={"agents": {"__all__": {"instruction", "id"}}},
+)
 async def list_agents():
-    return {"agents": Agents.query()}
+    return AgentsResponse(agents=MANAGER.get_agents())
 
 
-@router.get("/{uuid}")
+@router.get("/{uuid}", response_model=Agents)
 async def get_agent(uuid: str):
-    a = Agents.get_by_uuid(uuid)
-    if not a:
+    agent = MANAGER.get_agent(uuid)
+    if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return a
+    return agent
 
 
 @router.post("", status_code=201)
 async def create_agent(body: AgentCreate):
-    a = Agents(
-        name=body.name,
+    return MANAGER.create_agent(
+        body.name,
         description=body.description,
         instruction=body.instruction,
         llm=body.llm,
-        status=body.status,
         config=body.config,
         knowledge_bases=body.knowledge_bases,
         tools=body.tools,
     )
-    a.create()
-    return a
 
 
 @router.put("/{uuid}")

@@ -1,6 +1,8 @@
-from datetime import UTC, datetime, timedelta
+import asyncio
 import socket
+from datetime import UTC, datetime, timedelta
 from typing import Callable
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from loguru import logger
@@ -12,15 +14,16 @@ class BaseManager:
         self.asyncio_scheduler = AsyncIOScheduler()
         self.backgroup_scheduler = BackgroundScheduler()
 
-    def start(self):
+    async def start(self):
         self.asyncio_scheduler.start()
         self.backgroup_scheduler.start()
 
-    def stop(self):
-        self.asyncio_scheduler.pause()
-        self.backgroup_scheduler.pause()
-        self.asyncio_scheduler.shutdown()
-        self.backgroup_scheduler.shutdown()
+    async def stop(self):
+        logger.info("shutdown scheduler")
+        await asyncio.to_thread(self.asyncio_scheduler.pause)
+        await asyncio.to_thread(self.backgroup_scheduler.pause)
+        await asyncio.to_thread(self.asyncio_scheduler.shutdown)
+        await asyncio.to_thread(self.backgroup_scheduler.shutdown)
 
     def run_background_job(
         self,

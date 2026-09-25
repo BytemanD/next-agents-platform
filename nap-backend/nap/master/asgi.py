@@ -3,13 +3,7 @@ from contextlib import asynccontextmanager
 import bcrypt
 from fastapi import FastAPI
 from loguru import logger
-from nap.common.utils import hashpw
 from nap.db.models import User
-from pystonic.orm.database import create_all_tables
-from pystonic.asgi.app import create_app
-from pystonic.log import setup_logger
-from starlette.authentication import AuthenticationError
-
 from nap.master.api.v1 import (
     agents,
     knowledge,
@@ -21,7 +15,12 @@ from nap.master.api.v1 import (
     users,
 )
 from nap.master.manager import MANAGER
-from nap.master.middleware import jwt_auth
+from pystonic.asgi.app import create_app
+from pystonic.asgi.middlewares.trace import TraceIdMiddleware
+from pystonic.asgi.plugins import auth
+from pystonic.common.log import setup_logger
+from pystonic.orm.database import create_all_tables
+from starlette.authentication import AuthenticationError
 
 setup_logger(remove=True)
 
@@ -30,10 +29,11 @@ setup_logger(remove=True)
 async def lifespan(app: FastAPI):
     logger.info("start Master ...")
     create_all_tables()
-    MANAGER.start()
+    await MANAGER.start()
+    await MANAGER.init_agent()
     yield
     logger.info("stop Master ...")
-    MANAGER.stop()
+    await MANAGER.stop()
 
 
 APP = create_app(lifespan=lifespan)
@@ -60,4 +60,13 @@ def _on_login(username: str, password: str):
         raise AuthenticationError("username or password error")
 
 
-jwt_auth.setup(APP, on_login=_on_login, exclude_routes={("POST", "/api/v1/users")})
+APP.add_middleware(TraceIdMiddleware)
+auth.setup(
+    APP,
+    on_login=_on_login,
+    exclude_routes={
+        ("POST", "/api/v1/users"),
+        ("GET", "/docs"),
+        ("GET", "/openapi.json"),
+    },
+)

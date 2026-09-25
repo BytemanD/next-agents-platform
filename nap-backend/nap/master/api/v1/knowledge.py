@@ -2,11 +2,10 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from nap.db.models import Knowledge, KnowledgeStatus, KnowledgeTodo
+from nap.master.manager import MANAGER
 from pydantic import BaseModel
 
-from nap.master.manager import MANAGER
-
-router = APIRouter(prefix="/knowledges")
+router = APIRouter(prefix="/knowledges", tags=["知识"])
 
 
 class KnowledgeCreate(BaseModel):

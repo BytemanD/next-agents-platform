@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from nap.db.models import AgentCallback
 
-router = APIRouter(prefix="/monitoring")
+router = APIRouter(prefix="/monitoring", tags=["监控"])
 
 
 @router.get("/token-usage")

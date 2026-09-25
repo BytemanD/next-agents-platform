@@ -10,9 +10,6 @@ class AgentConfig(BaseModel):
     max_tokens: int | None = None
 
 
-AgentConfig.model_validate_json
-
-
 # ---------- 通用 TypeDecorator ----------
 class PydanticType(TypeDecorator):
     impl = JSON

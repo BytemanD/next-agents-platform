@@ -5,7 +5,7 @@ from nap.db.models import Session
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/sessions")
+router = APIRouter(prefix="/sessions", tags=["会话"])
 
 
 class SessionUpdate(BaseModel):

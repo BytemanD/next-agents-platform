@@ -1,31 +1,45 @@
+from collections.abc import Awaitable, Callable
+from typing import Callable
+
+import aiosqlite
 import httpx
-from loguru import logger
 from langchain.agents import create_agent
-from pydantic import BaseModel, SecretStr
-from langchain_openai import ChatOpenAI
-from pystonic.common import context
-from langchain_openai.chat_models.base import OpenAIRateLimitError
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langchain.agents.middleware import (
+    AgentMiddleware,
+    AgentState,
+    ModelRequest,
+    ModelResponse,
+)
+from langchain_community.callbacks import get_openai_callback
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
-from langchain_community.callbacks import get_openai_callback
-from langchain_core.tools.base import BaseTool
-
-from pystonic.utils.strutil import text_shorten
-from pystonic.utils.httpclient import default_client
-
+from langchain_openai import ChatOpenAI
+from langchain_openai.chat_models.base import OpenAIRateLimitError
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from loguru import logger
 from nap.common.conf import CONF
+from nap.common.exceptions import LLMIsInvalid, LLMRateLimitError
 from nap.common.manager import BaseManager
-from nap.db.models import AgentCallback, KnowledgeStatus, Session, User
-from nap.llm.tools import vector
-from nap.services.storage import STORE_SERVICE
-
-from nap.common.exceptions import (
-    LLMIsInvalid,
-    LLMRateLimitError,
+from nap.common.objects import ToolModel
+from nap.db.models import (
+    AgentCallback,
+    Agents,
+    Knowledge,
+    KnowledgeBase,
+    KnowledgeStatus,
+    LLMs,
+    Session,
 )
-from nap.db.models import Agents, Knowledge, KnowledgeBase, LLMs
+from nap.db.types import AgentConfig
+from nap.llm.tools import vector
 from nap.llm.tools.context import RuntimeContext
+from nap.services.storage import STORE_SERVICE
+from pydantic import BaseModel, SecretStr
+from pystonic.common import context
+from pystonic.utils.httpclient import default_client
+from pystonic.utils.strutil import text_shorten
+
+AGENT_TOOLS = [vector.retrival, vector.list_documents]
 
 
 class Message(BaseModel):
@@ -33,26 +47,6 @@ class Message(BaseModel):
     type: str
     content: str | None = None
     thinking: str | None = None
-
-
-class ToolModel(BaseModel):
-    class Extras(BaseModel):
-        title: str = ""
-        type: str = ""
-
-    name: str
-    description: str = ""
-    extras: Extras = Extras()
-    args: dict = {}
-
-    @classmethod
-    def from_llm_tool(cls, t: BaseTool):
-        return cls(
-            name=t.name,
-            description=t.description,
-            extras=cls.Extras.model_validate(t.extras or {}),
-            args=t.args,
-        )
 
 
 class ReasoningChatOpenAI(ChatOpenAI):
@@ -83,7 +77,36 @@ class ReasoningChatOpenAI(ChatOpenAI):
         return generation_chunk
 
 
-AGENT_TOOLS = [vector.retrival, vector.list_documents]
+class RuntimeAgentMiddleware(AgentMiddleware[AgentState, RuntimeContext]):
+    async def awrap_model_call(
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+    ) -> ModelResponse:
+        ctx: RuntimeContext = request.runtime.context
+        runtime_model = ReasoningChatOpenAI(
+            model=ctx.model,
+            api_key=SecretStr(ctx.model_api_key),
+            base_url=ctx.model_base_url,
+            temperature=ctx.agent_config.temperature,
+            stream_usage=True,
+            model_kwargs={"stream_options": {"include_usage": True}},
+            # use_responses_api=True,
+            # reasoning_effort="medium",
+            # use_responses_api=False,
+        )
+        logger.info(
+            "runtime tools: {}, knowledge bases: {}",
+            [x.name for x in ctx.tools or []],
+            [x.name for x in ctx.knowledge_bases],
+        )
+        return await handler(
+            request.override(
+                model=runtime_model,
+                tools=ctx.tools,
+                system_prompt=ctx.system_prompt,
+            )
+        )
 
 
 class MasterManager(BaseManager):
@@ -92,6 +115,62 @@ class MasterManager(BaseManager):
         self.knowledge_client = default_client(
             base_url=CONF.master.knowledge_base_url, raise_for_status=True
         )
+        self._conn = None
+        self._agent = None
+
+    async def stop(self):
+        await super().stop()
+        logger.info("close checkpointer connection")
+        if self._conn:
+            await self._conn.close()
+
+    async def init_agent(self):
+        if not self._agent:
+            logger.info("init agent ...")
+            self._conn = await aiosqlite.connect(CONF.store + "/checkpoint.sqlite")
+            self._agent = create_agent(
+                ChatOpenAI(model="gpt", base_url="...", api_key="..."),
+                checkpointer=AsyncSqliteSaver(self._conn),
+                context_schema=RuntimeContext,
+                middleware=[RuntimeAgentMiddleware()],
+                tools=[vector.get_available_knowledge_bases, *AGENT_TOOLS],
+            )
+        return self._agent
+
+    def get_agents(self):
+        return Agents.query(Agents.creator == context.getvar("account"))
+
+    def get_agent(self, uuid: str):
+        items = Agents.query(
+            Agents.creator == context.getvar("account"), Agents.uuid == uuid
+        )
+        if not items:
+            return None
+        return items[0]
+
+    def create_agent(
+        self,
+        name: str,
+        description: str = "",
+        instruction: str = "",
+        llm: str = "",
+        config: AgentConfig = AgentConfig(),
+        knowledge_bases: list[str] = [],
+        tools: list[str] = [],
+    ):
+        a = Agents(
+            creator=context.getvar("account", "guest"),
+            name=name,
+            description=description,
+            instruction=instruction,
+            llm=llm,
+            status="active",
+            config=config,
+            knowledge_bases=knowledge_bases,
+            tools=tools,
+        )
+        a.create()
+        return a
 
     def upload_knowledge(
         self, kb: KnowledgeBase, creator: str, filename: str, content: bytes
@@ -102,6 +181,37 @@ class MasterManager(BaseManager):
             knowledge_base=kb.uuid,
             creator=creator,
             name=filename,
+            size=len(content),
+            raw_path="",
+            convert_path="",
+            status=KnowledgeStatus.pending_process.value,
+        )
+        knowledge.create()
+
+        STORE_SERVICE.save_raw(knowledge, content)
+
+        knowledge.add_todo("convert")
+        knowledge.add_todo("vector")
+        knowledge.add_todo("enrich")
+        return knowledge
+
+    def upload_knowledge_from_url(
+        self,
+        kb: KnowledgeBase,
+        creator: str,
+        url: str,
+        name: str | None = None,
+    ) -> Knowledge:
+        """创建 doc 记录， 保存 doc 内容到本地存储"""
+
+        resp = httpx.get(url)
+        resp.raise_for_status()
+        content = resp.content
+
+        knowledge = Knowledge(
+            knowledge_base=kb.uuid,
+            creator=creator,
+            name=name or "unknown",
             size=len(content),
             raw_path="",
             convert_path="",
@@ -137,52 +247,38 @@ class MasterManager(BaseManager):
         llm = LLMs.get_by_uuid(db_agent.llm)
         if not llm.models:
             raise LLMIsInvalid(llm.uuid)
-
         if session_id:
             session = Session.get_by_uuid(session_id)
         else:
             session = Session(
-                user=context.getvar("account", "guest"),
+                user=context.getvar("account", context.getvar("account")),
                 agent=db_agent.uuid,
                 title=text_shorten(query, wide=10),
             )
             session.create()
 
+        kb_uuids = knowledge_bases or db_agent.knowledge_bases
         runtime_context = RuntimeContext(
-            knowledge_bases=KnowledgeBase.get_by_uuids(
-                knowledge_bases or db_agent.knowledge_bases or []
-            )
-        )
-        runtime_tools = [
-            vector.get_available_knowledge_bases,
-        ] + [x for x in AGENT_TOOLS if x.name in tools]
-        runtime_model = ReasoningChatOpenAI(
             model=model or llm.models[0],
-            api_key=SecretStr(llm.api_key),
-            base_url=llm.base_url,
-            temperature=db_agent.config.temperature,
-            stream_usage=True,
-            model_kwargs={"stream_options": {"include_usage": True}},
-            # use_responses_api=True,
-            # reasoning_effort="medium",
-            # use_responses_api=False,
+            model_base_url=llm.base_url,
+            model_api_key=llm.api_key,
+            agent_config=db_agent.config,
+            tools=[
+                vector.get_available_knowledge_bases,
+                *[x for x in AGENT_TOOLS if x.name in tools],
+            ],
+            knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
         )
 
+        agent = await self.init_agent()
         with get_openai_callback() as cb:
-            async for event in self._chat(
-                runtime_context,
-                db_agent,
-                session,
-                runtime_model,
-                query,
-                tools=runtime_tools,
-            ):
+            async for event in self._chat(runtime_context, db_agent, session, query):
                 yield event
 
             callback = AgentCallback(
                 agent_uuid=db_agent.uuid,
                 session_uuid=session.uuid,
-                model=runtime_model.model,
+                model=runtime_context.model,
                 total_tokens=cb.total_tokens,
                 prompt_tokens=cb.prompt_tokens,
                 completion_tokens=cb.completion_tokens,
@@ -191,57 +287,30 @@ class MasterManager(BaseManager):
             self.run_background_job(callback.create)
 
     async def _chat(
-        self,
-        context: RuntimeContext,
-        db_agent: Agents,
-        session: Session,
-        model: ChatOpenAI,
-        query: str,
-        tools: list[BaseTool] | None = None,
+        self, context: RuntimeContext, db_agent: Agents, session: Session, query: str
     ):
-        logger.info(
-            "runtime tools: {}, knowledge bases: {}",
-            [x.name for x in tools or []],
-            [x.name for x in context.knowledge_bases],
+        agent = await self.init_agent()
+        stream = agent.astream(
+            {"messages": [{"role": "user", "content": query}]},
+            stream_mode="messages",
+            config={
+                "configurable": {"thread_id": session.uuid},
+                "metadata": {"user": "guest", "agent": db_agent.uuid},
+            },
+            # version="v3"
+            context=context,
         )
-        async with AsyncSqliteSaver.from_conn_string(
-            CONF.store + "/checkpoint.sqlite"
-        ) as checkpointer:
-            agent = create_agent(
-                model=model,
-                system_prompt=db_agent.instruction,
-                checkpointer=checkpointer,
-                tools=tools,
-            )
 
-            stream = agent.astream(
-                {"messages": [{"role": "user", "content": query}]},
-                stream_mode="messages",
-                config={
-                    "configurable": {
-                        "thread_id": session.uuid,
-                    },
-                    "metadata": {
-                        "account": "guest",
-                        "agent": db_agent.uuid,
-                    },
-                },
-                # version="v3"
-                context=context,
-            )
+        try:
+            async for event in stream:
+                if isinstance(event, tuple) and isinstance(event[0], AIMessageChunk):
+                    yield event[0]
+                    continue
 
-            try:
-                async for event in stream:
-                    if isinstance(event, tuple) and isinstance(
-                        event[0], AIMessageChunk
-                    ):
-                        yield event[0]
-                        continue
-
-                    logger.warning("unknowd event: {}", event)
-            except OpenAIRateLimitError as e:
-                logger.error("request failed because rate limit")
-                raise LLMRateLimitError(str(e))
+                logger.warning("unknowd event: {}", event)
+        except OpenAIRateLimitError as e:
+            logger.error("request failed because rate limit")
+            raise LLMRateLimitError(str(e))
 
     async def list_sessions(self, agent_uuid: str):
         return Session.get_recent(agent_uuid)

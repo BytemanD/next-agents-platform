@@ -69,6 +69,11 @@ export class Api {
     return data
   }
 
+  async fetchUserMe<T = unknown>() {
+    const { data } = await axios.get<T>('/api/v1/users/me')
+    return data
+  }
+
   // ---------- Agents ----------
   async fetchAgents<T = unknown>() {
     const { data } = await axios.get('/api/v1/agents')

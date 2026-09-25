@@ -163,6 +163,13 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
       ai.id,
       ai.content.map((c: any) => (c.type === 'thinking' ? { ...c, status } : c))
     )
+    if (!currentConvId.value) {
+      fetchSessions().then(() => {
+        if (!currentConvId.value) {
+          currentConvId.value = conversations.value[0]?.uuid || null
+        }
+      })
+    }
   },
 }))
 
@@ -284,9 +291,14 @@ async function fetchSessions() {
   }
 }
 
-onMounted(() => {
-  agentStore.fetchAgents()
+onMounted(async () => {
+  await agentStore.fetchAgents()
   fetchTools()
+  if (agentStore.selectedAgentId) {
+    selectedModel.value = ''
+    selectedTools.value = [...(agentStore.selectedAgent?.tools || [])]
+    fetchSessions()
+  }
 })
 
 watch(() => agentStore.selectedAgentId, () => {

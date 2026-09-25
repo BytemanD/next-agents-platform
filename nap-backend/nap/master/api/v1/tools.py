@@ -2,8 +2,7 @@ from fastapi import APIRouter
 from nap.master.manager import MANAGER, ToolModel
 from pydantic import BaseModel
 
-
-router = APIRouter(prefix="/tools")
+router = APIRouter(prefix="/tools", tags=["工具"])
 
 
 class ToolsResponse(BaseModel):

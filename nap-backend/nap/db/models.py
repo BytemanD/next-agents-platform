@@ -1,15 +1,15 @@
-from datetime import date, datetime, timedelta
-from enum import IntEnum, StrEnum, auto
 import os
+from datetime import date, timedelta
+from enum import IntEnum, StrEnum, auto
 from pathlib import Path
 from typing import Sequence
 
 from nap.common.exceptions import AgentNotExists
 from nap.db.types import AgentConfig, PydanticType
 from pydantic import field_serializer
-from pystonic.orm.models import DBModel, get_session
-from sqlmodel import JSON, Column, Field, Text, col, desc, func, select, update
 from pystonic.common import context
+from pystonic.orm.models import DBModel, get_session, utcnow
+from sqlmodel import JSON, Column, Field, Text, col, desc, func, select, update
 
 
 class KnowledgeStatus(IntEnum):
@@ -66,13 +66,14 @@ class LLMs(DBModel, table=True):
 class Agents(DBModel, table=True):
     __tablename__ = "agents"  # type: ignore
 
+    creator: str = Field(nullable=False, description="创建者UUID")
     name: str = Field(nullable=False, description="智能体名称")
     description: str = Field(nullable=False, description="智能体描述")
     instruction: str = Field(
         nullable=False, sa_type=Text, description="agent instruction"
     )
     llm: str = Field(nullable=False, description="LLM UUID")
-    status: str = Field(nullable=False, default="draft", description="智能体状态")
+    status: str = Field(nullable=False, default="active", description="智能体状态")
 
     config: AgentConfig = Field(
         default_factory=AgentConfig,
@@ -98,6 +99,9 @@ class Agents(DBModel, table=True):
         if not items:
             raise AgentNotExists(uuid)
         return items[0]
+
+    def get_knowledge_bases(self):
+        return KnowledgeBase.query(col(KnowledgeBase.uuid).in_(self.knowledge_bases))
 
 
 class KnowledgeBase(DBModel, table=True):
@@ -286,7 +290,7 @@ class AgentCallback(DBModel, table=True):
 
     @classmethod
     def token_usage(cls, days: int = 7, agent_uuid: str | None = None):
-        since = datetime.now() - timedelta(days=days)
+        since = utcnow() - timedelta(days=days)
         filters = [col(AgentCallback.created_at) >= since]
         if agent_uuid:
             filters.append(col(AgentCallback.agent_uuid) == agent_uuid)
@@ -317,7 +321,7 @@ class AgentCallback(DBModel, table=True):
 
         labels, prompt, completion = [], [], []
         for i in range(days - 1, -1, -1):
-            day = (datetime.now() - timedelta(days=i)).date()
+            day = (utcnow() - timedelta(days=i)).date()
             key = day.isoformat()
             labels.append(day.strftime("%m-%d"))
             entry = daily.get(key, {"prompt": 0, "completion": 0, "calls": 0})

@@ -58,11 +58,12 @@
 
 <script setup lang="ts">
 import { useUIStore } from '@/stores/ui'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next';
 import ThemeMode from '../common/ThemeMode.vue';
 import { useAuthStore } from '@/stores/auth';
+import { API } from '@/api';
 
 const route = useRoute()
 const router = useRouter()
@@ -73,15 +74,23 @@ const uiStore = useUIStore()
 const currentTitle = computed(() => route.meta.title as string || '仪表盘')
 
 const authStore = useAuthStore()
+const userName = ref('')
 
-const userName = computed(() => {
-  const t = authStore.token
-  if (!t) return ''
+function redirectToLogin() {
+  authStore.logout()
+  router.replace('/login')
+}
+
+onMounted(async () => {
+  if (!authStore.token) {
+    redirectToLogin()
+    return
+  }
   try {
-    const payload = JSON.parse(atob(t.split('.')[1]))
-    return payload.sub || ''
+    const data = await API.fetchUserMe<{ username: string; email?: string }>()
+    userName.value = data.username || ''
   } catch {
-    return ''
+    redirectToLogin()
   }
 })
 
@@ -98,7 +107,7 @@ const userMenuHandler = (data: any) => {
     return
   }
   if (data.value == 'signout') {
-    useAuthStore().logout()
+    authStore.logout()
     router.push('/login')
     return
   }
@@ -115,4 +124,5 @@ function handleKeydown(e: KeyboardEvent) {
 if (typeof window !== 'undefined') {
   window.addEventListener('keydown', handleKeydown)
 }
+
 </script>

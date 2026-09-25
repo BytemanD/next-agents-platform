@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from nap.db.models import Project
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/projects")
+router = APIRouter(prefix="/projects", tags=["项目"])
 
 
 class ProjectCreate(BaseModel):

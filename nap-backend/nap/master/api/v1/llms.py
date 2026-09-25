@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from nap.db.models import LLMs
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/llms")
+router = APIRouter(prefix="/llms", tags=["模型"])
 
 
 class LLMCreate(BaseModel):
