@@ -36,7 +36,7 @@
           <t-button variant="text">
             <template #icon>
               <t-avatar size="small">
-                <user-1-icon></user-1-icon>
+                <t-icon name="user-1" size="16" />
               </t-avatar>
             </template>
             <span class="ml-1">{{ userName || '用户' }}</span>

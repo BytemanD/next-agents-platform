@@ -47,8 +47,9 @@
     </t-col>
     <t-col :span="10" style="height: 100%; padding: 40px;">
       <div class="relative h-full flex flex-col min-h-0">
-        <t-chatbot v-if="agentStore.selectedAgentId" :key="agentStore.selectedAgentId"
+        <t-chatbot v-if="agentStore.selectedAgentId"
           :chat-service-config="chatServiceConfig" :message-props="messageItemProps" ref="chatRef"
+          :sender-props="senderProps"
           class="flex-1 min-h-0 min-w-0" @message-change="onMessageChange">
           <template #sender-footer-prefix>
             <t-space class="flex j">
@@ -97,18 +98,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { API, TOKEN_KEY } from '@/api'
 import { useAgentStore } from '@/stores/agent'
+import { useChatStore, type ChatStoreMessage, type ChatChunk } from '@/stores/chat'
 import AppLogo from '@/components/common/AppLogo.vue'
 import type { Session, SessionMessage } from '@/types'
-import { ChatServiceConfig, type AIMessageContent, type ChatMessagesData, type SSEChunkData } from '@tdesign-vue-next/chat'
+import { ChatServiceConfig, type AIMessageContent, type SSEChunkData } from '@tdesign-vue-next/chat'
 import {
   Chatbot as TChatbot,
 } from '@tdesign-vue-next/chat';
 
 const agentStore = useAgentStore()
+const chatStore = useChatStore()
 
 function messageItemProps(msg: any) {
   return {
@@ -125,7 +128,8 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
   // 开启流式传输
   stream: true,
   onRequest: (params) => {
-    console.log(selectedModel.value)
+    chatStore.activeRequestKey = currentKey.value
+    chatStore.setDraft(currentKey.value, '')
     return {
       method: 'POST',
       headers: {
@@ -146,27 +150,46 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
   onMessage: (chunk: SSEChunkData): AIMessageContent => {
     const rest = chunk.data as { type?: string; msg?: string };
     const msg = rest?.msg || '';
+    let content: AIMessageContent
     if (rest?.type === 'thinking') {
-      return { type: 'thinking', data: { text: msg, title: '深度思考' } };
+      content = { type: 'thinking', data: { text: msg, title: '深度思考' }, status: 'streaming' };
+    } else {
+      content = { type: 'markdown', data: msg, status: 'streaming' };
     }
-    return { type: 'markdown', data: msg };
+    const key = chatStore.activeRequestKey || currentKey.value
+    chatStore.upsertStreamContent(key, content as ChatStoreMessage['content'][number])
+    return content;
   },
 
   onComplete: (isAborted?: boolean) => {
     const el = (chatRef.value as any)?.$el ?? chatRef.value
     const messageStore = el?.provide?.chatEngine?.messageStore
-    if (!messageStore) return
-    const ai = messageStore.messages.filter((m: any) => m.role === 'assistant').pop()
-    if (!ai?.content?.length) return
-    const status = isAborted ? 'stop' : 'complete'
-    messageStore.updateMultipleContents(
-      ai.id,
-      ai.content.map((c: any) => (c.type === 'thinking' ? { ...c, status } : c))
-    )
+    if (messageStore) {
+      const ai = messageStore.messages.filter((m: any) => m.role === 'assistant').pop()
+      if (ai?.content?.length) {
+        const status = isAborted ? 'stop' : 'complete'
+        messageStore.updateMultipleContents(
+          ai.id,
+          ai.content.map((c: any) => (c.type === 'thinking' ? { ...c, status } : c))
+        )
+      }
+    }
+    const key = chatStore.activeRequestKey || currentKey.value
+    chatStore.finalizeStream(key, !!isAborted)
+    chatStore.activeRequestKey = null
+    snapshotCurrentToStore()
     if (!currentConvId.value) {
       fetchSessions().then(() => {
         if (!currentConvId.value) {
-          currentConvId.value = conversations.value[0]?.uuid || null
+          const top = conversations.value[0]
+          if (top?.uuid) {
+            currentConvId.value = top.uuid
+            const agentId = agentStore.selectedAgentId
+            if (agentId) {
+              chatStore.bindNewToSession(agentId, top.uuid)
+              chatStore.setDraft(chatStore.keyFor(top.uuid, agentId), '')
+            }
+          }
         }
       })
     }
@@ -176,6 +199,42 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
 const currentConvId = ref<string | null>(null)
 const chatRef = ref<any>(null)
 const hasMessages = ref(false)
+
+const currentKey = computed(() =>
+  chatStore.keyFor(currentConvId.value, agentStore.selectedAgentId || '')
+)
+
+function getEngineMessages(): ChatStoreMessage[] | null {
+  const el = (chatRef.value as any)?.$el ?? chatRef.value
+  const msgs = el?.provide?.chatEngine?.messageStore?.messages
+  if (Array.isArray(msgs)) return msgs
+  return el?.chatMessageValue && Array.isArray(el.chatMessageValue) ? el.chatMessageValue : null
+}
+
+function snapshotCurrentToStore(agentId?: string | null) {
+  if (!chatRef.value) return
+  const msgs = getEngineMessages()
+  const key = chatStore.keyFor(currentConvId.value, agentId ?? (agentStore.selectedAgentId || ''))
+  if (msgs) chatStore.setMessages(key, msgs)
+}
+
+function restoreKeyDisplay(key: string) {
+  if (!chatRef.value) return
+  const ref = chatRef.value
+  if (chatStore.getMessages(key).length) {
+    ref.setMessages?.(chatStore.getMessagesForEngine(key), 'replace')
+  } else {
+    ref.clearMessages?.()
+  }
+  hasMessages.value = chatStore.getMessages(key).length > 0
+}
+
+const senderProps = computed(() => ({
+  value: chatStore.getDraft(currentKey.value),
+  onChange: (e: any) => {
+    chatStore.setDraft(currentKey.value, e?.detail ?? '')
+  },
+}))
 
 function onMessageChange(e: any) {
   const detail = e.detail ?? e
@@ -218,9 +277,9 @@ const agentOptions = computed(() =>
   agentStore.agents.map(a => ({ label: a.name, value: a.id }))
 )
 function newConversation() {
+  snapshotCurrentToStore()
   currentConvId.value = null
-  hasMessages.value = false
-  chatRef.value?.clearMessages()
+  restoreKeyDisplay(currentKey.value)
 }
 
 async function useSuggestion(text: string) {
@@ -229,23 +288,29 @@ async function useSuggestion(text: string) {
 }
 
 async function selectConversation(id: string) {
+  if (id === currentConvId.value) return
+  snapshotCurrentToStore()
   currentConvId.value = id
-  try {
-    const { messages } = await API.fetchSessionMessages<{ messages: SessionMessage[] }>(id)
-    chatRef.value?.setMessages(convertMessages(messages), 'replace')
-  } catch {
-    MessagePlugin.error('加载会话消息失败')
+  const key = currentKey.value
+  if (chatStore.getMessages(key).length === 0) {
+    try {
+      const { messages } = await API.fetchSessionMessages<{ messages: SessionMessage[] }>(id)
+      chatStore.setMessages(key, convertMessages(messages))
+    } catch {
+      MessagePlugin.error('加载会话消息失败')
+    }
   }
+  restoreKeyDisplay(key)
 }
 
-function convertMessages(messages: SessionMessage[]): ChatMessagesData[] {
+function convertMessages(messages: SessionMessage[]): ChatStoreMessage[] {
   return messages.map(msg => {
     let role: 'user' | 'assistant' | 'system'
     if (msg.type === 'ai') role = 'assistant'
     else if (msg.type === 'system' || msg.type === 'system-text') role = 'system'
     else role = 'user'
 
-    const content: AIMessageContent[] = []
+    const content: ChatChunk[] = []
     if (msg.thinking) {
       content.push({
         type: 'thinking',
@@ -258,7 +323,7 @@ function convertMessages(messages: SessionMessage[]): ChatMessagesData[] {
     else content.push({ type: 'text', data })
 
     return { id: msg.id, role, content }
-  }) as any
+  }) as ChatStoreMessage[]
 }
 
 
@@ -266,6 +331,7 @@ async function deleteConversation(id: string) {
   try {
     await API.deleteSession(id)
     MessagePlugin.success('会话已删除')
+    chatStore.removeSession(id)
     if (currentConvId.value === id) {
       currentConvId.value = null
       hasMessages.value = false
@@ -297,14 +363,19 @@ onMounted(async () => {
   if (agentStore.selectedAgentId) {
     selectedModel.value = ''
     selectedTools.value = [...(agentStore.selectedAgent?.tools || [])]
+    await nextTick()
+    restoreKeyDisplay(currentKey.value)
     fetchSessions()
   }
 })
 
-watch(() => agentStore.selectedAgentId, () => {
+watch(() => agentStore.selectedAgentId, async (_id, oldId) => {
+  snapshotCurrentToStore(oldId)
   selectedModel.value = ''
   currentConvId.value = null
   selectedTools.value = [...(agentStore.selectedAgent?.tools || [])]
+  await nextTick()
+  restoreKeyDisplay(currentKey.value)
   fetchSessions()
 })
 
