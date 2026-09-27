@@ -35,3 +35,10 @@ class ToolModel(BaseModel):
             extras=cls.Extras.model_validate(t.extras or {}),
             args=t.args,
         )
+
+
+class Message(BaseModel):
+    id: str
+    type: str
+    content: str | None = None
+    thinking: str | None = None

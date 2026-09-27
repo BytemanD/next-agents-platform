@@ -11,7 +11,10 @@ class RuntimeContext(BaseModel):
     model_base_url: str
     model_api_key: str
 
+    agent_uuid: str
     agent_config: AgentConfig
+    session_uuid: str
+    username: str
     system_prompt: str = ""
     tools: list[BaseTool] = []
     knowledge_bases: Sequence[KnowledgeBase] = []

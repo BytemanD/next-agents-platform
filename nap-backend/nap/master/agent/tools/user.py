@@ -1,12 +1,23 @@
 """系统内部使用的工具"""
 
-from langchain.tools import tool, ToolRuntime
+from langchain.tools import ToolRuntime, tool
 from loguru import logger
-
-from nap.llm.tools.context import RuntimeContext
 from nap.common.knowledge_client import KnowledgeClient
+from nap.master.agent.context import RuntimeContext
 
 KNOWLEDGE_CLIENT = KnowledgeClient()
+
+
+@tool
+def get_username(runtime: ToolRuntime[RuntimeContext]):
+    """获取当前用户名
+
+    当需要获取当前用户名时使用。
+
+    Returns:
+        用户名
+    """
+    return runtime.context.username
 
 
 @tool

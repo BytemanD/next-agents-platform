@@ -1,9 +1,8 @@
 """系统内部使用的工具"""
 
+from langchain_core.tools import tool
 from loguru import logger
 from nap.db.models import KnowledgeEnrichmen
-
-from langchain_core.tools import tool
 
 
 @tool

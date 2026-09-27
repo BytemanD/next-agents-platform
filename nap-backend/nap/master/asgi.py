@@ -30,7 +30,6 @@ async def lifespan(app: FastAPI):
     logger.info("start Master ...")
     create_all_tables()
     await MANAGER.start()
-    await MANAGER.init_agent()
     yield
     logger.info("stop Master ...")
     await MANAGER.stop()

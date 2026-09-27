@@ -216,6 +216,10 @@ class Knowledge(DBModel, table=True):
         item.create()
         return item
 
+    def add_todos(self, *names: str):
+        for name in names:
+            self.add_todo(name)
+
     def get_or_create_todo(self, name: str):
         items = KnowledgeTodo.query(
             KnowledgeTodo.knowlwdge_uuid == self.uuid, KnowledgeTodo.name == name

@@ -1,0 +1,100 @@
+import aiosqlite
+from langchain.agents import create_agent
+from langchain_community.callbacks import get_openai_callback
+from langchain_core.messages import AIMessageChunk
+from langchain_core.runnables.config import RunnableConfig
+from langchain_openai import ChatOpenAI
+from langchain_openai.chat_models.base import OpenAIRateLimitError
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from loguru import logger
+from nap.common.conf import CONF
+from nap.common.exceptions import LLMRateLimitError
+from nap.common.objects import Message
+from nap.db.models import AgentCallback, Session
+from nap.master.agent.context import RuntimeContext
+from nap.master.agent.middlewares import RuntimeAgentMiddleware
+from nap.master.agent.tools import user
+from pystonic.common import context
+
+AGENT_TOOLS = [user.retrival, user.list_documents]
+
+
+class AsyncAgent:
+    def __init__(self):
+        self._conn = aiosqlite.connect(CONF.store + "/checkpoint.sqlite")
+        self._saver = AsyncSqliteSaver(self._conn)
+        self._agent = create_agent(
+            ChatOpenAI(model="gpt", base_url="...", api_key="..."),
+            checkpointer=self._saver,
+            context_schema=RuntimeContext,
+            middleware=[RuntimeAgentMiddleware()],
+            tools=[
+                user.get_username,
+                user.get_available_knowledge_bases,
+                *AGENT_TOOLS,
+            ],
+        )
+
+    async def stop(self):
+        logger.info("close checkpointer connection")
+        await self._conn.close()
+
+    async def _chat(self, ctx: RuntimeContext, query: str):
+        stream = self._agent.astream(
+            {"messages": [{"role": "user", "content": query}]},
+            stream_mode="messages",
+            config={
+                "configurable": {"thread_id": ctx.session_uuid},
+                "metadata": {
+                    "user": context.getvar("account"),
+                    "agent": ctx.agent_uuid,
+                },
+            },
+            # version="v3"
+            context=ctx,
+        )
+
+        try:
+            async for event in stream:
+                if isinstance(event, tuple) and isinstance(event[0], AIMessageChunk):
+                    yield event[0]
+                    continue
+                logger.warning("unknowd event: {}", event)
+        except OpenAIRateLimitError as e:
+            logger.error("request failed because rate limit")
+            raise LLMRateLimitError(str(e))
+
+    async def chat(self, ctx: RuntimeContext, query: str):
+        with get_openai_callback() as cb:
+            async for event in self._chat(ctx, query):
+                yield event
+
+            callback = AgentCallback(
+                agent_uuid=ctx.agent_uuid,
+                session_uuid=ctx.session_uuid,
+                model=ctx.model,
+                total_tokens=cb.total_tokens,
+                prompt_tokens=cb.prompt_tokens,
+                completion_tokens=cb.completion_tokens,
+                total_cost=cb.total_cost,
+            )
+            yield callback
+
+    async def list_messages(self, session: Session | str):
+        session = (
+            session if isinstance(session, Session) else Session.get_by_uuid(session)
+        )
+        config = RunnableConfig(configurable={"thread_id": session.uuid})
+        item = await self._saver.aget_tuple(config)
+        if not item:
+            return []
+
+        return [
+            Message(
+                id=msg.id,
+                type=msg.type,
+                content=msg.content,
+                thinking=msg.additional_kwargs.get("reasoning_content"),
+            )
+            for msg in item.checkpoint.get("channel_values", {}).get("messages", [])
+        ]

@@ -1,12 +1,11 @@
+from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from loguru import logger
-from langchain.agents import create_agent
-from pydantic import SecretStr
-from pystonic.utils import funcutil
-
-from nap.llm.tools.internal import update_knowledge_enrichment
 from nap.common.exceptions import EnrichFailed, EnrichmentAlreadyExists
 from nap.db.models import Knowledge, LLMs
+from nap.master.agent.tools.internal import update_knowledge_enrichment
+from pydantic import SecretStr
+from pystonic.utils import funcutil
 
 ENRICH_TEMPLATE = """
 请阅读以下文档内容，完成三项任务：
