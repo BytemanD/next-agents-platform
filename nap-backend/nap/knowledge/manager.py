@@ -1,25 +1,32 @@
 import asyncio
 from datetime import UTC, datetime
 
-from loguru import logger
-from nap.common.manager import BaseManager
-from nap.knowledge.graph import knowledge_process
 import portalocker
-
+from loguru import logger
 from nap.common.conf import CONF
+from nap.common.manager import BaseManager
 from nap.db.models import Knowledge, KnowledgeBase, KnowledgeStatus
-from nap.services.vector import VECTOR_SERVICE
+from nap.knowledge.graph import knowledge_process
 from nap.services.storage import STORE_SERVICE
+from nap.services.vector import VECTOR_SERVICE
 
 
 class KnowledgeManager(BaseManager):
     def __init__(self) -> None:
         super().__init__()
         self.asyncio_scheduler.add_job(
-            self.job_process_knowledges, "interval", seconds=10
+            self.job_process_knowledges,
+            "interval",
+            seconds=10,
+            max_instances=1,
+            coalesce=True,
         )
         self.asyncio_scheduler.add_job(
-            self.job_delete_knowledges, "interval", seconds=10
+            self.job_delete_knowledges,
+            "interval",
+            seconds=10,
+            max_instances=1,
+            coalesce=True,
         )
 
     def list_documents(

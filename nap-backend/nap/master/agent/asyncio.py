@@ -1,6 +1,6 @@
 import aiosqlite
 from langchain.agents import create_agent
-from langchain_community.callbacks import get_openai_callback
+from langchain_community.callbacks import OpenAICallbackHandler
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI
@@ -11,6 +11,7 @@ from nap.common.conf import CONF
 from nap.common.exceptions import LLMRateLimitError
 from nap.common.objects import Message
 from nap.db.models import AgentCallback, Session
+from nap.master.agent.callbacks import TraceHandler
 from nap.master.agent.context import RuntimeContext
 from nap.master.agent.middlewares import RuntimeAgentMiddleware
 from nap.master.agent.tools import user
@@ -39,7 +40,9 @@ class AsyncAgent:
         logger.info("close checkpointer connection")
         await self._conn.close()
 
-    async def _chat(self, ctx: RuntimeContext, query: str):
+    async def chat(self, ctx: RuntimeContext, query: str):
+        trace_handler = TraceHandler()
+        openai_callback = OpenAICallbackHandler()
         stream = self._agent.astream(
             {"messages": [{"role": "user", "content": query}]},
             stream_mode="messages",
@@ -49,6 +52,7 @@ class AsyncAgent:
                     "user": context.getvar("account"),
                     "agent": ctx.agent_uuid,
                 },
+                "callbacks": [trace_handler, openai_callback],
             },
             # version="v3"
             context=ctx,
@@ -64,21 +68,20 @@ class AsyncAgent:
             logger.error("request failed because rate limit")
             raise LLMRateLimitError(str(e))
 
-    async def chat(self, ctx: RuntimeContext, query: str):
-        with get_openai_callback() as cb:
-            async for event in self._chat(ctx, query):
-                yield event
-
-            callback = AgentCallback(
-                agent_uuid=ctx.agent_uuid,
-                session_uuid=ctx.session_uuid,
-                model=ctx.model,
-                total_tokens=cb.total_tokens,
-                prompt_tokens=cb.prompt_tokens,
-                completion_tokens=cb.completion_tokens,
-                total_cost=cb.total_cost,
-            )
-            yield callback
+        yield AgentCallback(
+            agent_uuid=ctx.agent_uuid,
+            session_uuid=ctx.session_uuid,
+            model=ctx.model,
+            total_tokens=openai_callback.total_tokens,
+            prompt_tokens=openai_callback.prompt_tokens,
+            completion_tokens=openai_callback.completion_tokens,
+            total_cost=openai_callback.total_cost,
+            total_requests=trace_handler.total_requests,
+            success_requests=trace_handler.successful_requests,
+            failed_requests=trace_handler.failed_requests,
+            total_latency=round(trace_handler.total_latency, 3),
+            latencies=[round(l * 1000, 1) for l in trace_handler.latencies],
+        )
 
     async def list_messages(self, session: Session | str):
         session = (
@@ -89,6 +92,11 @@ class AsyncAgent:
         if not item:
             return []
 
+        for msg in item.checkpoint.get("channel_values", {}).get("messages", []):
+            if msg.type in ["human", "ai"]:
+                print("============================")
+                print(msg.id, msg.type, msg.content, msg.additional_kwargs)
+
         return [
             Message(
                 id=msg.id,
@@ -97,4 +105,5 @@ class AsyncAgent:
                 thinking=msg.additional_kwargs.get("reasoning_content"),
             )
             for msg in item.checkpoint.get("channel_values", {}).get("messages", [])
+            if msg.type in ["human", "ai"]
         ]

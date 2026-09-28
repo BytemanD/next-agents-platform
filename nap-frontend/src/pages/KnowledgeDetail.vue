@@ -57,7 +57,7 @@
         </t-button>
       </t-space>
     </template>
-    <t-table size="small" :data="filteredDocs" :columns="columns" :pagination="{ pageSize: 10 }" hover>
+    <t-table size="small" :data="filteredDocs" :columns="columns" :pagination="{ pageSize: 10 }" rowKey="uuid" hover>
       <template #status="{ row }">
         <t-tag shape="round" v-if="row.status == 'pending_process'" variant="light-outline">等待处理</t-tag>
         <t-tag shape="round" v-else-if="row.status == 'processing'" theme="warning" variant="light-outline">处理中</t-tag>
@@ -81,14 +81,18 @@
     </t-table>
   </t-card>
 
-  <t-dialog v-model:visible="showUpload" footer header="上传文档" placement="center" width="600px"
-    :on-confirm="handleUpload" :confirm-on-enter="false" :confirm-btn="uploadFiles.length == 0 ? null : '上传'">
-    <t-upload v-model="uploadFiles" multiple accept=".pdf,.txt,.md,.docx,.csv" :max="10" :auto-upload="false">
-      <template #default>
-        <t-space direction="vertical" align="center" class="pa-4" style="border: 3px dashed #dcdcdc;">
-          <t-icon name="upload" size="48" class="text-nap-primary mx-auto mb-4" />
-          <p class="text-nap-text">点击或拖拽文件到此处上传</p>
-          <p class="text-sm text-nap-text-secondary mt-2">支持 PDF、TXT、Markdown、DOCX、CSV 格式</p>
+  <t-dialog v-model:visible="showUpload" header="上传文档" width="700px" :on-confirm="handleUpload"
+    :confirm-on-enter="false" :footer="false">
+    <t-button variant="outline" @click="() => uploadRef?.triggerUpload()" class="mb-2">
+      <template #icon><t-icon name="upload"></t-icon></template>选择文件
+    </t-button>
+    <t-upload v-model="uploadFiles" ref="uploadRef" multiple :theme="uploadFiles.length == 0 ? 'custom' : 'file-flow'"
+      :max="10" :auto-upload="false" draggable :is-batch-upload="false" :request-method="handleUpload" :abridge-name="ABRIDGE_NAME">
+      <template #dragContent>
+        <t-space class="flex justify-between" align="center" direction="vertical" :size="2">
+          <t-icon name="upload" size="48" class="text-nap-primay" />
+          <span class="w-auto">点击或拖拽文件到此处上传</span>
+          <span class="text-nap-accent" style="font-size: x-small;">支持格式: PDF、TXT、Markdown、DOCX、CSV </span>
         </t-space>
       </template>
     </t-upload>
@@ -111,8 +115,8 @@
       <t-collapse v-model="todosCollapse" class="my-3">
         <t-collapse-panel value="todos" header="处理进度">
           <t-steps layout="vertical" :current="currentTodo" theme="dot" readonly>
-            <t-step-item v-for="todo in todos" :key="todo.id" :title="todoName(todo.name)" :status="todoStatus(todo.status)"
-              :content="todo.detail" />
+            <t-step-item v-for="todo in todos" :key="todo.id" :title="todoName(todo.name)"
+              :status="todoStatus(todo.status)" :content="todo.detail" />
           </t-steps>
         </t-collapse-panel>
       </t-collapse>
@@ -143,6 +147,12 @@ import { MessagePlugin, Button as TButton } from 'tdesign-vue-next'
 import { API } from '@/api'
 import { useKnowledgeStore } from '@/stores/knowledge'
 import type { KnowledgeItem, KnowledgeBase, KnowledgeDetail, KnowledgeTodo } from '@/types'
+import type { UploadInstanceFunctions, UploadProps } from 'tdesign-vue-next';
+
+const uploadRef = ref<UploadInstanceFunctions>();
+
+
+const ABRIDGE_NAME: UploadProps['abridgeName'] = [10, 7];
 
 const route = useRoute()
 const knowledgeStore = useKnowledgeStore()

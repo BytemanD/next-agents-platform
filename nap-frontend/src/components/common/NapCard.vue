@@ -1,5 +1,5 @@
 <template>
-    <t-card class="h-full card-hover" :bordered="true" :title="title" :subtitle="subtitle" size="small">
+    <t-card class="h-full card-hover" :bordered="true" :title="title" :subtitle="subtitle" size="small" hover-shadow>
         <template #actions>
             <t-space>
                 <slot name="actions"></slot>

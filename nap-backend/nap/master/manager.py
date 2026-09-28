@@ -49,6 +49,17 @@ class MasterManager(BaseManager):
         await super().stop()
         await self._agent.stop()
 
+    def create_llm(self, name: str, base_url: str, api_key: str, models: list[str]):
+        item = LLMs(
+            user=context.getvar("account"),
+            name=name,
+            base_url=base_url,
+            api_key=api_key,
+            models=models,
+        )
+        item.create()
+        return item
+
     def get_agents(self):
         return Agents.query(Agents.creator == context.getvar("account"))
 

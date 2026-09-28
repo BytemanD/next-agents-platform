@@ -17,6 +17,13 @@ _ALTERS: dict[str, list[tuple[str, str]]] = {
     "llms": [
         ("name", "TEXT NOT NULL DEFAULT ''"),
     ],
+    "agent_callbacks": [
+        ("success_requests", "INTEGER NOT NULL DEFAULT 0"),
+        ("failed_requests", "INTEGER NOT NULL DEFAULT 0"),
+        ("total_requests", "INTEGER NOT NULL DEFAULT 0"),
+        ("total_latency", "REAL NOT NULL DEFAULT 0"),
+        ("latencies", "TEXT NOT NULL DEFAULT '[]'"),
+    ],
 }
 
 

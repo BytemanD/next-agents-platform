@@ -15,27 +15,26 @@ const globalConfig = ref<GlobalConfigProvider>({})
 </script>
 
 <style>
-
 html,
 body,
 #app {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 
 :root {
-  --primary-100:#296266;
-  --primary-200:#589094;
-  --primary-300:#b9f3f7;
-  --accent-100:#a8824a;
-  --accent-200:#482d00;
-  --text-100:#4b4a47;
-  --text-200:#777672;
-  --bg-100:#fffbf2;
-  --bg-200:#f5f1e8;
-  --bg-300:#ccc8bf;
+  --primary-100: #296266;
+  --primary-200: #589094;
+  --primary-300: #b9f3f7;
+  --accent-100: #a8824a;
+  --accent-200: #482d00;
+  --text-100: #4b4a47;
+  --text-200: #777672;
+  --bg-100: #fffbf2;
+  --bg-200: #f5f1e8;
+  --bg-300: #ccc8bf;
 
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
   --font-display: 'Space Grotesk Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -66,6 +65,14 @@ body,
 }
 
 .text-accent-100 {
+  color: var(--accent-100);
+}
+
+.text-nap-primay {
+  color: var(--td-brand-color-active);
+}
+
+.text-nap-accent {
   color: var(--accent-100);
 }
 </style>

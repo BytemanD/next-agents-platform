@@ -39,8 +39,7 @@
       </t-col>
 
       <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="6" :xl="2">
-        <t-card :bordered="false" class="metric-card nap-rise"
-          :style="{ animationDelay: `${(i + 1) * 60}ms` }"
+        <t-card :bordered="false" class="metric-card nap-rise" :style="{ animationDelay: `${(i + 1) * 60}ms` }"
           style="min-height: 150px; border-radius: var(--nap-radius-lg)">
           <t-statistic :title="stat.label" :value="stat.value" />
           <div class="mt-3 flex items-center gap-1 text-xs" :class="stat.changeClass">
@@ -53,8 +52,8 @@
 
     <t-row :gutter="[8, 8]">
       <t-col :xs="24" :xl="4">
-        <t-card :bordered="true" class="canvas-card" :class="{ 'nap-rise': true }" :style="{ animationDelay: '220ms' }"
-          title="最近智能体" subtitle="团队的智能体运行状态" size="small">
+        <t-card :bordered="true" :class="{ 'nap-rise': true }" :style="{ animationDelay: '220ms' }" title="最近智能体"
+          subtitle="团队的智能体运行状态" size="small">
           <template #actions>
             <t-button variant="text" size="small" @click="$router.push('/agents')">
               查看全部
@@ -98,8 +97,8 @@
       <t-col :xs="24" :xl="4">
         <t-card :bordered="true" :style="{ animationDelay: '300ms' }" title="快速开始" size="small">
           <t-list size="small" :split="true">
-            <t-list-item v-for="template in templates" 
-              class="agent-row cursor-pointer" @click="createFromTemplate(template)">
+            <t-list-item v-for="template in templates" class="agent-row cursor-pointer"
+              @click="createFromTemplate(template)">
 
               <t-list-item-meta :title="template.name">
                 <template #image>
@@ -132,25 +131,65 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { API } from '@/api'
 
 const router = useRouter()
 
-const stats = ref([
-  { label: '知识文档', value: 48, change: 8, icon: 'book', tint: 'bg-emerald-50', iconClass: 'text-nap-success', changeClass: 'text-nap-success' },
-  { label: '会话数', value: 1284, change: 15, icon: 'chat', tint: 'bg-nap-accent-soft', iconClass: 'text-nap-primary', changeClass: 'text-nap-success' },
-  { label: '智能体总数', value: 2, change: 20 },
-  { label: '总 Token 数', value: 2.4, change: -5, icon: 'bolt', tint: 'bg-amber-50', iconClass: 'text-nap-warning', changeClass: 'text-nap-error' }
-])
+interface DashboardStat {
+  key: string
+  label: string
+  value: number
+  change: number
+}
 
-const recentAgents = ref([
-  { id: '1', name: '研究助理', description: '协助进行研究和文献综述', model: 'gpt-4o', status: 'active', tools: ['web_search', 'file_read'], avatarClass: 'bg-nap-accent-soft', avatarColor: 'text-nap-primary' },
-  { id: '2', name: '代码评审员', description: '审查代码并提供改进建议', model: 'claude-3.5', status: 'active', tools: ['code_review', 'file_read'], avatarClass: 'bg-emerald-50', avatarColor: 'text-nap-success' },
-  { id: '3', name: '数据分析师', description: '分析数据并生成报告', model: 'gpt-4o', status: 'draft', tools: ['code_exec'], avatarClass: 'bg-violet-50', avatarColor: 'text-nap-secondary' },
-  { id: '4', name: '内容创作者', description: '创作优质的博客和文案内容', model: 'claude-3.5', status: 'active', tools: ['web_search'], avatarClass: 'bg-amber-50', avatarColor: 'text-nap-warning' }
+interface DashboardAgent {
+  uuid: string
+  id?: string
+  name: string
+  description: string
+  model: string
+  status: string
+  tools: string[]
+  avatarClass?: string
+  avatarColor?: string
+}
+
+interface DashboardActivity {
+  type: string
+  text: string
+  time: string
+}
+
+interface DashboardResponse {
+  stats: DashboardStat[]
+  recent_agents: DashboardAgent[]
+  activities: DashboardActivity[]
+}
+
+const stats = ref<Array<DashboardStat & { changeClass?: string }>>([
+  { key: 'knowledge_documents', label: '知识文档', value: 0, change: 0 },
+  { key: 'sessions', label: '会话数', value: 0, change: 0 },
+  { key: 'agents', label: '智能体总数', value: 0, change: 0 },
+  { key: 'total_tokens', label: '总 Token 数', value: 0, change: 0 }
 ])
+const recentAgents = ref<DashboardAgent[]>([])
+const activities = ref<Array<DashboardActivity & { dotClass?: string }>>([])
+
+const AGENT_STYLES = [
+  { avatarClass: 'bg-nap-accent-soft', avatarColor: 'text-nap-primary' },
+  { avatarClass: 'bg-emerald-50', avatarColor: 'text-nap-success' },
+  { avatarClass: 'bg-violet-50', avatarColor: 'text-nap-secondary' },
+  { avatarClass: 'bg-amber-50', avatarColor: 'text-nap-warning' }
+]
+
+const ACTIVITY_DOT: Record<string, string> = {
+  knowledge: 'bg-nap-primary',
+  agent: 'bg-nap-success',
+  session: 'bg-nap-secondary'
+}
 
 const templates = ref([
   { name: '研究专家', description: '联网深度研究', icon: 'book', tint: 'bg-nap-accent-soft', iconClass: 'text-nap-primary' },
@@ -159,12 +198,28 @@ const templates = ref([
   { name: '任务自动化', description: '自动化重复任务', icon: 'robot', tint: 'bg-amber-50', iconClass: 'text-nap-warning' }
 ])
 
-const activities = ref([
-  { text: '研究助理完成了一项任务', time: '2 分钟前', dotClass: 'bg-nap-success' },
-  { text: '知识库新增了一篇文档', time: '15 分钟前', dotClass: 'bg-nap-primary' },
-  { text: '代码评审员提示了一个问题', time: '1 小时前', dotClass: 'bg-nap-warning' },
-  { text: '数据分析师生成了一份报告', time: '3 小时前', dotClass: 'bg-nap-secondary' }
-])
+async function loadDashboard() {
+  try {
+    const data = await API.fetchDashboard<DashboardResponse>()
+    stats.value = (data.stats || []).map(stat => ({
+      ...stat,
+      changeClass: stat.change >= 0 ? 'text-nap-success' : 'text-nap-error'
+    }))
+    recentAgents.value = (data.recent_agents || []).map((agent, i) => ({
+      ...agent,
+      id: agent.uuid,
+      ...AGENT_STYLES[i % AGENT_STYLES.length]
+    }))
+    activities.value = (data.activities || []).map(activity => ({
+      ...activity,
+      dotClass: ACTIVITY_DOT[activity.type] || 'bg-nap-primary'
+    }))
+  } catch (e) {
+    console.error('load dashboard failed', e)
+  }
+}
+
+onMounted(loadDashboard)
 
 function createFromTemplate(_template: any) {
   router.push('/agents/builder')

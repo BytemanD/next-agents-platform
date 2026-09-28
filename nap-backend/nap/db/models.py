@@ -201,6 +201,21 @@ class Knowledge(DBModel, table=True):
             session.exec(stm)
             session.commit()
 
+    @classmethod
+    def count(cls, knowledge_bases: list[str]):
+        stm = (
+            update(cls)
+            .where(col(cls.knowledge_base).in_(knowledge_bases))
+            .where(
+                col(cls.status).not_in(
+                    [KnowledgeStatus.deleting.value, KnowledgeStatus.deleted.value]
+                )
+            )
+        )
+        with get_session() as session:
+            result = session.exec(stm)
+            return int(result.one())
+
     def set_status(self, status: KnowledgeStatus):
         self.status = status.value
         self.save()
@@ -291,6 +306,21 @@ class AgentCallback(DBModel, table=True):
         nullable=True, default=0, description="Completion tokens"
     )
     total_cost: float = Field(nullable=True, default=0.0, description="Total Fost")
+
+    success_requests: int = Field(
+        nullable=False, default=0, description="success requests"
+    )
+    failed_requests: int = Field(
+        nullable=False, default=0, description="failed requests"
+    )
+    total_requests: int = Field(nullable=False, default=0, description="total requests")
+    total_latency: float = Field(nullable=False, default=0, description="total latency")
+    latencies: list[float] = Field(
+        nullable=False,
+        default=[],
+        sa_type=JSON,
+        description="per-request latencies (ms), json",
+    )
 
     @classmethod
     def token_usage(cls, days: int = 7, agent_uuid: str | None = None):

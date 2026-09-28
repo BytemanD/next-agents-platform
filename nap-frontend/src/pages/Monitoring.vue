@@ -11,21 +11,21 @@
 
     <t-row :gutter="[16, 16]">
       <t-col v-for="stat in stats" :key="stat.label" :xs="12" :sm="6" :lg="3">
-        <t-card :bordered="true" class="settings-card">
+        <t-card :bordered="true">
           <t-statistic :title="stat.label" :value="stat.value" />
         </t-card>
       </t-col>
     </t-row>
 
     <t-row :gutter="[16, 16]">
-      <t-col :xs="24" :lg="6">
-        <t-card :bordered="true" class="settings-card" title="Token 使用量" size="small">
+      <t-col :xs="12" :lg="6">
+        <t-card :bordered="true" title="Token 使用量" size="small">
           <div class="h-64">
             <v-chart :option="tokenChartOption" autoresize />
           </div>
         </t-card>
       </t-col>
-      <t-col :xs="24" :lg="6">
+      <t-col :xs="12" :lg="6">
         <t-card :bordered="true" title="延迟分布" size="small">
           <div class="h-64">
             <v-chart :option="latencyChartOption" autoresize />
@@ -65,6 +65,13 @@ interface TokenUsage {
   total_calls: number
 }
 
+interface LatencyUsage {
+  days: string[]
+  p50: number[]
+  p95: number[]
+  p99: number[]
+}
+
 const searchQuery = ref('')
 const timeRange = ref('7d')
 const selectedAgentId = ref<string | null>(null)
@@ -73,6 +80,7 @@ const tokenUsage = ref<TokenUsage>({
   days: [], prompt: [], completion: [],
   total_prompt: 0, total_completion: 0, total_tokens: 0, total_calls: 0
 })
+const latencyUsage = ref<LatencyUsage>({ days: [], p50: [], p95: [], p99: [] })
 
 const timeOptions = [
   { label: '最近 24 小时', value: '1d' },
@@ -126,8 +134,8 @@ const tokenChartOption = ref<any>({
   xAxis: { type: 'category', data: [], axisLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478' } },
   yAxis: { type: 'value', axisLine: { lineStyle: { color: '#e7e9f2' } }, splitLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478' } },
   series: [
-    { name: '输入 Token', type: 'bar', stack: 'total', data: [], itemStyle: { color: '#4f46e5', borderRadius: [4, 4, 0, 0] } },
-    { name: '输出 Token', type: 'bar', stack: 'total', data: [], itemStyle: { color: '#c7d2fe' } }
+    { name: '输入 Token', type: 'bar', stack: 'total', data: [], itemStyle: { color: '#296266', borderRadius: [0, 0, 0, 0] } },
+    { name: '输出 Token', type: 'bar', stack: 'total', data: [], itemStyle: { color: '#a8824a', borderRadius: [8, 8, 0, 0] } }
   ]
 })
 
@@ -150,9 +158,14 @@ const loadTokenUsage = async () => {
   }
 }
 
-watch(timeRange, loadTokenUsage)
-watch(selectedAgentId, loadTokenUsage)
-onMounted(loadTokenUsage)
+const loadMetrics = () => {
+  loadTokenUsage()
+  loadLatency()
+}
+
+watch(timeRange, loadMetrics)
+watch(selectedAgentId, loadMetrics)
+onMounted(loadMetrics)
 
 const loadAgents = async () => {
   try {
@@ -166,16 +179,30 @@ const loadAgents = async () => {
 }
 onMounted(loadAgents)
 
-const latencyChartOption = ref({
+const loadLatency = async () => {
+  const days = timeRange.value === '1d' ? 1 : timeRange.value === '30d' ? 30 : 7
+  try {
+    const data = await API.fetchLatency<LatencyUsage>(days, selectedAgentId.value || undefined)
+    latencyUsage.value = data
+    latencyChartOption.value.xAxis.data = data.days
+    latencyChartOption.value.series[0].data = data.p50
+    latencyChartOption.value.series[1].data = data.p95
+    latencyChartOption.value.series[2].data = data.p99
+  } catch (e) {
+    console.error('load latency failed', e)
+  }
+}
+
+const latencyChartOption = ref<any>({
   backgroundColor: 'transparent',
   tooltip: { trigger: 'axis' },
   grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-  xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'], axisLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478' } },
+  xAxis: { type: 'category', data: [], axisLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478' } },
   yAxis: { type: 'value', axisLine: { lineStyle: { color: '#e7e9f2' } }, splitLine: { lineStyle: { color: '#e7e9f2' } }, axisLabel: { color: '#5b6478', formatter: '{value}ms' } },
   series: [
-    { name: 'P50', type: 'line', data: [800, 850, 780, 900, 820, 750, 800], itemStyle: { color: '#16a34a' }, smooth: true, areaStyle: { color: 'rgba(22, 163, 74, 0.08)' } },
-    { name: 'P95', type: 'line', data: [1500, 1600, 1400, 1800, 1550, 1300, 1500], itemStyle: { color: '#d97706' }, smooth: true },
-    { name: 'P99', type: 'line', data: [2500, 2800, 2200, 3200, 2600, 2000, 2500], itemStyle: { color: '#dc2626' }, smooth: true }
+    { name: 'P50', type: 'line', data: [], itemStyle: { color: '#16a34a' }, smooth: true, areaStyle: { color: 'rgba(22, 163, 74, 0.08)' } },
+    { name: 'P95', type: 'line', data: [], itemStyle: { color: '#d97706' }, smooth: true },
+    { name: 'P99', type: 'line', data: [], itemStyle: { color: '#dc2626' }, smooth: true }
   ]
 })
 </script>

@@ -2,6 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from nap.db.models import LLMs
+from nap.master.manager import MANAGER
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/llms", tags=["模型"])
@@ -56,13 +57,9 @@ async def get_llm(uuid: str):
     return _to_response(d)
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, response_model=LLMs)
 async def create_llm(body: LLMCreate):
-    d = LLMs(
-        name=body.name, base_url=body.base_url, api_key=body.api_key, models=body.models
-    )
-    d.create()
-    return _to_response(d)
+    return MANAGER.create_llm(body.name, body.base_url, body.api_key, body.models)
 
 
 @router.put("/{uuid}")

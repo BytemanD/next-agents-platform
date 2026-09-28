@@ -21,8 +21,9 @@
             <p class="text-sm text-nap-text-secondary">还没有会话</p>
           </template>
         </t-empty>
-        <t-list v-else class="conversation-list flex-1 min-h-0 overflow-y-auto">
-          <t-list-item v-for="session in conversations" :key="session.uuid" class="cursor-pointer rounded-2"
+        <t-list v-else class=" flex-1 min-h-0 overflow-y-auto">
+          <t-list-item v-for="session in conversations" :key="session.uuid"
+            class="cursor-pointer rounded-2 conversation-list-item"
             :class="{ 'conversation-item-active': currentConvId === session.uuid }"
             @click="selectConversation(session.uuid)">
             <t-list-item-meta>
@@ -31,35 +32,33 @@
               </template>
             </t-list-item-meta>
             <template #action>
-              <t-popconfirm
-                theme="warning"
-                content="确定删除该会话吗？删除后不可恢复。"
-                placement="bottom-right"
-                @confirm="deleteConversation(session.uuid)"
-                @click.stop
-              >
-                <t-link @click.stop theme="danger" hover="color"><t-icon name="close"></t-icon></t-link>
+              <t-popconfirm theme="warning" content="确定删除该会话吗？删除后不可恢复。" placement="bottom-right"
+                @confirm="deleteConversation(session.uuid)" @click.stop>
+                <!-- <span class="session-action">sdfsdf</span> -->
+                <t-link @click.stop theme="danger" class="session-action"><t-icon name="close"></t-icon></t-link>
               </t-popconfirm>
-          </template>
+              <!-- <t-link @click.stop theme="danger"><t-icon name="close"></t-icon></t-link> -->
+              <!-- <t-link theme="danger" hover="color"><t-icon name="close"></t-icon></t-link> -->
+            </template>
           </t-list-item>
         </t-list>
       </t-aside>
     </t-col>
     <t-col :span="10" style="height: 100%; padding: 40px;">
       <div class="relative h-full flex flex-col min-h-0">
-        <t-chatbot v-if="agentStore.selectedAgentId"
-          :chat-service-config="chatServiceConfig" :message-props="messageItemProps" ref="chatRef"
-          :sender-props="senderProps"
-          class="flex-1 min-h-0 min-w-0" @message-change="onMessageChange">
+        <t-chatbot v-if="agentStore.selectedAgentId" :chat-service-config="chatServiceConfig"
+          :message-props="messageItemProps" ref="chatRef" :sender-props="senderProps" class="flex-1 min-h-0 min-w-0"
+          @message-change="onMessageChange">
           <template #sender-footer-prefix>
             <t-space class="flex j">
               <t-button shape="round" variant="outline">深度思考</t-button>
               <!-- 选择模型 -->
-              <t-select label="模型：" v-model="selectedModel" :options="modelOptions" placeholder="选择模型" class="border-rounded-10"
-                clearable>
+              <t-select label="模型：" v-model="selectedModel" :options="modelOptions" placeholder="选择模型"
+                class="border-rounded-10" clearable>
               </t-select>
               <!-- 选择工具 -->
-              <t-select v-model="selectedTools" :options="toolOptions" placeholder="无" multiple label="工具:" :min-collapsed-num="1">
+              <t-select v-model="selectedTools" :options="toolOptions" placeholder="无" multiple label="工具:"
+                :min-collapsed-num="1">
 
               </t-select>
             </t-space>
@@ -68,7 +67,8 @@
           </template>
         </t-chatbot>
 
-        <div v-if="agentStore.selectedAgentId && !hasMessages" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none welcome">
+        <div v-if="agentStore.selectedAgentId && !hasMessages"
+          class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none welcome">
           <div class="welcome-glow welcome-glow-1"></div>
           <div class="welcome-glow welcome-glow-2"></div>
           <div class="flex flex-col items-center gap-4 relative z-10">
@@ -80,12 +80,7 @@
             <p class="text-sm text-nap-muted">选择右侧会话继续，或直接提问开始一段新对话</p>
 
             <div class="welcome-suggestions pointer-events-auto">
-              <button
-                v-for="s in welcomeSuggestions"
-                :key="s"
-                class="welcome-chip"
-                @click="useSuggestion(s)"
-              >
+              <button v-for="s in welcomeSuggestions" :key="s" class="welcome-chip" @click="useSuggestion(s)">
                 <t-icon name="chat" size="14" />
                 {{ s }}
               </button>
@@ -427,12 +422,25 @@ watch(() => agentStore.selectedAgentModels, (models) => {
   white-space: nowrap;
 }
 
-.conversation-list :deep(.t-list-item .t-link) {
+/* .conversation-list :deep(.t-list-item .t-link) {
   opacity: 0;
   transition: opacity 0.15s ease;
+} */
+
+/* .conversation-list :deep(.t-list-item:hover .t-link) {
+  opacity: 1;
 }
 
-.conversation-list :deep(.t-list-item:hover .t-link) {
+.conversation-list :deep(.t-list-item:hover .t-button) {
+  opacity: 1;
+} */
+
+
+.session-action {
+  opacity: 0;
+}
+
+.conversation-list-item:hover .session-action {
   opacity: 1;
 }
 
@@ -466,9 +474,12 @@ watch(() => agentStore.selectedAgentModels, (models) => {
 }
 
 @keyframes welcome-float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate3d(0, 0, 0) scale(1);
   }
+
   50% {
     transform: translate3d(24px, -18px, 0) scale(1.08);
   }
@@ -503,6 +514,7 @@ watch(() => agentStore.selectedAgentModels, (models) => {
     transform: scale(0.7);
     opacity: 0.9;
   }
+
   100% {
     transform: scale(1.5);
     opacity: 0;
@@ -510,10 +522,13 @@ watch(() => agentStore.selectedAgentModels, (models) => {
 }
 
 @keyframes welcome-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.5;
     transform: scale(0.92);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.06);
@@ -533,6 +548,7 @@ watch(() => agentStore.selectedAgentModels, (models) => {
   0% {
     background-position: 0% center;
   }
+
   100% {
     background-position: 200% center;
   }
@@ -575,6 +591,7 @@ watch(() => agentStore.selectedAgentModels, (models) => {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

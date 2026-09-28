@@ -3,9 +3,11 @@ from contextlib import asynccontextmanager
 import bcrypt
 from fastapi import FastAPI
 from loguru import logger
+from nap.db.migrate import ensure_columns
 from nap.db.models import User
 from nap.master.api.v1 import (
     agents,
+    dashboard,
     knowledge,
     knowledge_base,
     llms,
@@ -29,6 +31,7 @@ setup_logger(remove=True)
 async def lifespan(app: FastAPI):
     logger.info("start Master ...")
     create_all_tables()
+    ensure_columns()
     await MANAGER.start()
     yield
     logger.info("stop Master ...")
@@ -40,6 +43,7 @@ APP = create_app(lifespan=lifespan)
 
 for module in (
     agents,
+    dashboard,
     knowledge,
     knowledge_base,
     llms,
