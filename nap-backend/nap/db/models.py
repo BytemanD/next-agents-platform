@@ -296,7 +296,7 @@ class Session(DBModel, table=True):
 
 class AgentCallback(DBModel, table=True):
     __tablename__ = "agent_callbacks"  # type: ignore
-
+    creator: str = Field(nullable=False, description="User UUID")
     agent_uuid: str = Field(nullable=False, description="Agent UUID")
     session_uuid: str = Field(nullable=False, description="Session UUID")
     model: str = Field(nullable=False, description="Model name")
@@ -323,11 +323,18 @@ class AgentCallback(DBModel, table=True):
     )
 
     @classmethod
-    def token_usage(cls, days: int = 7, agent_uuid: str | None = None):
+    def token_usage(
+        cls, days: int = 7, agent_uuid: str | None = None, model: str | None = None
+    ):
         since = utcnow() - timedelta(days=days)
-        filters = [col(AgentCallback.created_at) >= since]
+        filters = [
+            AgentCallback.creator == (context.getvar("account") or "guest"),
+            col(AgentCallback.created_at) >= since,
+        ]
         if agent_uuid:
             filters.append(col(AgentCallback.agent_uuid) == agent_uuid)
+        if model:
+            filters.append(col(AgentCallback.model) == model)
         stm = (
             select(
                 func.date(AgentCallback.created_at).label("day"),

@@ -40,17 +40,13 @@ async def upload_attachment(file: UploadFile):
         raise HTTPException(status_code=400, detail="Empty file")
 
     attachment = await MANAGER.save_attachment(file.filename, content)
-    return AttachmentResponse(
-        attachment=AttachmentItem.from_model(attachment)
-    )
+    return AttachmentResponse(attachment=AttachmentItem.from_model(attachment))
 
 
 @router.get("", response_model=AttachmentListResponse)
 async def list_attachments():
     return AttachmentListResponse(
-        attachments=[
-            AttachmentItem.from_model(x) for x in MANAGER.list_attachments()
-        ]
+        attachments=[AttachmentItem.from_model(x) for x in MANAGER.list_attachments()]
     )
 
 

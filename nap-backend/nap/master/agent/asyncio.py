@@ -60,7 +60,7 @@ class AsyncAgent:
         trace_handler = TraceHandler()
         openai_callback = OpenAICallbackHandler()
         stream = self._agent.astream(
-            {"messages": [{"role": "user", "content": self._build_input(ctx, query)}]},
+            {"messages": [{"role": "user", "content": query}]},
             stream_mode="messages",
             config={
                 "configurable": {"thread_id": ctx.session_uuid},
@@ -96,7 +96,7 @@ class AsyncAgent:
             success_requests=trace_handler.successful_requests,
             failed_requests=trace_handler.failed_requests,
             total_latency=round(trace_handler.total_latency, 3),
-            latencies=[round(l * 1000, 1) for l in trace_handler.latencies],
+            latencies=[round(x * 1000, 1) for x in trace_handler.latencies],
         )
 
     async def list_messages(self, session: Session | str):

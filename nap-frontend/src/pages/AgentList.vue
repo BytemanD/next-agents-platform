@@ -1,11 +1,5 @@
 <template>
   <t-row>
-    <t-col :span="6">
-      <p class="text-sm text-nap-text-secondary mt-1">管理你的 AI 智能体</p>
-    </t-col>
-  </t-row>
-  <t-space></t-space>
-  <t-row>
     <t-col :span="12">
       <tools>
         <t-input v-model="searchQuery" placeholder="搜索智能体..." clearable class="w-64">

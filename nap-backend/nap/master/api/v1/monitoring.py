@@ -2,23 +2,46 @@ from datetime import timedelta
 
 from fastapi import APIRouter
 from nap.db.models import AgentCallback
-from pystonic.orm.models import utcnow
-from sqlmodel import col
+from pystonic.common import context
+from pystonic.orm.models import get_session, utcnow
+from sqlmodel import col, select
 
 router = APIRouter(prefix="/monitoring", tags=["监控"])
 
 
 @router.get("/token-usage")
-async def token_usage(days: int = 7, agent_uuid: str | None = None):
-    return AgentCallback.token_usage(days=days, agent_uuid=agent_uuid)
+async def token_usage(
+    days: int = 7, agent_uuid: str | None = None, model: str | None = None
+):
+    return AgentCallback.token_usage(days=days, agent_uuid=agent_uuid, model=model)
+
+
+@router.get("/models")
+async def models():
+    stm = (
+        select(col(AgentCallback.model))
+        .where(
+            AgentCallback.creator == (context.getvar("account") or "guest"),
+        )
+        .distinct()
+    )
+    with get_session() as session:
+        rows = session.exec(stm).all()
+    return {"models": [row for row in rows if row]}
 
 
 @router.get("/latency")
-async def latency(days: int = 7, agent_uuid: str | None = None):
+async def latency(
+    days: int = 7,
+    agent_uuid: str | None = None,
+    model: str | None = None,
+):
     since = utcnow() - timedelta(days=days)
     filters = [col(AgentCallback.created_at) >= since]
     if agent_uuid:
         filters.append(col(AgentCallback.agent_uuid) == agent_uuid)
+    if model:
+        filters.append(col(AgentCallback.model) == model)
     rows = AgentCallback.query(*filters)
 
     per_day: dict[str, list[float]] = {}

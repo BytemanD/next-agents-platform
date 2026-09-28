@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable
 from typing import Callable
 
 from langchain.agents.middleware import (

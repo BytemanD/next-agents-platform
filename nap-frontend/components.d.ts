@@ -73,6 +73,11 @@ declare module 'vue' {
     TTag: typeof import('tdesign-vue-next')['Tag']
     TText: typeof import('tdesign-vue-next')['Text']
     TTextarea: typeof import('tdesign-vue-next')['Textarea']
+    TTextTitle: typeof import('tdesign-vue-next')['TextTitle']
+    TTimeline: typeof import('tdesign-vue-next')['Timeline']
+    TTimelineItem: typeof import('tdesign-vue-next')['TimelineItem']
+    TTitle: typeof import('tdesign-vue-next')['Title']
+    TTypographyText: typeof import('tdesign-vue-next')['TypographyText']
     TUpload: typeof import('tdesign-vue-next')['Upload']
   }
 }

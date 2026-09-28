@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center justify-between mb-6">
     <t-space size="12">
-      <t-button variant="outline" @click="$router.back()">
+      <t-button variant="text" @click="$router.back()">
         <template #icon><t-icon name="arrow-left" /></template>
       </t-button>
       <div>

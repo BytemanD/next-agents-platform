@@ -1,30 +1,24 @@
 <template>
-  <t-row>
-    <t-col :span="6">
-      <p class="text-sm text-nap-text-secondary mt-1">管理会话中上传的临时附件</p>
-    </t-col>
-  </t-row>
-  <t-space></t-space>
   <t-card class="mt-4">
     <template #title><span class="text-nap-text">附件列表</span></template>
     <template #actions>
       <t-space :size="12">
-        <t-button :disabled="selectedUuids.length === 0" @click="openSaveDialog">
-          <template #icon><t-icon name="save" /></template>
-          保存到知识库
-        </t-button>
-        <t-button variant="outline" shape="square" @click="fetchAttachments">
+        <t-button variant="outline" shape="circle" @click="fetchAttachments">
           <template #icon><t-icon name="refresh" /></template>
         </t-button>
         <t-input v-model="searchQuery" placeholder="搜索附件..." clearable class="w-64">
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
+        <t-button :disabled="selectedUuids.length === 0" @click="openSaveDialog">
+          <template #icon><t-icon name="save" /></template>
+          保存到知识库
+        </t-button>
       </t-space>
     </template>
     <t-table size="small" :data="filteredAttachments" :columns="columns" :pagination="pagination" rowKey="uuid" hover
       :selected-row-keys="selectedUuids" select-on-row-click @select-change="handleSelectChange">
       <template #size="{ row }">
-        {{ formatSize(row.size) }}
+        {{ filesize(row.size) }}
       </template>
       <template #created_at="{ row }">
         {{ formatTime(row.created_at) }}
@@ -66,6 +60,7 @@ import { MessagePlugin } from 'tdesign-vue-next'
 import type { PrimaryTableCol } from 'tdesign-vue-next'
 import { API } from '@/api'
 import type { Attachment, KnowledgeBase } from '@/types'
+import { filesize } from 'filesize'
 
 const searchQuery = ref('')
 const loading = ref(false)
@@ -84,7 +79,7 @@ const kbOptions = computed(() =>
 const columns: PrimaryTableCol[] = [
   { colKey: 'row-select', type: 'multiple', width: 48 },
   { colKey: 'name', title: '文件名', ellipsis: true },
-  { colKey: 'size', title: '大小' },
+  { colKey: 'size', title: '大小', align: 'right' },
   { colKey: 'created_at', title: '上传时间' },
   { colKey: 'operation', title: '操作', width: 100 },
 ]
@@ -105,11 +100,6 @@ function handleSelectChange(keys: Array<string | number>) {
   selectedUuids.value = keys.map(String)
 }
 
-function formatSize(size: number) {
-  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`
-  if (size >= 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${size} B`
-}
 
 function formatTime(iso: string) {
   if (!iso) return ''

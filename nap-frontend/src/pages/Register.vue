@@ -1,6 +1,5 @@
 <template>
-  <AuthLayout heading="创建账号" hint="注册 NAP，开始编排你的第一个智能体" brand-title="NAP"
-    brand-subtitle="Hand it over while you take a nap">
+  <AuthLayout heading="创建账号" hint="注册 NAP，开始编排你的第一个智能体" brand-title="NAP" brand-subtitle="Hand it over and take a nap">
     <t-form :data="form" @submit="handleRegister">
       <t-form-item label="用户名" name="username">
         <t-input v-model="form.username" placeholder="请输入用户名">

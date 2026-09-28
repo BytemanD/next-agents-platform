@@ -1,46 +1,46 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <p class="text-nap-text-secondary mt-1">跟踪智能体运行与用量</p>
-        <t-select v-model="selectedAgentId" :options="agentOptions" clearable size="small" class="w-44"
-          placeholder="全部智能体" />
-      </div>
-      <t-select v-model="timeRange" :options="timeOptions" size="small" class="w-36" />
-    </div>
+  <t-row class="my-2">
+    <t-col :span="6"></t-col>
+    <t-col :span="6">
+      <t-space class="flex justify-right">
+        <t-select v-model="selectedAgentId" :options="agentOptions" clearable class="w-44" placeholder="全部智能体" />
+        <t-select v-model="selectedModel" :options="modelOptions" clearable class="w-44" placeholder="全部模型" />
+        <t-select v-model="timeRange" :options="timeOptions" class="w-36" />
+      </t-space>
+    </t-col>
+  </t-row>
+  <t-row :gutter="[16, 16]">
+    <t-col v-for="stat in stats" :key="stat.label" :xs="12" :sm="6" :lg="3">
+      <statistic-card :value="stat.value" :title="stat.label" />
+    </t-col>
+  </t-row>
 
-    <t-row :gutter="[16, 16]">
-      <t-col v-for="stat in stats" :key="stat.label" :xs="12" :sm="6" :lg="3">
-        <t-card :bordered="true">
-          <t-statistic :title="stat.label" :value="stat.value" />
-        </t-card>
-      </t-col>
-    </t-row>
+  <t-row :gutter="[14, 14]" class="my-2">
+    <t-col :xs="12" :lg="6">
+      <t-card :bordered="true" title="Token 使用量" size="small">
+        <div class="h-64">
+          <v-chart :option="tokenChartOption" autoresize />
+        </div>
+      </t-card>
+    </t-col>
+    <t-col :xs="12" :lg="6">
+      <t-card :bordered="true" title="延迟分布" size="small">
+        <div class="h-64">
+          <v-chart :option="latencyChartOption" autoresize />
+        </div>
+      </t-card>
+    </t-col>
+    <t-col :span="12">
+      <t-card :bordered="true" class="settings-card" title="最近追踪" size="small">
+        <template #actions>
+          <t-input v-model="searchQuery" placeholder="搜索追踪..." size="small" clearable class="w-64" />
+        </template>
+        <t-table size="small" :data="traces" :columns="traceColumns" row-key="id" :pagination="{ pageSize: 10 }"
+          hover />
+      </t-card>
+    </t-col>
+  </t-row>
 
-    <t-row :gutter="[16, 16]">
-      <t-col :xs="12" :lg="6">
-        <t-card :bordered="true" title="Token 使用量" size="small">
-          <div class="h-64">
-            <v-chart :option="tokenChartOption" autoresize />
-          </div>
-        </t-card>
-      </t-col>
-      <t-col :xs="12" :lg="6">
-        <t-card :bordered="true" title="延迟分布" size="small">
-          <div class="h-64">
-            <v-chart :option="latencyChartOption" autoresize />
-          </div>
-        </t-card>
-      </t-col>
-    </t-row>
-
-    <t-card :bordered="true" class="settings-card" title="最近追踪" size="small">
-      <template #actions>
-        <t-input v-model="searchQuery" placeholder="搜索追踪..." size="small" clearable class="w-64" />
-      </template>
-      <t-table size="small" :data="traces" :columns="traceColumns" row-key="id" :pagination="{ pageSize: 10 }" hover />
-    </t-card>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -52,6 +52,7 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import VChart from 'vue-echarts'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { API } from '@/api'
+import StatisticCard from '@/components/common/StatisticCard.vue';
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -76,6 +77,8 @@ const searchQuery = ref('')
 const timeRange = ref('7d')
 const selectedAgentId = ref<string | null>(null)
 const agentOptions = ref<{ label: string; value: string }[]>([])
+const selectedModel = ref<string | null>(null)
+const modelOptions = ref<{ label: string; value: string }[]>([])
 const tokenUsage = ref<TokenUsage>({
   days: [], prompt: [], completion: [],
   total_prompt: 0, total_completion: 0, total_tokens: 0, total_calls: 0
@@ -142,7 +145,7 @@ const tokenChartOption = ref<any>({
 const loadTokenUsage = async () => {
   const days = timeRange.value === '1d' ? 1 : timeRange.value === '30d' ? 30 : 7
   try {
-    const data = await API.fetchTokenUsage<TokenUsage>(days, selectedAgentId.value || undefined)
+    const data = await API.fetchTokenUsage<TokenUsage>(days, selectedAgentId.value || undefined, selectedModel.value || undefined)
     tokenUsage.value = data
     tokenChartOption.value.xAxis.data = data.days
     tokenChartOption.value.series[0].data = data.prompt
@@ -165,6 +168,7 @@ const loadMetrics = () => {
 
 watch(timeRange, loadMetrics)
 watch(selectedAgentId, loadMetrics)
+watch(selectedModel, loadMetrics)
 onMounted(loadMetrics)
 
 const loadAgents = async () => {
@@ -179,10 +183,22 @@ const loadAgents = async () => {
 }
 onMounted(loadAgents)
 
+const loadModels = async () => {
+  try {
+    const data = await API.fetchMonitoringModels<{ models: string[] }>()
+    modelOptions.value = (data.models || [])
+      .filter(Boolean)
+      .map(m => ({ label: m, value: m }))
+  } catch {
+    modelOptions.value = []
+  }
+}
+onMounted(loadModels)
+
 const loadLatency = async () => {
   const days = timeRange.value === '1d' ? 1 : timeRange.value === '30d' ? 30 : 7
   try {
-    const data = await API.fetchLatency<LatencyUsage>(days, selectedAgentId.value || undefined)
+    const data = await API.fetchLatency<LatencyUsage>(days, selectedAgentId.value || undefined, selectedModel.value || undefined)
     latencyUsage.value = data
     latencyChartOption.value.xAxis.data = data.days
     latencyChartOption.value.series[0].data = data.p50

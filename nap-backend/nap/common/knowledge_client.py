@@ -18,6 +18,7 @@ class KnowledgeClient:
                 "query": query,
                 "top_k": top_k,
             },
+            headers={"x-knowedge-base-id": knowledge_base},
         )
         return [
             RetrivalDocument.model_validate(x) for x in resp.json().get("documents", [])
@@ -25,7 +26,8 @@ class KnowledgeClient:
 
     def list_documents(self, knowledge_base: str):
         resp = self.client.get(
-            "/api/v1/documents", headers={"x-knowledge-base": knowledge_base}
+            "/api/v1/documents",
+            headers={"x-knowedge-base-id": knowledge_base},
         )
         return [
             RetrivalDocument.model_validate(x) for x in resp.json().get("documents", [])
@@ -38,6 +40,7 @@ class KnowledgeClient:
     ):
         resp = self.client.get(f"/api/v1/documents/{doc_id}")
         resp = self.client.get(
-            "/api/v1/documents", headers={"x-knowledge-base": knowledge_base}
+            "/api/v1/documents",
+            headers={"x-knowedge-base-id": knowledge_base},
         )
         return RetrivalDocument.model_validate(resp.json().get("document", {}))

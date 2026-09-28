@@ -1,16 +1,14 @@
 <template>
   <t-row>
     <t-col :span="6">
-      <p class="text-sm text-nap-text-secondary mt-1">管理知识库与知识来源</p>
     </t-col>
     <t-col :span="6">
-      <t-space class="flex justify-end">
-        <statistic-card title="知识库总数" :value="knowledgeStore.knowledgeBases.length" unit="个" />
-        <statistic-card title="文档总数" :value="knowledgeStore.totalDocs" unit="个" />
+      <t-space class="flex justify-right">
+        <statistic-card title="知识库总数" :value="knowledgeStore.knowledgeBases.length" />
+        <statistic-card title="文档总数" :value="knowledgeStore.totalDocs" />
       </t-space>
     </t-col>
   </t-row>
-  <t-space></t-space>
   <t-row>
     <t-col :span="12">
       <tools>
@@ -43,13 +41,13 @@
   </t-empty>
   <t-row v-else :gutter="[16, 16]">
     <t-col v-for="kb in filteredBases" :key="kb.uuid" :xs="12" :sm="12" :md="8" :lg="4">
-      <nap-card :title="kb.name" :subtitle="kb.uuid" >
+      <nap-card :title="kb.name" :subtitle="kb.uuid">
         <template #actions>
           <t-space align="center">
             <t-tag shape="round" theme="success" variant="light" v-if="kb.active">启用</t-tag>
             <t-tag shape="round" theme="warning" variant="light" v-else>禁用</t-tag>
             <t-button variant="text" shape="circle" @click="$router.push(`/knowledge/${kb.uuid}`)">
-              <t-icon name="link" ></t-icon>
+              <t-icon name="link"></t-icon>
             </t-button>
           </t-space>
         </template>

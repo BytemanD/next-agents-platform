@@ -1,133 +1,130 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between nap-rise">
-      <div>
-        <p class="text-sm text-nap-text-secondary mt-1.5">把所有重复劳动交给智能体，你只负责决策</p>
-      </div>
-    </div>
+  <t-row :gutter="[16, 16]" class="my-2">
+    <t-col :xs="24" :sm="12" :xl="4">
+      <t-card class="hero-stat" size="small" :style="{ animationDelay: '0ms' }">
+        <div class="flex items-start justify-between relative z-10">
+          <div>
+            <p class="text-sm text-white/75">{{ stats[0].label }}</p>
+            <p class="text-4xl font-bold text-white mt-2 tabular" style="font-family: var(--font-display)">
+              {{ stats[0].value }}
+            </p>
+          </div>
+          <span class="inline-flex items-center gap-1 text-xs text-white rounded-full bg-white/15 px-2 py-1">
+            <t-icon :name="stats[0].change >= 0 ? 'trend-up' : 'trend-down'" size="12" />
+            <span class="tabular">{{ stats[0].change >= 0 ? '+' : '' }}{{ stats[0].change }}%</span>
+          </span>
+        </div>
+        <div class="relative z-10 mt-4">
+          <svg width="100%" height="48" viewBox="0 0 260 48" fill="none" preserveAspectRatio="none" class="block">
+            <defs>
+              <linearGradient id="heroSpark" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="white" stop-opacity="0.28" />
+                <stop offset="100%" stop-color="white" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4 V48 H0 Z"
+              fill="url(#heroSpark)" />
+            <path d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4" stroke="white"
+              stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </div>
+      </t-card>
+    </t-col>
 
-    <t-row :gutter="[16, 16]">
-      <t-col :xs="24" :sm="12" :xl="4">
-        <t-card class="hero-stat" size="small" :style="{ animationDelay: '0ms' }">
-          <div class="flex items-start justify-between relative z-10">
-            <div>
-              <p class="text-sm text-white/75">{{ stats[0].label }}</p>
-              <p class="text-4xl font-bold text-white mt-2 tabular" style="font-family: var(--font-display)">
-                {{ stats[0].value }}
-              </p>
+    <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="6" :xl="2">
+      <t-card :bordered="false" class="metric-card nap-rise" :style="{ animationDelay: `${(i + 1) * 60}ms` }"
+        style="min-height: 150px; border-radius: var(--nap-radius-lg)">
+        <t-statistic :title="stat.label" :value="stat.value" />
+        <div class="mt-3 flex items-center gap-1 text-xs" :class="stat.changeClass">
+          <!-- <t-icon :name="stat.change >= 0 ? 'trend-up' : 'trend-down'" size="14" /> -->
+          <span class="tabular">较上周 {{ stat.change >= 0 ? '+' : '' }}{{ stat.change }}%</span>
+        </div>
+      </t-card>
+    </t-col>
+  </t-row>
+
+  <t-row :gutter="[8, 8]" class="my-2">
+    <t-col :xs="24" :xl="4">
+      <t-card :bordered="true" :class="{ 'nap-rise': true }" :style="{ animationDelay: '220ms' }" title="最近智能体"
+        subtitle="团队的智能体运行状态" size="small">
+        <template #actions>
+          <t-button variant="text" size="small" @click="$router.push('/agents')">
+            查看全部
+            <t-icon name="arrow-right" size="14" class="ml-2 mt-1" />
+          </t-button>
+        </template>
+        <t-list>
+          <t-list-item class="agent-row flex items-center gap-4 rounded-xl cursor-pointer" :split="true"
+            v-for="agent in recentAgents" :key="agent.id" @click="$router.push(`/agents/builder/${agent.id}`)">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" :class="agent.avatarClass">
+              <t-icon name="robot" size="18" :class="agent.avatarColor" />
             </div>
-            <span class="inline-flex items-center gap-1 text-xs text-white rounded-full bg-white/15 px-2 py-1">
-              <t-icon :name="stats[0].change >= 0 ? 'trend-up' : 'trend-down'" size="12" />
-              <span class="tabular">{{ stats[0].change >= 0 ? '+' : '' }}{{ stats[0].change }}%</span>
-            </span>
-          </div>
-          <div class="relative z-10 mt-4">
-            <svg width="100%" height="48" viewBox="0 0 260 48" fill="none" preserveAspectRatio="none" class="block">
-              <defs>
-                <linearGradient id="heroSpark" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="white" stop-opacity="0.28" />
-                  <stop offset="100%" stop-color="white" stop-opacity="0" />
-                </linearGradient>
-              </defs>
-              <path d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4 V48 H0 Z"
-                fill="url(#heroSpark)" />
-              <path d="M0 38 C24 34, 40 40, 62 34 S104 22, 128 26 S176 12, 198 16 S244 8, 260 4" stroke="white"
-                stroke-width="1.6" stroke-linecap="round" />
-            </svg>
-          </div>
-        </t-card>
-      </t-col>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <h3 class="font-medium truncate text-sm">{{ agent.name }}</h3>
+                <StatusBadge :status="agent.status" />
+              </div>
+              <p class="text-xs text-nap-text-secondary mt-0.5 truncate">{{ agent.description }}</p>
+            </div>
+            <div class="hidden md:flex items-center gap-2 flex-shrink-0">
+              <span
+                class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
+                <t-icon name="cpu" size="12" />
+                {{ agent.model }}
+              </span>
+              <span
+                class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
+                <t-icon name="tools" size="12" />
+                {{ agent.tools.length }} 个工具
+              </span>
+            </div>
+            <template #action>
+              <t-icon name="chevron-right" size="16"
+                class="text-nap-text-tertiary flex-shrink-0 transition-transform group-hover:translate-x-1" />
+            </template>
+          </t-list-item>
+        </t-list>
+      </t-card>
+    </t-col>
 
-      <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="6" :xl="2">
-        <t-card :bordered="false" class="metric-card nap-rise" :style="{ animationDelay: `${(i + 1) * 60}ms` }"
-          style="min-height: 150px; border-radius: var(--nap-radius-lg)">
-          <t-statistic :title="stat.label" :value="stat.value" />
-          <div class="mt-3 flex items-center gap-1 text-xs" :class="stat.changeClass">
-            <!-- <t-icon :name="stat.change >= 0 ? 'trend-up' : 'trend-down'" size="14" /> -->
-            <span class="tabular">较上周 {{ stat.change >= 0 ? '+' : '' }}{{ stat.change }}%</span>
-          </div>
-        </t-card>
-      </t-col>
-    </t-row>
+    <t-col :xs="24" :xl="4">
+      <t-card :bordered="true" :style="{ animationDelay: '300ms' }" title="快速开始" size="small">
+        <t-list size="small" :split="true">
+          <t-list-item v-for="template in templates" class="agent-row cursor-pointer"
+            @click="createFromTemplate(template)">
 
-    <t-row :gutter="[8, 8]">
-      <t-col :xs="24" :xl="4">
-        <t-card :bordered="true" :class="{ 'nap-rise': true }" :style="{ animationDelay: '220ms' }" title="最近智能体"
-          subtitle="团队的智能体运行状态" size="small">
-          <template #actions>
-            <t-button variant="text" size="small" @click="$router.push('/agents')">
-              查看全部
-              <t-icon name="arrow-right" size="14" class="ml-2 mt-1" />
-            </t-button>
-          </template>
-          <t-list>
-            <t-list-item class="agent-row flex items-center gap-4 rounded-xl cursor-pointer" :split="true"
-              v-for="agent in recentAgents" :key="agent.id" @click="$router.push(`/agents/builder/${agent.id}`)">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" :class="agent.avatarClass">
-                <t-icon name="robot" size="18" :class="agent.avatarColor" />
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <h3 class="font-medium truncate text-sm">{{ agent.name }}</h3>
-                  <StatusBadge :status="agent.status" />
-                </div>
-                <p class="text-xs text-nap-text-secondary mt-0.5 truncate">{{ agent.description }}</p>
-              </div>
-              <div class="hidden md:flex items-center gap-2 flex-shrink-0">
-                <span
-                  class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
-                  <t-icon name="cpu" size="12" />
-                  {{ agent.model }}
-                </span>
-                <span
-                  class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
-                  <t-icon name="tools" size="12" />
-                  {{ agent.tools.length }} 个工具
-                </span>
-              </div>
-              <template #action>
-                <t-icon name="chevron-right" size="16"
-                  class="text-nap-text-tertiary flex-shrink-0 transition-transform group-hover:translate-x-1" />
+            <t-list-item-meta :title="template.name">
+              <template #image>
+                <t-icon class="mt-4 ml-4" :name="template.icon" size="26" :class="template.iconClass" />
               </template>
-            </t-list-item>
-          </t-list>
-        </t-card>
-      </t-col>
+              <template #description>
+                <p>{{ template.description }}</p>
+              </template>
+            </t-list-item-meta>
+          </t-list-item>
+        </t-list>
+      </t-card>
+    </t-col>
+    <t-col :xs="24" :xl="4">
+      <t-card :bordered="true" :style="{ animationDelay: '360ms' }" title="动态" size="small">
+        <t-timeline mode="same">
+          <t-timeline-item v-for="(activity, i) in activities" :key="i" :label="activity.time">{{ activity.text
+          }}</t-timeline-item>
+        </t-timeline>
 
-      <t-col :xs="24" :xl="4">
-        <t-card :bordered="true" :style="{ animationDelay: '300ms' }" title="快速开始" size="small">
-          <t-list size="small" :split="true">
-            <t-list-item v-for="template in templates" class="agent-row cursor-pointer"
-              @click="createFromTemplate(template)">
-
-              <t-list-item-meta :title="template.name">
-                <template #image>
-                  <t-icon class="mt-4 ml-4" :name="template.icon" size="26" :class="template.iconClass" />
-                </template>
-                <template #description>
-                  <p>{{ template.description }}</p>
-                </template>
-              </t-list-item-meta>
-            </t-list-item>
-          </t-list>
-        </t-card>
-      </t-col>
-      <t-col :xs="24" :xl="4">
-        <t-card :bordered="true" :style="{ animationDelay: '360ms' }" title="动态" size="small">
-          <div class="activity-list">
-            <div v-for="(activity, i) in activities" :key="i" class="relative flex gap-3 activity-item">
-              <div v-if="i < activities.length - 1" class="absolute left-[3px] top-3 bottom-0 w-px" />
-              <div class="w-[7px] h-[7px] rounded-full mt-1.5 flex-shrink-0  z-10" :class="activity.dotClass" />
-              <div class="pb-4">
-                <p class="text-sm">{{ activity.text }}</p>
-                <p class="text-xs text-nap-text-secondary mt-0.5">{{ activity.time }}</p>
-              </div>
+        <!-- <div class="activity-list">
+          <div v-for="(activity, i) in activities" :key="i" class="relative flex gap-3 activity-item">
+            <div v-if="i < activities.length - 1" class="absolute left-[3px] top-3 bottom-0 w-px" />
+            <div class="w-[7px] h-[7px] rounded-full mt-1.5 flex-shrink-0  z-10" :class="activity.dotClass" />
+            <div class="pb-4">
+              <p class="text-sm">{{ activity.text }}</p>
+              <p class="text-xs text-nap-text-secondary mt-0.5">{{ activity.time }}</p>
             </div>
           </div>
-        </t-card>
-      </t-col>
-    </t-row>
-  </div>
+        </div> -->
+      </t-card>
+    </t-col>
+  </t-row>
 </template>
 
 <script setup lang="ts">

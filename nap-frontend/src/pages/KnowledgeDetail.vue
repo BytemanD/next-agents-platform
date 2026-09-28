@@ -1,50 +1,39 @@
 <template>
-  <t-space align="center">
-    <t-button variant="outline" @click="$router.back()">
-      <template #icon><t-icon name="arrow-left" /></template>
-    </t-button>
-
-    <t-space direction="vertical" :size="1">
-      <h4 class="text-2xl font-bold text-nap-text">{{ kb?.name || '知识库详情' }}</h4>
-      <p class="text-nap-text-secondary mt-1">{{ kb?.description || '暂无描述' }}</p>
-    </t-space>
-    <t-tag v-if="kb" shape="round" class="self-center ml-12" :theme="kb.active ? 'success' : 'danger'">
-      {{ kb.active ? '启用' : '禁用' }}
-    </t-tag>
-  </t-space>
-
-  <t-row :gutter="[16, 16]" class="mt-4">
-    <t-col :xs="12" :sm="6" :lg="3">
-      <t-card :bordered="true" class="settings-card">
-        <p class="text-sm text-nap-text-secondary">文档总数</p>
-        <p class="text-2xl font-bold text-nap-text mt-1 tabular">{{ docs.length }}</p>
-      </t-card>
+  <t-row :gutter="[16, 16]">
+    <t-col :span="4">
+      <t-space align="center">
+        <t-button variant="text" @click="$router.back()">
+          <template #icon><t-icon name="arrow-left" /></template>
+        </t-button>
+        <t-space direction="vertical" :size="2">
+          <t-title level="h5">{{ kb?.name || '知识库详情' }}</t-title>
+          <t-text theme="secondary">{{ kb?.description || '暂无描述' }}</t-text>
+        </t-space>
+      </t-space>
     </t-col>
-    <t-col :xs="12" :sm="6" :lg="3">
-      <t-card :bordered="true" class="settings-card">
-        <p class="text-sm text-nap-text-secondary">总大小</p>
-        <p class="text-2xl font-bold text-nap-text mt-1 tabular">{{ totalSizeText }}</p>
-      </t-card>
-    </t-col>
-    <t-col :xs="12" :sm="6" :lg="3">
-      <t-card :bordered="true" class="settings-card">
-        <p class="text-sm text-nap-text-secondary">已就绪</p>
-        <p class="text-2xl font-bold text-nap-text mt-1 tabular">{{ readyCount }}</p>
-      </t-card>
-    </t-col>
-    <t-col :xs="12" :sm="6" :lg="3">
-      <t-card :bordered="true" class="settings-card">
-        <p class="text-sm text-nap-text-secondary">待处理</p>
-        <p class="text-2xl font-bold text-nap-text mt-1 tabular">{{ pendingCount }}</p>
-      </t-card>
+    <t-col :span="8">
+      <t-row :gutter="[16, 16]">
+        <t-col :xs="12" :sm="6" :lg="3">
+          <statistic-card title="文档总数" :value="docs.length" />
+        </t-col>
+        <t-col :xs="12" :sm="6" :lg="3">
+          <statistic-card title="总大小" :value="totalSizeText" format-value />
+        </t-col>
+        <t-col :xs="12" :sm="6" :lg="3">
+          <statistic-card title="已就绪" :value="readyCount" />
+        </t-col>
+        <t-col :xs="12" :sm="6" :lg="3">
+          <statistic-card title="待处理" :value="pendingCount" />
+        </t-col>
+      </t-row>
     </t-col>
   </t-row>
 
-  <t-card class="mt-4">
+  <t-card class="mt-4" size="small">
     <template #title><span class="text-nap-text">文档列表</span></template>
     <template #actions>
       <t-space :size="12">
-        <t-button variant="outline" shape="square" @click="handleRefresh">
+        <t-button variant="outline" shape="circle" @click="handleRefresh">
           <template #icon><t-icon name="refresh" /></template>
         </t-button>
         <t-input v-model="searchQuery" placeholder="搜索文档..." clearable class="w-64">
@@ -57,7 +46,7 @@
         </t-button>
       </t-space>
     </template>
-    <t-table size="small" :data="filteredDocs" :columns="columns" :pagination="{ pageSize: 10 }" rowKey="uuid" hover>
+    <t-table size="small" :data="filteredDocs" :columns="columns" :pagination="pagination" rowKey="uuid" hover>
       <template #status="{ row }">
         <t-tag shape="round" v-if="row.status == 'pending_process'" variant="light-outline">等待处理</t-tag>
         <t-tag shape="round" v-else-if="row.status == 'processing'" theme="warning" variant="light-outline">处理中</t-tag>
@@ -87,7 +76,8 @@
       <template #icon><t-icon name="upload"></t-icon></template>选择文件
     </t-button>
     <t-upload v-model="uploadFiles" ref="uploadRef" multiple :theme="uploadFiles.length == 0 ? 'custom' : 'file-flow'"
-      :max="10" :auto-upload="false" draggable :is-batch-upload="false" :request-method="handleUpload" :abridge-name="ABRIDGE_NAME">
+      :max="10" :auto-upload="false" draggable :is-batch-upload="false" :request-method="handleUpload"
+      :abridge-name="ABRIDGE_NAME">
       <template #dragContent>
         <t-space class="flex justify-between" align="center" direction="vertical" :size="2">
           <t-icon name="upload" size="48" class="text-nap-primay" />
@@ -107,7 +97,7 @@
         <t-descriptions-item label="UUID">{{ detail.uuid }}</t-descriptions-item>
         <t-descriptions-item label="状态">{{ statusText(detail.status) }}</t-descriptions-item>
         <t-descriptions-item label="上传者">{{ detail.creator || '-' }}</t-descriptions-item>
-        <t-descriptions-item label="大小">{{ formatSize(detail.size) }}</t-descriptions-item>
+        <t-descriptions-item label="大小">{{ filesize(detail.size) }}</t-descriptions-item>
         <t-descriptions-item label="上传时间">{{ new Date(detail.created_at).toLocaleString() }}</t-descriptions-item>
         <t-descriptions-item label="更新时间">{{ new Date(detail.updated_at).toLocaleString() }}</t-descriptions-item>
       </t-descriptions>
@@ -148,6 +138,8 @@ import { API } from '@/api'
 import { useKnowledgeStore } from '@/stores/knowledge'
 import type { KnowledgeItem, KnowledgeBase, KnowledgeDetail, KnowledgeTodo } from '@/types'
 import type { UploadInstanceFunctions, UploadProps } from 'tdesign-vue-next';
+import StatisticCard from '@/components/common/StatisticCard.vue';
+import { filesize } from 'filesize'
 
 const uploadRef = ref<UploadInstanceFunctions>();
 
@@ -211,13 +203,15 @@ const filteredDocs = computed(() => {
   return docs.value.filter(d => d.name.toLowerCase().includes(q))
 })
 
+const pagination = computed(() => ({ pageSize: 10, total: filteredDocs.value.length }))
+
 const isDone = (s: any) => {
   const v = String(s || '')
   return v === 'active' || v === '6'
 }
 const readyCount = computed(() => docs.value.filter(d => isDone(d.status)).length)
 const pendingCount = computed(() => docs.value.length - readyCount.value)
-const totalSizeText = computed(() => formatSize(docs.value.reduce((sum, d) => sum + d.size, 0)))
+const totalSizeText = computed(() => docs.value.reduce((sum, d) => sum + d.size, 0))
 
 function parseType(name: string) {
   const ext = name.split('.').pop()?.toLowerCase() || 'file'
@@ -233,7 +227,7 @@ const columns = [
     colKey: 'type', title: '类型', width: 50, cell: (h: any, { row }: any) => h('span', parseType(row.name))
   },
   {
-    colKey: 'size', title: '大小', width: 80, cell: (h: any, { row }: any) => h('span', formatSize(row.size))
+    colKey: 'size', title: '大小', width: 80, align: 'right', cell: (h: any, { row }: any) => h('span', filesize(row.size))
   },
   {
     colKey: 'creator', title: '上传者', width: 120, cell: (h: any, { row }: any) => h('span', row.creator || '-')
@@ -292,13 +286,6 @@ function handleUpload() {
     .finally(() => {
       uploading.value = false
     })
-}
-
-function formatSize(bytes: number) {
-  if (!bytes) return '0 B'
-  if (bytes === 0) return '0 B'
-  if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB'
-  return (bytes / 1024).toFixed(1) + ' KB'
 }
 
 const STATUS_TEXT: Record<string, string> = {

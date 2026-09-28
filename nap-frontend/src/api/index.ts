@@ -278,16 +278,21 @@ export class Api {
   }
 
   // ---------- Monitoring ----------
-  async fetchTokenUsage<T = unknown>(days = 7, agentUuid?: string) {
+  async fetchTokenUsage<T = unknown>(days = 7, agentUuid?: string, model?: string) {
     const { data } = await axios.get<T>('/api/v1/monitoring/token-usage', {
-      params: { days, agent_uuid: agentUuid || undefined }
+      params: { days, agent_uuid: agentUuid || undefined, model: model || undefined }
     })
     return data
   }
 
-  async fetchLatency<T = unknown>(days = 7, agentUuid?: string) {
+  async fetchMonitoringModels<T = unknown>() {
+    const { data } = await axios.get<T>('/api/v1/monitoring/models')
+    return data
+  }
+
+  async fetchLatency<T = unknown>(days = 7, agentUuid?: string, model?: string) {
     const { data } = await axios.get<T>('/api/v1/monitoring/latency', {
-      params: { days, agent_uuid: agentUuid || undefined }
+      params: { days, agent_uuid: agentUuid || undefined, model: model || undefined }
     })
     return data
   }

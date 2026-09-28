@@ -2,11 +2,11 @@
   <t-row style="height: 100%; overflow-y: auto;" :gutter="6">
     <t-col :span="2" style="height: 100%;">
       <t-aside class="p-2 border-rounded-4 h-full flex flex-col min-h-0" style="min-width: 220px">
-        <t-select label="智能体：" v-model="agentStore.selectedAgentId" :options="agentOptions" placeholder="选择智能体">
+        <t-select label="智能体:" v-model="agentStore.selectedAgentId" :options="agentOptions" placeholder="选择智能体">
         </t-select>
-        <!-- <t-divider></t-divider> -->
-        <t-space class="flex justify-between mt-8">
-          <p class="px-1 pb-2 text-grey">最近会话</p>
+        <!-- <t-divider>最近会话</t-divider> -->
+        <t-space class="flex justify-between mt-4">
+          <t-text theme="secondary" style="font-size: xx-small;">最近会话</t-text>
           <t-space :size="4">
             <t-button variant="text" @click="fetchSessions" size="small">
               <template #icon><t-icon name="refresh" /></template>

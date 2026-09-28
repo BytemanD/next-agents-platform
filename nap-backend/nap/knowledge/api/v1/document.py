@@ -1,12 +1,10 @@
-from fastapi import APIRouter, HTTPException, Header
-
+from fastapi import APIRouter, Header, HTTPException
 from nap.common.exceptions import DocumentNotFound
 from nap.db.models import KnowledgeBase
 from nap.knowledge.manager import MANAGER
 from nap.services.vector import RetrivalDocument
 from pydantic import BaseModel
 from starlette import status
-
 
 router = APIRouter(prefix="/documents", tags=["向量库文档"])
 
@@ -26,9 +24,9 @@ class ListDocumentResp(BaseModel):
     response_model=ListDocumentResp,
     response_model_exclude_none=True,
 )
-async def list_documents(x_knowedge_id=Header()):
+async def list_documents(x_knowedge_base_id=Header()):
     try:
-        kb = KnowledgeBase.get_by_uuid(x_knowedge_id)
+        kb = KnowledgeBase.get_by_uuid(x_knowedge_base_id)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="knowledge base not found"
@@ -45,7 +43,7 @@ async def list_documents(x_knowedge_id=Header()):
     response_model=GetDocumentResp,
     response_model_exclude_none=True,
 )
-async def get_document(doc_id: str, x_knowedge_id=Header()):
+async def get_document(doc_id: str, x_knowedge_base_id=Header()):
     item = MANAGER.get_document(doc_id)
     if not item:
         raise DocumentNotFound(doc_id)
