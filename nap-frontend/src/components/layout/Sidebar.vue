@@ -59,6 +59,7 @@ const uiStore = useUIStore()
 
 const navItems: NavItem[] = [
   { label: '知识库', path: '/knowledge', icon: 'book' },
+  { label: '附件', path: '/attachments', icon: 'attach' },
   { label: '智能体', path: '/agents', icon: 'robot' },
 
   {

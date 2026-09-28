@@ -155,6 +155,25 @@ export class Api {
     return data as T
   }
 
+  async uploadAttachment<T = unknown>(file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await axios.post('/api/v1/attachments', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data as T
+  }
+
+  async fetchAttachments<T = unknown>() {
+    const { data } = await axios.get('/api/v1/attachments')
+    return data as T
+  }
+
+  async deleteAttachment<T = unknown>(uuid: string) {
+    const { data } = await axios.delete(`/api/v1/attachments/${uuid}`)
+    return data as T
+  }
+
   // ---------- Sessions ----------
   async fetchSessions<T = unknown>(agentUuid: string) {
     const { data } = await axios.get('/api/v1/sessions', { params: { agent: agentUuid } })
@@ -222,6 +241,13 @@ export class Api {
   async fetchKbKnowledges(kbId: string) {
     const { data } = await axios.get<{ items: KnowledgeItem[] }>(`/api/v1/knowledge-bases/${kbId}/knowledges`)
     return data
+  }
+
+  async addAttachmentsToKnowledgeBase<T = unknown>(kbId: string, attachmentUuids: string[]) {
+    const { data } = await axios.post(`/api/v1/knowledge-bases/${kbId}/knowledges`, {
+      attachments: attachmentUuids,
+    })
+    return data as T
   }
 
   async fetchKnowledges() {

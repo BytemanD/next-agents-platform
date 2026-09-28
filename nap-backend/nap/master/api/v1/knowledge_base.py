@@ -2,7 +2,7 @@ import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from nap.db.models import Knowledge, KnowledgeBase
+from nap.db.models import Attachment, Knowledge, KnowledgeBase
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 from pystonic.common import context
@@ -101,6 +101,7 @@ async def list_kb_knowledges(kb_id: str):
     status_code=200,
     summary="添加知识文件",
     description="从本地上传文件并添加到知识库",
+    response_model=Knowledge,
 )
 async def add_knowledge_from_file(kb_id: str, file: UploadFile = File(...)):
     kb = KnowledgeBase.get_by_uuid(kb_id)
@@ -112,39 +113,71 @@ async def add_knowledge_from_file(kb_id: str, file: UploadFile = File(...)):
     item = await asyncio.to_thread(
         MANAGER.upload_knowledge,
         kb,
-        context.getvar("account") or "guest",
         file.filename or file.file.name,
         await file.read(),
     )
     return item
 
 
-class UploadUrlRequest(BaseModel):
+class UrlKnowledge(BaseModel):
     url: str
     name: str | None = None
 
 
+class AddKnowledgeRequest(BaseModel):
+    web_files: list[UrlKnowledge] = []
+    attachments: list[str] = []
+
+
+class KnowledgesResponse(BaseModel):
+    knowledges: list[Knowledge] = []
+
+
 @router.post(
-    "/{kb_id}/knowledges/url",
+    "/{kb_id}/knowledges",
     status_code=200,
     summary="从网络获取知识",
     description="从网络地址下载文件并添加到知识库",
+    response_model=KnowledgesResponse,
 )
-async def add_knowledge_from_url(kb_id: str, body: UploadUrlRequest):
+async def add_knowledge(kb_id: str, body: AddKnowledgeRequest):
     kb = KnowledgeBase.get_by_uuid(kb_id)
     if not kb:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"knowledge base {kb_id} not found",
         )
-    item = await asyncio.to_thread(
-        MANAGER.upload_knowledge_from_url,
-        kb,
-        context.getvar("account") or "guest",
-        body.url,
-        name=body.name,
-    )
-    return item
+    if not body.web_files and not body.attachments:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="urls or attachments is required",
+        )
 
+    attachments = []
+    for attachment_uuid in body.attachments:
+        attachment = Attachment.get_by_uuid(attachment_uuid)
+        if not attachment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"attachment {attachment_uuid} not found",
+            )
+        attachments.append(attachment)
 
-# https://www.cnblogs.com/haoxiaobo/archive/2012/11/30/2795841.html
+    items = []
+    for web_file in body.web_files:
+        item = await asyncio.to_thread(
+            MANAGER.add_knowledge_from_url,
+            kb,
+            context.getvar("account") or "guest",
+            web_file.url,
+            name=body.name,
+        )
+        items.append(item)
+
+    for attachment in attachments:
+        item = await asyncio.to_thread(
+            MANAGER.add_knowledge_from_attachment, kb, attachment
+        )
+        items.append(item)
+
+    return KnowledgesResponse(knowledges=items)

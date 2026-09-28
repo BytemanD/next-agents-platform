@@ -7,6 +7,7 @@ from nap.db.migrate import ensure_columns
 from nap.db.models import User
 from nap.master.api.v1 import (
     agents,
+    attachment,
     dashboard,
     knowledge,
     knowledge_base,
@@ -53,6 +54,7 @@ for module in (
     sessions,
     tools,
     monitoring,
+    attachment,
 ):
     APP.include_router(module.router, prefix="/api/v1")
 

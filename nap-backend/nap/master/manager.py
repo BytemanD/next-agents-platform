@@ -7,6 +7,7 @@ from nap.common.objects import ToolModel
 from nap.db.models import (
     AgentCallback,
     Agents,
+    Attachment,
     Knowledge,
     KnowledgeBase,
     KnowledgeStatus,
@@ -24,6 +25,23 @@ from pystonic.utils.httpclient import default_client
 from pystonic.utils.strutil import text_shorten
 
 RUNTIME_TOOLS = [user.retrival, user.list_documents]
+
+
+def _resolve_attachments(file_keys: list[str]) -> list[dict]:
+    """将 file_key 解析为 agent 可用的附件元数据"""
+    resolved = []
+    for key in file_keys:
+        if not STORE_SERVICE.has_attachment(key):
+            logger.warning("attachment {} not found, skip", key)
+            continue
+        resolved.append(
+            {
+                "file_key": key,
+                "name": STORE_SERVICE.get_attachment_name(key),
+                "filename": STORE_SERVICE.get_attachment_name(key),
+            }
+        )
+    return resolved
 
 
 class Message(BaseModel):
@@ -96,13 +114,13 @@ class MasterManager(BaseManager):
         return a
 
     def upload_knowledge(
-        self, kb: KnowledgeBase, creator: str, filename: str, content: bytes
+        self, kb: KnowledgeBase, filename: str, content: bytes
     ) -> Knowledge:
         """创建 doc 记录， 保存 doc 内容到本地存储"""
 
         knowledge = Knowledge(
             knowledge_base=kb.uuid,
-            creator=creator,
+            creator=context.getvar("account") or "guest",
             name=filename,
             size=len(content),
             raw_path="",
@@ -118,22 +136,22 @@ class MasterManager(BaseManager):
         knowledge.add_todo("enrich")
         return knowledge
 
-    def upload_knowledge_from_url(
+    def add_knowledge_from_url(
         self,
         kb: KnowledgeBase,
-        creator: str,
         url: str,
         name: str | None = None,
     ) -> Knowledge:
         """创建 doc 记录， 保存 doc 内容到本地存储"""
 
+        logger.info("fetch from: {}", url)
         resp = httpx.get(url)
         resp.raise_for_status()
         content = resp.content
 
         knowledge = Knowledge(
             knowledge_base=kb.uuid,
-            creator=creator,
+            creator=context.getvar("account") or "guest",
             name=name or "unknown",
             size=len(content),
             raw_path="",
@@ -144,6 +162,26 @@ class MasterManager(BaseManager):
 
         STORE_SERVICE.save_raw(knowledge, content)
 
+        knowledge.add_todos("convert", "vector", "enrich")
+        return knowledge
+
+    def add_knowledge_from_attachment(
+        self,
+        kb: KnowledgeBase,
+        attachment: Attachment,
+    ) -> Knowledge:
+        """创建 doc 记录， 保存 doc 内容到本地存储"""
+
+        knowledge = Knowledge(
+            knowledge_base=kb.uuid,
+            creator=context.getvar("account") or "guest",
+            name=attachment.name,
+            size=0,
+            raw_path=attachment.raw_path,
+            convert_path="",
+            status=KnowledgeStatus.pending_process.value,
+        )
+        knowledge.create()
         knowledge.add_todos("convert", "vector", "enrich")
         return knowledge
 
@@ -158,6 +196,7 @@ class MasterManager(BaseManager):
         model: str | None = None,
         tools: list[str] = [],
         knowledge_bases: list[str] | None = None,
+        attachments: list[str] = [],
     ):
         llm = LLMs.get_by_uuid(db_agent.llm)
         if not llm.models:
@@ -185,9 +224,12 @@ class MasterManager(BaseManager):
             tools=[
                 user.get_username,
                 user.get_available_knowledge_bases,
+                user.get_attachments,
+                user.get_attachment_content,
                 *[x for x in RUNTIME_TOOLS if x.name in tools],
             ],
             knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
+            attachments=attachments,
         )
 
         async for event in self._agent.chat(runtime_context, query):
@@ -215,6 +257,28 @@ class MasterManager(BaseManager):
 
     async def list_messages(self, session: Session | str):
         return await self._agent.list_messages(session)
+
+    async def save_attachment(self, name: str, content: bytes):
+        attachment = Attachment(
+            creator=context.getvar("account") or "guest",
+            name=name,
+            size=len(content),
+        )
+        attachment.create()
+        STORE_SERVICE.save_attachment_raw(attachment, content)
+        return attachment
+
+    def list_attachments(self):
+        creator = context.getvar("account")
+        return sorted(
+            Attachment.query(Attachment.creator == creator),
+            key=lambda a: a.created_at,
+            reverse=True,
+        )
+
+    def delete_attachment(self, attachment: Attachment):
+        STORE_SERVICE.remove_attachment(attachment)
+        attachment.delete()
 
 
 MANAGER = MasterManager()

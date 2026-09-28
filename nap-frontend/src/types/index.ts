@@ -77,6 +77,13 @@ export interface KnowledgeBase {
   updated_at: string
 }
 
+export interface Attachment {
+  uuid: string
+  name: string
+  size: number
+  created_at: string
+}
+
 export interface KnowledgeItem {
   uuid: string
   knowledge: string

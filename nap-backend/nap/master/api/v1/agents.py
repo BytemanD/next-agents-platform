@@ -62,6 +62,7 @@ class ChatRequest(BaseModel):
     session: str | None = ""
     tools: list[str] | None = []
     knowledge_bases: list[str] | None = []
+    attachments: list[str] = []
 
 
 class ChatSSE(BaseModel):
@@ -150,6 +151,7 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 model=body.model,
                 tools=body.tools or [],
                 knowledge_bases=body.knowledge_bases or [],
+                attachments=body.attachments,
             ):
                 reasoning_content = delta.additional_kwargs.get("reasoning_content")
                 data = ChatSSE(

@@ -18,3 +18,4 @@ class RuntimeContext(BaseModel):
     system_prompt: str = ""
     tools: list[BaseTool] = []
     knowledge_bases: Sequence[KnowledgeBase] = []
+    attachments: list[str] = []

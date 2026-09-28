@@ -9,12 +9,13 @@ START --> convert --> vector --+-->  active --> END
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 from nap.common.exceptions import KnowledgeProcessFailed
 from nap.db.models import Knowledge, KnowledgeStatus
 from nap.services.convert import CONVERT_SERVICE
-from nap.services.vector import VECTOR_SERVICE
 from nap.services.enrich import ENRICH_SERVICE
+from nap.services.storage import STORE_SERVICE
+from nap.services.vector import VECTOR_SERVICE
 
 
 class State(TypedDict):
@@ -35,7 +36,12 @@ def _node_convert(state: State):
         }
 
     todo.set_running()
-    content = CONVERT_SERVICE.convert(state["knowledge"])
+    raw_content = STORE_SERVICE.get_raw(state["knowledge"])
+    if state["knowledge"].size != len(raw_content):
+        state["knowledge"].size = len(raw_content)
+        state["knowledge"].save()
+    content = CONVERT_SERVICE.convert(state["knowledge"], raw_content=raw_content)
+
     todo.set_completed()
     return {"convert": True, "content": content}
 

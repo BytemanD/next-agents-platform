@@ -377,3 +377,13 @@ class AgentCallback(DBModel, table=True):
             "total_tokens": totals["prompt"] + totals["completion"],
             "total_calls": totals["calls"],
         }
+
+
+class Attachment(DBModel, table=True):
+    __tablename__ = "attachments"  # type: ignore
+
+    creator: str = Field(nullable=False, description="knowledge creator")
+    name: str = Field(nullable=False, description="文档文件名称")
+    size: int = Field(nullable=False, description="文档文件大小(bytes)")
+    raw_path: str | None = Field(nullable=True, description="源文档存储路径")
+    convert_path: str | None = Field(nullable=True, description="转化后文档存储路径")

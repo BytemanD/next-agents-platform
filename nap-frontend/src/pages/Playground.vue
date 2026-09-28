@@ -62,8 +62,6 @@
               </t-select>
             </t-space>
           </template>
-          <template #sender-footer-attachments>sdfsd
-          </template>
         </t-chatbot>
 
         <div v-if="agentStore.selectedAgentId && !hasMessages"
@@ -123,6 +121,9 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
     chatStore.activeRequestKey = currentKey.value
     chatStore.setDraft(currentKey.value, '')
     const token = await getToken()
+    const attachments = await resolveSendingFileKeys()
+    // 上传没拿到文件，但已在聊天里显示附件时，作为空处理
+    const attachmentKeys = attachments.filter(Boolean)
     return {
       method: 'POST',
       headers: {
@@ -135,6 +136,7 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
         model: selectedModel.value || undefined,
         session: currentConvId.value || undefined,
         tools: selectedTools.value,
+        attachments: attachmentKeys,
       }),
     };
   },
@@ -242,12 +244,82 @@ function restoreKeyDisplay(key: string) {
   hasMessages.value = chatStore.getMessages(key).length > 0
 }
 
+const uploadRawFiles = ref<{ key: string; raw: File }[]>([])
+const uploadTasks = new Map<string, Promise<string | null>>()
+const sendingFileKeys = ref<string[]>([])
+const pendingAttachments = ref<{ key: string; name: string; size?: number; fileType?: string; fileKey?: string }[]>([])
+
 const senderProps = computed(() => ({
   value: chatStore.getDraft(currentKey.value),
   onChange: (e: any) => {
     chatStore.setDraft(currentKey.value, e?.detail ?? '')
   },
+  actions: ['uploadAttachment', 'send'],
+  attachmentsProps: { items: pendingAttachments.value },
+  onFileSelect: (e: any) => {
+    const files = Array.isArray(e?.detail) ? e.detail : (e?.target?.files || [])
+    const items = Array.from(files as File[]).map((f) => ({
+      key: `${f.name}-${f.size}-${f.lastModified}`,
+      name: f.name,
+      size: f.size,
+      fileType: f.type?.split('/')[0] || undefined,
+    }))
+    pendingAttachments.value = [...pendingAttachments.value, ...items]
+    uploadRawFiles.value = [...uploadRawFiles.value, ...items.map((it, i) => ({ key: it.key, raw: (files as File[])[i] }))]
+    items.forEach((it) => {
+      uploadTasks.set(it.key, uploadAttachment(it))
+    })
+  },
+  onFileRemove: (e: any) => {
+    const rest = Array.isArray(e?.detail) ? e.detail : []
+    pendingAttachments.value = rest
+    const keys = new Set(rest.map((r: any) => r?.key))
+    uploadRawFiles.value = uploadRawFiles.value.filter((r) => keys.has(r.key))
+  },
+  onSend: (e: any) => {
+    const detailAtts = e?.detail?.attachments
+    const atts = Array.isArray(detailAtts) ? detailAtts : pendingAttachments.value
+    sendingFileKeys.value = (atts as any[])
+      .map((a: any) => a?.key)
+      .filter((k: unknown): k is string => typeof k === 'string' && !!k)
+    pendingAttachments.value = []
+    uploadRawFiles.value = []
+  },
 }))
+
+async function uploadAttachment(item: { key: string; name: string; fileKey?: string }): Promise<string | null> {
+  const file = findRawFile(item)
+  if (!file) return null
+  try {
+    const data = await API.uploadAttachment<{ attachment: { uuid: string; name: string } }>(file)
+    const idx = pendingAttachments.value.findIndex((a) => a.key === item.key)
+    if (idx >= 0) pendingAttachments.value[idx] = { ...item, fileKey: data.attachment.uuid }
+    return data.attachment.uuid
+  } catch {
+    pendingAttachments.value = pendingAttachments.value.filter((a) => a.key !== item.key)
+    uploadRawFiles.value = uploadRawFiles.value.filter((r) => r.key !== item.key)
+    MessagePlugin.error(`附件「${item.name}」上传失败`)
+    return null
+  }
+}
+
+async function resolveSendingFileKeys(): Promise<string[]> {
+  const fileKeys: string[] = []
+  for (const key of sendingFileKeys.value) {
+    const task = uploadTasks.get(key)
+    if (task) {
+      const fk = await task
+      if (fk) fileKeys.push(fk)
+    }
+  }
+  sendingFileKeys.value = []
+  return fileKeys
+}
+
+function findRawFile(item: { key: string }): File | undefined {
+  const el = uploadRawFiles.value.find((f) => f.key === item.key)
+  return el?.raw
+}
 
 function onMessageChange(e: any) {
   const detail = e.detail ?? e

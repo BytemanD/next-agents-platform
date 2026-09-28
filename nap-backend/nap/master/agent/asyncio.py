@@ -32,6 +32,8 @@ class AsyncAgent:
             tools=[
                 user.get_username,
                 user.get_available_knowledge_bases,
+                user.get_attachments,
+                user.get_attachment_content,
                 *AGENT_TOOLS,
             ],
         )
@@ -40,11 +42,25 @@ class AsyncAgent:
         logger.info("close checkpointer connection")
         await self._conn.close()
 
+    @staticmethod
+    def _build_input(ctx: RuntimeContext, query: str) -> str:
+        if not ctx.attachments:
+            return query
+
+        parts = [query]
+        for attachment_uuid in ctx.attachments:
+            parts.append(
+                f"\n\n用户上传了附件（uuid: {attachment_uuid}）。"
+                "如需回答附件相关内容，请调用 get_attachments 查看附件列表，"
+                "再调用 get_attachment_content 获取对应附件内容。"
+            )
+        return "\n".join(parts)
+
     async def chat(self, ctx: RuntimeContext, query: str):
         trace_handler = TraceHandler()
         openai_callback = OpenAICallbackHandler()
         stream = self._agent.astream(
-            {"messages": [{"role": "user", "content": query}]},
+            {"messages": [{"role": "user", "content": self._build_input(ctx, query)}]},
             stream_mode="messages",
             config={
                 "configurable": {"thread_id": ctx.session_uuid},

@@ -3,7 +3,10 @@
 from langchain.tools import ToolRuntime, tool
 from loguru import logger
 from nap.common.knowledge_client import KnowledgeClient
+from nap.db.models import Attachment
 from nap.master.agent.context import RuntimeContext
+from nap.services.convert import CONVERT_SERVICE
+from sqlmodel import col
 
 KNOWLEDGE_CLIENT = KnowledgeClient()
 
@@ -77,3 +80,45 @@ async def list_documents(knowledge_uuid: str):
         x.model_dump(mode="json")
         for x in KNOWLEDGE_CLIENT.list_documents(knowledge_uuid)
     ]
+
+
+@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
+async def get_attachments(runtime: ToolRuntime[RuntimeContext]):
+    """获取会话附件
+
+    当需要获取会话上下文中的附件列表时使用。
+    例如， 用户提问：总结一下这个文档、该文档讲了什么 等等
+
+    Returns:
+        附件列表
+    """
+    logger.info("list attachments with uuid: {}", runtime.context.attachments)
+    return [
+        x.model_dump(mode="json")
+        for x in Attachment.query(
+            Attachment.creator == runtime.context.username,
+            col(Attachment.uuid).in_(runtime.context.attachments),
+        )
+    ]
+
+
+@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
+async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str):
+    """获取附件内容跟
+
+    当需要获取会话附件内容时使用。
+
+    Args:
+        uuid: 附件UUID
+
+    Returns:
+        附件内容或者错误信息
+    """
+    items = Attachment.query(
+        Attachment.creator == runtime.context.username,
+        Attachment.uuid == uuid,
+    )
+    if not items:
+        return f"ERROR: attachment {uuid} not exists"
+    logger.info("get Attachment content for {}", uuid)
+    return CONVERT_SERVICE.convert(items[0], save_convert=False)
