@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from langchain_openai.chat_models.base import OpenAIInvalidRequestError
+from langchain_core.exceptions import ModelError
 from loguru import logger
 from nap.db.models import AgentConfig, Agents
 from nap.master.manager import MANAGER
@@ -159,11 +159,11 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 if not data.msg:
                     continue
                 yield data.model_dump_json()
-        except OpenAIInvalidRequestError as e:
-            logger.error("openai invalid request: {}", e)
+        except ModelError as e:
+            logger.error("model request failed: {}", e)
             data = ChatSSE(
-                type="text",
-                msg=f"Error: openai invalid request: {e}",
+                type="error",
+                msg=f"Error: model request failed: {e}",
             )
             yield data.model_dump_json()
 

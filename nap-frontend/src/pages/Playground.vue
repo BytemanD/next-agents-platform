@@ -50,7 +50,7 @@
           :message-props="messageItemProps" ref="chatRef" :sender-props="senderProps" class="flex-1 min-h-0 min-w-0"
           @message-change="onMessageChange">
           <template #sender-footer-prefix>
-            <t-space class="flex j">
+            <t-space>
               <t-button shape="round" variant="outline">深度思考</t-button>
               <!-- 选择模型 -->
               <t-select label="模型：" v-model="selectedModel" :options="modelOptions" placeholder="选择模型"
@@ -59,19 +59,16 @@
               <!-- 选择工具 -->
               <t-select v-model="selectedTools" :options="toolOptions" placeholder="无" multiple label="工具:"
                 :min-collapsed-num="1">
-
               </t-select>
             </t-space>
           </template>
-          <template #sender-footer-suffix>
+          <template #sender-footer-attachments>sdfsd
           </template>
         </t-chatbot>
 
         <div v-if="agentStore.selectedAgentId && !hasMessages"
           class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none welcome">
-          <div class="welcome-glow welcome-glow-1"></div>
-          <div class="welcome-glow welcome-glow-2"></div>
-          <div class="flex flex-col items-center gap-4 relative z-10">
+          <div class="flex flex-col items-center gap-4 relative">
             <div class="welcome-logo-wrap">
               <span class="welcome-logo-ring"></span>
               <AppLogo size="large" :show-text="false" />
@@ -95,7 +92,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { API, TOKEN_KEY } from '@/api'
+import { API, getToken } from '@/api'
 import { useAgentStore } from '@/stores/agent'
 import { useChatStore, type ChatStoreMessage, type ChatChunk } from '@/stores/chat'
 import AppLogo from '@/components/common/AppLogo.vue'
@@ -122,14 +119,15 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
     : '',
   // 开启流式传输
   stream: true,
-  onRequest: (params) => {
+  onRequest: async (params) => {
     chatStore.activeRequestKey = currentKey.value
     chatStore.setDraft(currentKey.value, '')
+    const token = await getToken()
     return {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem(TOKEN_KEY)}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         // 改成你后端要的格式
@@ -148,12 +146,32 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
     let content: AIMessageContent
     if (rest?.type === 'thinking') {
       content = { type: 'thinking', data: { text: msg, title: '深度思考' }, status: 'streaming' };
+    } else if (rest?.type === 'error') {
+      content = { type: 'text', data: msg, status: 'error' };
     } else {
       content = { type: 'markdown', data: msg, status: 'streaming' };
     }
     const key = chatStore.activeRequestKey || currentKey.value
     chatStore.upsertStreamContent(key, content as ChatStoreMessage['content'][number])
     return content;
+  },
+
+  onError: () => {
+    const el = (chatRef.value as any)?.$el ?? chatRef.value
+    const messageStore = el?.provide?.chatEngine?.messageStore
+    if (messageStore) {
+      const ai = messageStore.messages.filter((m: any) => m.role === 'assistant').pop()
+      if (ai?.id) {
+        messageStore.setMessageStatus(ai.id, 'error')
+        messageStore.updateMultipleContents(
+          ai.id,
+          ai.content.map((c: any) => (c.status ? { ...c, status: 'error' } : c))
+        )
+      }
+    }
+    const key = chatStore.activeRequestKey || currentKey.value
+    chatStore.finalizeStream(key, false)
+    chatStore.activeRequestKey = null
   },
 
   onComplete: (isAborted?: boolean) => {

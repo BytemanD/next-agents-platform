@@ -153,7 +153,8 @@ export interface DashboardStats {
 
 export interface NavItem {
   label: string
-  path: string
-  icon: string
+  path?: string
+  icon?: string
   featured?: boolean
+  subItems?: NavItem[]
 }

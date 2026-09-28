@@ -4,7 +4,7 @@
       <t-row :gutter="12">
         <t-col v-for="endpoint in apiEndpoints" :key="endpoint.uuid" :xs="24" :sm="12" :md="8" :xl="6">
           <t-card :title="endpoint.name || endpoint.base_url" size="small" :bordered="true">
-            <t-descriptions :column="1" size="small" tableLayout="auto" >
+            <t-descriptions :column="1" size="small" tableLayout="auto">
               <t-descriptions-item label="地址">{{ endpoint.base_url }}</t-descriptions-item>
               <t-descriptions-item label="密钥">{{ maskKey(endpoint.api_key) }}</t-descriptions-item>
               <t-descriptions-item label="模型">
@@ -16,20 +16,21 @@
               </t-descriptions-item>
             </t-descriptions>
             <template #actions>
-              <t-button size="small" variant="outline" @click="handleEdit(endpoint)">编辑</t-button>
+              <t-button size="small" variant="text" @click="handleEdit(endpoint)"><t-icon
+                  name="edit"></t-icon></t-button>
               <t-popconfirm content="确认删除该模型？" @confirm="handleDelete(endpoint)">
-                <t-button theme="danger" size="small" variant="text">删除</t-button>
+                <t-button theme="danger" size="small" variant="text"><t-icon name="delete"></t-icon></t-button>
               </t-popconfirm>
             </template>
           </t-card>
         </t-col>
-        <t-col :xs="24" :sm="12" :md="8" :xl="6">
-          <t-button variant="dashed" block @click="handleAddKey">
-            <template #icon><t-icon name="add" /></template>
-            添加模型
-          </t-button>
-        </t-col>
       </t-row>
+      <t-col :xs="24" :sm="12" :md="8" :xl="6" class="mt-4">
+        <t-button variant="dashed" @click="handleAddKey">
+          <template #icon><t-icon name="add" /></template>
+          添加模型
+        </t-button>
+      </t-col>
     </t-tab-panel>
 
     <t-tab-panel value="appearance" label="外观" class="panel">
@@ -92,12 +93,8 @@
     </t-tab-panel>
   </t-tabs>
 
-  <t-dialog
-    v-model:visible="createVisible"
-    :header="editingUuid ? '编辑模型' : '添加模型'"
-    :confirm-btn="{ content: editingUuid ? '保存' : '创建', loading: submitting }"
-    @confirm="handleCreate"
-  >
+  <t-dialog v-model:visible="createVisible" :header="editingUuid ? '编辑模型' : '添加模型'"
+    :confirm-btn="{ content: editingUuid ? '保存' : '创建', loading: submitting }" @confirm="handleCreate">
     <t-form ref="formRef" :data="createForm" :rules="formRules" label-align="top">
       <t-form-item label="名称" name="name">
         <t-input v-model="createForm.name" placeholder="OpenAI" clearable />
@@ -109,16 +106,9 @@
         <t-input v-model="createForm.api_key" placeholder="sk-..." type="password" clearable />
       </t-form-item>
       <t-form-item label="模型" name="models">
-        <t-select-input
-          :value="createForm.models"
-          :input-value="modelInput"
-          multiple
-          allow-input
-          placeholder="输入模型名后回车添加，如 gpt-4o"
-          @input-change="handleInputChange"
-          @enter="handleModelsEnter"
-          @tag-change="handleModelsChange"
-        />
+        <t-select-input :value="createForm.models" :input-value="modelInput" multiple allow-input
+          placeholder="输入模型名后回车添加，如 gpt-4o" @input-change="handleInputChange" @enter="handleModelsEnter"
+          @tag-change="handleModelsChange" />
       </t-form-item>
     </t-form>
   </t-dialog>

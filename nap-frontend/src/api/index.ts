@@ -2,17 +2,66 @@ import axios from 'axios'
 import type { KnowledgeBase, KnowledgeDetail, KnowledgeItem, KnowledgeTodo } from '@/types'
 
 export const TOKEN_KEY = 'nap_token'
+export const TOKEN_CREATED_KEY = 'nap_token_created'
+export const TOKEN_TTL = 30 * 60 * 1000
 
-export function getToken(): string | null {
+export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
 
 export function setToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(TOKEN_CREATED_KEY, String(Date.now()))
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(TOKEN_CREATED_KEY)
+}
+
+let lastRefreshAttempt = 0
+let pendingRefresh: Promise<string | null> | null = null
+
+async function refreshToken(): Promise<string | null> {
+  const old = getStoredToken()
+  if (!old) return null
+  try {
+    const res = await fetch('/api/v1/auth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${old}`,
+      },
+    })
+    if (res.status === 401 || res.status === 403) {
+      clearToken()
+      return null
+    }
+    if (!res.ok) return old
+    const data = (await res.json()) as { token?: string }
+    if (data?.token) {
+      setToken(data.token)
+      return data.token
+    }
+    return old
+  } catch {
+    return old
+  }
+}
+
+export async function getToken(): Promise<string | null> {
+  const token = getStoredToken()
+  if (!token) return null
+  const created = Number(localStorage.getItem(TOKEN_CREATED_KEY) || 0)
+  if (created && Date.now() - created < TOKEN_TTL) return token
+  if (Date.now() - lastRefreshAttempt < 30 * 1000) return token
+  lastRefreshAttempt = Date.now()
+  if (!pendingRefresh) {
+    pendingRefresh = refreshToken().finally(() => {
+      pendingRefresh = null
+    })
+  }
+  return pendingRefresh
 }
 
 const AUTH_EXCLUDE: Array<[string, string]> = [
@@ -20,12 +69,12 @@ const AUTH_EXCLUDE: Array<[string, string]> = [
   ['post', '/api/v1/users']
 ]
 
-axios.interceptors.request.use((config) => {
+axios.interceptors.request.use(async (config) => {
   const method = (config.method || 'get').toLowerCase()
   const url = config.url || ''
   const excluded = AUTH_EXCLUDE.some(([m, u]) => method === m && url.startsWith(u))
   if (!excluded) {
-    const token = getToken()
+    const token = await getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

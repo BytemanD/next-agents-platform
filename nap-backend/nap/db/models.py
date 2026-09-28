@@ -201,20 +201,20 @@ class Knowledge(DBModel, table=True):
             session.exec(stm)
             session.commit()
 
-    @classmethod
-    def count(cls, knowledge_bases: list[str]):
-        stm = (
-            update(cls)
-            .where(col(cls.knowledge_base).in_(knowledge_bases))
-            .where(
-                col(cls.status).not_in(
-                    [KnowledgeStatus.deleting.value, KnowledgeStatus.deleted.value]
-                )
-            )
-        )
-        with get_session() as session:
-            result = session.exec(stm)
-            return int(result.one())
+    # @classmethod
+    # def count(cls, knowledge_bases: list[str]):
+    #     stm = (
+    #         update(cls)
+    #         .where(col(cls.knowledge_base).in_(knowledge_bases))
+    #         .where(
+    #             col(cls.status).not_in(
+    #                 [KnowledgeStatus.deleting.value, KnowledgeStatus.deleted.value]
+    #             )
+    #         )
+    #     )
+    #     with get_session() as session:
+    #         result = session.exec(stm)
+    #         return int(result.one())
 
     def set_status(self, status: KnowledgeStatus):
         self.status = status.value

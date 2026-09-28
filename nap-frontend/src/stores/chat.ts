@@ -130,7 +130,8 @@ export const useChatStore = defineStore('chat', () => {
         }
         return c
       })
-      state.messages = msgs.slice(0, i).concat([{ ...m, status, content }], msgs.slice(i + 1))
+      const hasError = content.some((c) => c.status === 'error')
+      state.messages = msgs.slice(0, i).concat([{ ...m, status: hasError ? 'error' : status, content }], msgs.slice(i + 1))
       return
     }
   }

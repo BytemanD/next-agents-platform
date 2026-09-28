@@ -17,9 +17,11 @@ from nap.master.api.v1 import (
     users,
 )
 from nap.master.manager import MANAGER
+from pydantic import BaseModel
 from pystonic.asgi.app import create_app
 from pystonic.asgi.middlewares.trace import TraceIdMiddleware
 from pystonic.asgi.plugins import auth
+from pystonic.common import context
 from pystonic.common.log import setup_logger
 from pystonic.orm.database import create_all_tables
 from starlette.authentication import AuthenticationError
@@ -73,3 +75,14 @@ auth.setup(
         ("GET", "/openapi.json"),
     },
 )
+
+
+class RefreshResponse(BaseModel):
+    token: str
+
+
+@APP.post("/api/v1/auth/token", response_model=RefreshResponse, tags=["auth"])
+def _refresh_token():
+    token = auth.JWT_SERVICE.encode(context.getvar("account"))
+    logger.success("create token success")
+    return RefreshResponse(token=token)

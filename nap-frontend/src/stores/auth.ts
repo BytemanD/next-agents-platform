@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getToken, setToken, clearToken } from '@/api'
+import { getStoredToken, setToken, clearToken } from '@/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(getToken())
+  const token = ref<string | null>(getStoredToken())
 
   const isAuthenticated = () => !!token.value
 

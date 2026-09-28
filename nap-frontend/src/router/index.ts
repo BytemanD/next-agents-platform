@@ -87,9 +87,9 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   document.title = `${to.meta.title || '打包'} - NAP 下一代智能体平台`
-  const token = getToken()
+  const token = await getToken()
   if (!token && to.name !== 'Login' && to.name !== 'Register') {
     return { name: 'Login' }
   }

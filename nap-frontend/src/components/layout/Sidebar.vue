@@ -1,24 +1,43 @@
 <template>
-  <t-aside :class="uiStore.collapsed ? 'w-16' : 'w-58' " >
+  <t-aside :class="uiStore.collapsed ? 'w-16' : 'w-58'">
     <t-menu :value="currentPath" :collapsed="uiStore.collapsed" @change="handleMenuChange" class='border-r'>
       <template #logo>
         <AppLogo :show-text="!uiStore.collapsed" />
       </template>
 
       <t-button block shape="round" @click="handleMenuChange('/playground')" style="margin-bottom: 20px;">
-        <template #icon><ChatBubbleIcon /></template>
+        <template #icon>
+          <ChatBubbleIcon />
+        </template>
         <span v-if="!uiStore.collapsed">对话</span>
       </t-button>
 
-      <t-menu-item v-for="item in navItems" :key="item.path" :value="item.path" class="nav-featured">
-        <template #icon><t-icon :name="item.icon" /></template>
-        {{ item.label }}
-      </t-menu-item>
+      <template v-for="item in navItems" :key="item.path">
+        <t-submenu v-if="item.subItems && item.subItems.length > 0" :value="item.path" v-model="item.featured">
+          <template #icon>
+            <t-icon :name="item.icon" />
+          </template>
+          <template #title>
+            <span>{{ item.label }}</span>
+          </template>
+          <t-menu-item v-for="subItem in item.subItems" :value="subItem.path" class="nav-featured">
+            <template #icon>
+              <t-icon :name="subItem.icon" />
+            </template>
+            {{ subItem.label }}
+          </t-menu-item>
+        </t-submenu>
+        <t-menu-item v-else :value="item.path" class="nav-featured">
+          <template #icon v-if="item.icon"><t-icon :name="item.icon" /></template>
+          {{ item.label }}
+        </t-menu-item>
+      </template>
+
       <template #operations>
         <t-card size="small" v-if="!uiStore.collapsed">
           <h3 class="text-xs font-medium">本月 Token 额度</h3>
           <t-progress :percentage="50" color="var(--accent-100)" />
-          <span>已使用: 1.6M / 2.4M</span> 
+          <span>已使用: 1.6M / 2.4M</span>
         </t-card>
       </template>
     </t-menu>
@@ -40,13 +59,17 @@ const uiStore = useUIStore()
 
 const navItems: NavItem[] = [
   { label: '知识库', path: '/knowledge', icon: 'book' },
-  { label: '仪表盘', path: '/dashboard', icon: 'dashboard' },
   { label: '智能体', path: '/agents', icon: 'robot' },
-  { label: '监控中心', path: '/monitoring', icon: 'chart-bar' },
-  { label: '设置', path: '/settings', icon: 'setting' }
+
+  {
+    label: '概览', icon: "chart-bar", featured: true, subItems: [
+      { label: '仪表盘', path: '/dashboard', icon: 'dashboard' },
+      { label: '监控中心', path: '/monitoring', icon: 'precise-monitor' },
+    ]
+  },
 ]
 
-const currentPath = computed(() =>{
+const currentPath = computed(() => {
   return route.path;
 })
 
