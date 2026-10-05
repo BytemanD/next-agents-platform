@@ -15,33 +15,29 @@ from nap.db.models import (
     Session,
 )
 from nap.db.types import AgentConfig
-from nap.master.agent.asyncio import AsyncAgent
+from nap.master.agent.asyncio import CUSTOM_TOOLS, AsyncAgent
 from nap.master.agent.context import RuntimeContext
-from nap.master.agent.tools import user
 from nap.services.storage import STORE_SERVICE
 from pydantic import BaseModel
 from pystonic.common import context
 from pystonic.utils.httpclient import default_client
 from pystonic.utils.strutil import text_shorten
 
-RUNTIME_TOOLS = [user.retrival, user.list_documents]
-
-
-def _resolve_attachments(file_keys: list[str]) -> list[dict]:
-    """将 file_key 解析为 agent 可用的附件元数据"""
-    resolved = []
-    for key in file_keys:
-        if not STORE_SERVICE.has_attachment(key):
-            logger.warning("attachment {} not found, skip", key)
-            continue
-        resolved.append(
-            {
-                "file_key": key,
-                "name": STORE_SERVICE.get_attachment_name(key),
-                "filename": STORE_SERVICE.get_attachment_name(key),
-            }
-        )
-    return resolved
+# def _resolve_attachments(file_keys: list[str]) -> list[dict]:
+#     """将 file_key 解析为 agent 可用的附件元数据"""
+#     resolved = []
+#     for key in file_keys:
+#         if not STORE_SERVICE.has_attachment(key):
+#             logger.warning("attachment {} not found, skip", key)
+#             continue
+#         resolved.append(
+#             {
+#                 "file_key": key,
+#                 "name": STORE_SERVICE.get_attachment_name(key),
+#                 "filename": STORE_SERVICE.get_attachment_name(key),
+#             }
+#         )
+#     return resolved
 
 
 class Message(BaseModel):
@@ -97,7 +93,7 @@ class MasterManager(BaseManager):
         llm: str = "",
         config: AgentConfig = AgentConfig(),
         knowledge_bases: list[str] = [],
-        tools: list[str] = [],
+        tools: dict = {},
     ):
         a = Agents(
             creator=context.getvar("account", "guest"),
@@ -194,7 +190,7 @@ class MasterManager(BaseManager):
         query: str,
         session_id: str | None = None,
         model: str | None = None,
-        tools: list[str] = [],
+        custom_tools: list[str] = [],
         knowledge_bases: list[str] | None = None,
         attachments: list[str] = [],
     ):
@@ -221,15 +217,10 @@ class MasterManager(BaseManager):
             session_uuid=session.uuid,
             username=context.getvar("account") or "guest",
             system_prompt=db_agent.instruction,
-            tools=[
-                user.get_username,
-                user.get_available_knowledge_bases,
-                user.get_attachments,
-                user.get_attachment_content,
-                *[x for x in RUNTIME_TOOLS if x.name in tools],
-            ],
+            tools=[x for x in CUSTOM_TOOLS if x.name in custom_tools],
             knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
             attachments=attachments,
+            tool_args=db_agent.tools,
         )
 
         async for event in self._agent.chat(runtime_context, query):
@@ -252,8 +243,7 @@ class MasterManager(BaseManager):
             knowledge.set_status(KnowledgeStatus.pending_delete)
 
     def list_tools(self):
-        tools = [user.retrival, user.list_documents]
-        return [ToolModel.from_llm_tool(x) for x in tools]
+        return [ToolModel.from_llm_tool(x) for x in CUSTOM_TOOLS]
 
     async def list_messages(self, session: Session | str):
         return await self._agent.list_messages(session)

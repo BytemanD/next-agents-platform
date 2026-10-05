@@ -19,3 +19,5 @@ class RuntimeContext(BaseModel):
     tools: list[BaseTool] = []
     knowledge_bases: Sequence[KnowledgeBase] = []
     attachments: list[str] = []
+
+    tool_args: dict = {}

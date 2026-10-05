@@ -17,7 +17,13 @@ from nap.master.agent.middlewares import RuntimeAgentMiddleware
 from nap.master.agent.tools import user
 from pystonic.common import context
 
-AGENT_TOOLS = [user.retrival, user.list_documents]
+INTERNAL_TOOLS = [
+    user.get_username,
+    user.get_available_knowledge_bases,
+    user.get_attachments,
+    user.get_attachment_content,
+]
+CUSTOM_TOOLS = [user.retrival, user.list_documents, user.tavily_hub_search]
 
 
 class AsyncAgent:
@@ -29,34 +35,29 @@ class AsyncAgent:
             checkpointer=self._saver,
             context_schema=RuntimeContext,
             middleware=[RuntimeAgentMiddleware()],
-            tools=[
-                user.get_username,
-                user.get_available_knowledge_bases,
-                user.get_attachments,
-                user.get_attachment_content,
-                *AGENT_TOOLS,
-            ],
+            tools=[*INTERNAL_TOOLS, *CUSTOM_TOOLS],
         )
 
     async def stop(self):
         logger.info("close checkpointer connection")
         await self._conn.close()
 
-    @staticmethod
-    def _build_input(ctx: RuntimeContext, query: str) -> str:
-        if not ctx.attachments:
-            return query
+    # @staticmethod
+    # def _build_input(ctx: RuntimeContext, query: str) -> str:
+    #     if not ctx.attachments:
+    #         return query
 
-        parts = [query]
-        for attachment_uuid in ctx.attachments:
-            parts.append(
-                f"\n\n用户上传了附件（uuid: {attachment_uuid}）。"
-                "如需回答附件相关内容，请调用 get_attachments 查看附件列表，"
-                "再调用 get_attachment_content 获取对应附件内容。"
-            )
-        return "\n".join(parts)
+    #     parts = [query]
+    #     for attachment_uuid in ctx.attachments:
+    #         parts.append(
+    #             f"\n\n用户上传了附件（uuid: {attachment_uuid}）。"
+    #             "如需回答附件相关内容，请调用 get_attachments 查看附件列表，"
+    #             "再调用 get_attachment_content 获取对应附件内容。"
+    #         )
+    #     return "\n".join(parts)
 
     async def chat(self, ctx: RuntimeContext, query: str):
+        ctx.tools.extend(INTERNAL_TOOLS)
         trace_handler = TraceHandler()
         openai_callback = OpenAICallbackHandler()
         stream = self._agent.astream(
@@ -88,6 +89,7 @@ class AsyncAgent:
             agent_uuid=ctx.agent_uuid,
             session_uuid=ctx.session_uuid,
             model=ctx.model,
+            creator=ctx.username,
             total_tokens=openai_callback.total_tokens,
             prompt_tokens=openai_callback.prompt_tokens,
             completion_tokens=openai_callback.completion_tokens,

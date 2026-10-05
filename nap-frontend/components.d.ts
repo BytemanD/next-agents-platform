@@ -13,6 +13,7 @@ declare module 'vue' {
     NapCard: typeof import('./src/components/common/NapCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SelectButton: typeof import('./src/components/common/SelectButton.vue')['default']
     Sidebar: typeof import('./src/components/layout/Sidebar.vue')['default']
     StatisticCard: typeof import('./src/components/common/StatisticCard.vue')['default']
     StatusBadge: typeof import('./src/components/common/StatusBadge.vue')['default']
@@ -77,6 +78,7 @@ declare module 'vue' {
     TTimeline: typeof import('tdesign-vue-next')['Timeline']
     TTimelineItem: typeof import('tdesign-vue-next')['TimelineItem']
     TTitle: typeof import('tdesign-vue-next')['Title']
+    TTooltip: typeof import('tdesign-vue-next')['Tooltip']
     TTypographyText: typeof import('tdesign-vue-next')['TypographyText']
     TUpload: typeof import('tdesign-vue-next')['Upload']
   }

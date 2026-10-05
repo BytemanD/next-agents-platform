@@ -89,8 +89,8 @@ class Agents(DBModel, table=True):
         nullable=False, default=[], sa_type=JSON, description="知识库"
     )
 
-    tools: list[str] = Field(
-        nullable=False, default=[], sa_type=JSON, description="启用的工具列表"
+    tools: dict = Field(
+        nullable=False, default={}, sa_type=JSON, description="启用的工具及其参数"
     )
 
     @classmethod

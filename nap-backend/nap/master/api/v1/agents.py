@@ -19,7 +19,7 @@ class AgentCreate(BaseModel):
     status: str = "draft"
     config: AgentConfig = AgentConfig()
     knowledge_bases: list[str] = []
-    tools: list[str] = []
+    tools: dict = {}
 
 
 class AgentUpdate(BaseModel):
@@ -30,7 +30,7 @@ class AgentUpdate(BaseModel):
     status: Optional[str] = None
     config: Optional[AgentConfig | dict] = None
     knowledge_bases: Optional[list[str]] = None
-    tools: Optional[list[str]] = None
+    tools: Optional[dict] = None
 
 
 class AgentResponse(BaseModel):
@@ -149,7 +149,7 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 body.query,
                 session_id=body.session,
                 model=body.model,
-                tools=body.tools or [],
+                custom_tools=body.tools or [],
                 knowledge_bases=body.knowledge_bases or [],
                 attachments=body.attachments,
             ):

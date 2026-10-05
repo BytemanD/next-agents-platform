@@ -1,5 +1,6 @@
 """用户使用的工具"""
 
+import httpx
 from langchain.tools import ToolRuntime, tool
 from loguru import logger
 from nap.common.knowledge_client import KnowledgeClient
@@ -39,7 +40,7 @@ def get_available_knowledge_bases(runtime: ToolRuntime[RuntimeContext]):
     ]
 
 
-@tool(parse_docstring=True, extras={"title": "向量召回", "type": "search"})
+@tool(parse_docstring=True, extras={"title": "向量召回", "type": "file_search"})
 def retrival(knowledge_uuid: str, query: str, top_k: int = 3):
     """搜索向量库，返回与查询语义最相关的文档片段。
 
@@ -63,7 +64,7 @@ def retrival(knowledge_uuid: str, query: str, top_k: int = 3):
     ]
 
 
-@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
+@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "file_search"})
 async def list_documents(knowledge_uuid: str):
     """列出向量库中的中的文档。
 
@@ -104,7 +105,7 @@ async def get_attachments(runtime: ToolRuntime[RuntimeContext]):
 
 @tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
 async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str):
-    """获取附件内容跟
+    """获取附件内容
 
     当需要获取会话附件内容时使用。
 
@@ -122,3 +123,44 @@ async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str
         return f"ERROR: attachment {uuid} not exists"
     logger.info("get Attachment content for {}", uuid)
     return CONVERT_SERVICE.convert(items[0], save_convert=False)
+
+
+@tool(
+    parse_docstring=True,
+    extras={
+        "title": "网络搜索(TavilyHub)",
+        "type": "web_search",
+        "requires": {"api_key": {"type": "string"}},
+        "help": (
+            "该工具需要需要在 TavilyHub 注册账号并创建API_KEY。"
+            "官网: https://tavily.sharyuke.com/dashboard"
+        ),
+    },
+)
+def tavily_hub_search(
+    runtime: ToolRuntime[RuntimeContext], query: str, max_results: int = 5
+):
+    """TavilyHub网络搜索工具。
+
+    当需要联网获取新闻、咨询是使用。
+
+    Args:
+        query: 查询文本
+        max_results: 最大返回数量
+
+    Returns:
+        查询结果
+    """
+    api_key = runtime.context.tool_args.get("tavily_hub_search").get("api_key")
+    if not api_key:
+        raise ValueError("api key is required")
+
+    logger.info("tavily search: {}", query)
+    resp = httpx.post(
+        "https://tavily.sharyuke.com/api/proxy/search",
+        headers={"Authorization": api_key},
+        json={"query": query, "max_results": max_results},
+    )
+    logger.debug("tavily search result: {}", resp.text)
+    resp.raise_for_status()
+    return resp.text

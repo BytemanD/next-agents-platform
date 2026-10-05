@@ -1,3 +1,5 @@
+from typing import Any
+
 from langchain_core.tools.base import BaseTool
 from pydantic import BaseModel
 
@@ -21,6 +23,8 @@ class ToolModel(BaseModel):
     class Extras(BaseModel):
         title: str = ""
         type: str = ""
+        requires: dict[str, Any] = {}
+        help: str | None = None
 
     name: str
     description: str = ""
@@ -31,7 +35,7 @@ class ToolModel(BaseModel):
     def from_llm_tool(cls, t: BaseTool):
         return cls(
             name=t.name,
-            description=t.description,
+            description=t.description.split()[0],
             extras=cls.Extras.model_validate(t.extras or {}),
             args=t.args,
         )

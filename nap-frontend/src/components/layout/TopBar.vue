@@ -4,7 +4,7 @@
       <template #logo>
         <t-button variant="text" shape="square" :title="uiStore.collapsed ? '展开导航' : '收起导航'"
           @click="uiStore.toggleCollapsed()">
-          <t-icon :name="uiStore.collapsed ? 'chevron-right' : 'chevron-left'" size="18" />
+          <t-icon :name="uiStore.collapsed ? 'bulletpoint' : 'view-list'" size="18" />
         </t-button>
         <t-divider layout="vertical"></t-divider>
         <h1 class="w-30">{{ currentTitle }}</h1>

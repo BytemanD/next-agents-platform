@@ -8,7 +8,7 @@ export interface Agent {
   status: 'active' | 'draft' | 'error'
   config: Object
   knowledge_bases: string[]
-  tools: string[]
+  tools: Record<string, Record<string, string>>
 
   createdAt: string
   updatedAt: string

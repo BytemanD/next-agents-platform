@@ -90,7 +90,7 @@ export interface AgentPayload {
   status: string
   config?: { temperature: number; max_tokens: number }
   knowledge_bases?: string[]
-  tools: string[]
+  tools: Record<string, Record<string, string>>
 }
 
 export interface LLMPayload {

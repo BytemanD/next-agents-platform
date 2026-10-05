@@ -36,33 +36,43 @@
           </t-form-item>
         </t-form>
       </t-card>
-    </t-col>
-
-    <t-col :xs="12" :lg="4">
-      <t-card size="small">
+      <t-card size="small" class="mt-2">
         <template #title>知识库</template>
         <template #description>关联知识源</template>
         <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
       </t-card>
-      <t-card size="small" class="my-2">
+    </t-col>
+
+    <t-col :xs="12" :lg="4">
+      <t-card size="small">
         <template #title>工具</template>
         <template #description>选择这个智能体可以使用的工具</template>
         <t-list size="small">
           <t-list-item v-for="tool in availableTools" :key="tool.name" size="small"
-            :class="form.tools.includes(tool.id) ? 'border-nap-primary/50 bg-nap-primary/5' : ''"
-            class="rounded-lg mb-1">
+            :class="tool.id in form.tools ? 'border-nap-primary/50 bg-nap-primary/5' : ''" class="rounded-lg mb-1">
             <template #content>
               <t-list-item-meta :title="tool.name">
                 <template #image>
                   <t-icon :name="tool.icon" class="ml-3 mt-3" size="30" />
                 </template>
                 <template #description>
-                  <t-text :content="tool.description" :ellipsis="{ row: 2, expandable: true, collapsible: true }" />
+                  <t-text :content="tool.description" />
+                  <t-tooltip v-if="tool.help" :content="tool.help">
+                    <t-icon name="info-circle" color="info"></t-icon>
+                  </t-tooltip>
+
+                  <t-form v-if="Object.keys(tool.requires).length > 0" size="small">
+                    <h6>参数：</h6>
+                    <t-form-item v-for="(_, k) in tool.requires" :label="k" :name="k">
+                      <t-input size="small" :model-value="toolArgValue(tool.id, k)"
+                        @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+                    </t-form-item>
+                  </t-form>
                 </template>
               </t-list-item-meta>
             </template>
             <template #action>
-              <t-checkbox :checked="form.tools.includes(tool.id)" @change="toggleTool(tool.id)" />
+              <t-checkbox :checked="tool.id in form.tools" @change="toggleTool(tool.id)" />
             </template>
           </t-list-item>
         </t-list>
@@ -92,7 +102,7 @@ interface AgentForm {
   status: string
   config: { temperature: number; max_tokens: number }
   knowledge_bases: string[]
-  tools: string[]
+  tools: Record<string, Record<string, string>>
 }
 
 const route = useRoute()
@@ -167,7 +177,7 @@ function defaultForm(): AgentForm {
     status: 'draft',
     config: { temperature: 0.7, max_tokens: 4096 },
     knowledge_bases: [],
-    tools: []
+    tools: {},
   }
 }
 
@@ -180,18 +190,22 @@ interface ToolItem {
   name: string
   description: string
   icon: string
+  requires: object
+  help?: string
 }
 
 const TOOL_ICONS: Record<string, string> = {
   search: 'search',
+  file_search: 'file-search',
   listing: 'list',
-  tool: 'tool'
+  tool: 'tool',
+  web_search: 'earth',
 }
 
 interface BackendTool {
   name: string
   description: string
-  extras?: { title?: string; type?: string }
+  extras?: { title?: string; type?: string, requires?: object, help?: string }
 }
 
 async function fetchTools() {
@@ -201,7 +215,9 @@ async function fetchTools() {
       id: tool.name,
       name: tool.extras?.title || tool.name,
       description: tool.description,
-      icon: TOOL_ICONS[tool.extras?.type || ''] || 'tool'
+      icon: TOOL_ICONS[tool.extras?.type || ''] || 'tool',
+      requires: tool.extras?.requires || {},
+      help: tool.extras?.help,
     }))
   } catch {
     availableTools.value = []
@@ -247,7 +263,7 @@ async function fetchAgent(agentUuid: string) {
         max_tokens: agent.config?.max_tokens ?? null
       },
       knowledge_bases: agent.knowledge_bases || [],
-      tools: agent.tools || []
+      tools: agent.tools || {},
     }
   } catch {
     MessagePlugin.error('加载智能体失败')
@@ -255,12 +271,21 @@ async function fetchAgent(agentUuid: string) {
 }
 
 function toggleTool(toolId: string) {
-  const idx = form.value.tools.indexOf(toolId)
-  if (idx >= 0) {
-    form.value.tools.splice(idx, 1)
+  if (toolId in form.value.tools) {
+    delete form.value.tools[toolId]
   } else {
-    form.value.tools.push(toolId)
+    form.value.tools[toolId] = {}
   }
+}
+
+function toolArgValue(toolId: string, key: string): string {
+  const v = form.value.tools[toolId]?.[key]
+  return v === undefined || v === null ? '' : String(v)
+}
+
+function setToolArg(toolId: string, key: string, value: string) {
+  if (!form.value.tools[toolId]) form.value.tools[toolId] = {}
+  form.value.tools[toolId][key] = value
 }
 
 async function handleSave(status: string) {
@@ -272,7 +297,7 @@ async function handleSave(status: string) {
     status,
     config: form.value.config,
     knowledge_bases: form.value.knowledge_bases,
-    tools: form.value.tools
+    tools: form.value.tools,
   }
   saving.value = true
   try {

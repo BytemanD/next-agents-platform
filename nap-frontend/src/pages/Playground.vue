@@ -23,19 +23,21 @@
         </t-empty>
         <t-list v-else class=" flex-1 min-h-0 overflow-y-auto">
           <t-list-item v-for="session in conversations" :key="session.uuid"
-            class="cursor-pointer rounded-2 conversation-list-item"
+            class="cursor-pointer rounded-2 conversation-list-item  my-1"
             :class="{ 'conversation-item-active': currentConvId === session.uuid }"
             @click="selectConversation(session.uuid)">
             <t-list-item-meta>
               <template #description>
-                <span class="conversation-title">{{ session.title }}</span>
+                <t-text theme="primary">{{ session.title }}</t-text>
               </template>
             </t-list-item-meta>
             <template #action>
               <t-popconfirm theme="warning" content="确定删除该会话吗？删除后不可恢复。" placement="bottom-right"
                 @confirm="deleteConversation(session.uuid)" @click.stop>
                 <!-- <span class="session-action">sdfsdf</span> -->
-                <t-link @click.stop theme="danger" class="session-action"><t-icon name="close"></t-icon></t-link>
+                <t-link @click.stop theme="danger" hover="color" class="session-action">
+                  <t-icon name="close" color="danger"></t-icon>
+                </t-link>
               </t-popconfirm>
               <!-- <t-link @click.stop theme="danger"><t-icon name="close"></t-icon></t-link> -->
               <!-- <t-link theme="danger" hover="color"><t-icon name="close"></t-icon></t-link> -->
@@ -51,14 +53,16 @@
           @message-change="onMessageChange">
           <template #sender-footer-prefix>
             <t-space>
-              <t-button shape="round" variant="outline">深度思考</t-button>
+              <!-- <t-button shape="round" variant="outline">深度思考</t-button> -->
+              <select-button icon="earth" v-if="agentStore.enableWebSearch()"
+                v-model="enableWebSearch">联网搜索</select-button>
+              <!-- 选择工具 -->
+              <t-select v-model="selectedTools" :options="agentStore.toolOptions" placeholder="无" multiple label="工具:"
+                :min-collapsed-num="1">
+              </t-select>
               <!-- 选择模型 -->
               <t-select label="模型：" v-model="selectedModel" :options="modelOptions" placeholder="选择模型"
                 class="border-rounded-10" clearable>
-              </t-select>
-              <!-- 选择工具 -->
-              <t-select v-model="selectedTools" :options="toolOptions" placeholder="无" multiple label="工具:"
-                :min-collapsed-num="1">
               </t-select>
             </t-space>
           </template>
@@ -83,6 +87,7 @@
           </div>
         </div>
       </div>
+
     </t-col>
   </t-row>
 </template>
@@ -96,9 +101,8 @@ import { useChatStore, type ChatStoreMessage, type ChatChunk } from '@/stores/ch
 import AppLogo from '@/components/common/AppLogo.vue'
 import type { Session, SessionMessage } from '@/types'
 import { ChatServiceConfig, type AIMessageContent, type SSEChunkData } from '@tdesign-vue-next/chat'
-import {
-  Chatbot as TChatbot,
-} from '@tdesign-vue-next/chat';
+import { Chatbot as TChatbot } from '@tdesign-vue-next/chat';
+import SelectButton from '@/components/common/SelectButton.vue'
 
 const agentStore = useAgentStore()
 const chatStore = useChatStore()
@@ -135,7 +139,9 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
         query: params.prompt,        // 默认可能是 messages 数组
         model: selectedModel.value || undefined,
         session: currentConvId.value || undefined,
-        tools: selectedTools.value,
+        tools: enableWebSearch.value
+          ? [...selectedTools.value, agentStore.webSearchTool]
+          : selectedTools.value,
         attachments: attachmentKeys,
       }),
     };
@@ -329,22 +335,13 @@ function onMessageChange(e: any) {
 const selectedModel = ref('')
 const selectedTools = ref<string[]>([])
 
-const toolOptions = computed(() =>
-  availableTools.value.map(t => ({ label: t.name, value: t.id }))
-)
+const enableWebSearch = ref(false)
 
-const availableTools = ref<{ id: string; name: string }[]>([])
-
-async function fetchTools() {
-  try {
-    const data = await API.fetchTools<{ tools: { name: string; description: string; detail?: string; extras?: { title?: string; type?: string } }[] }>()
-    availableTools.value = (data.tools || []).map(t => ({
-      id: t.name,
-      name: t.extras?.title || t.name
-    }))
-  } catch {
-    availableTools.value = []
-  }
+// 联网搜索由独立开关控制，不计入工具下拉
+function applyAgentTools() {
+  const tools = Object.keys(agentStore.selectedAgent?.tools || {})
+  enableWebSearch.value = tools.includes(agentStore.webSearchTool)
+  selectedTools.value = tools.filter(t => t !== agentStore.webSearchTool)
 }
 
 const welcomeSuggestions = [
@@ -444,10 +441,9 @@ async function fetchSessions() {
 
 onMounted(async () => {
   await agentStore.fetchAgents()
-  fetchTools()
   if (agentStore.selectedAgentId) {
     selectedModel.value = ''
-    selectedTools.value = [...(agentStore.selectedAgent?.tools || [])]
+    applyAgentTools()
     await nextTick()
     restoreKeyDisplay(currentKey.value)
     fetchSessions()
@@ -458,7 +454,7 @@ watch(() => agentStore.selectedAgentId, async (_id, oldId) => {
   snapshotCurrentToStore(oldId)
   selectedModel.value = ''
   currentConvId.value = null
-  selectedTools.value = [...(agentStore.selectedAgent?.tools || [])]
+  applyAgentTools()
   await nextTick()
   restoreKeyDisplay(currentKey.value)
   fetchSessions()
@@ -491,11 +487,13 @@ watch(() => agentStore.selectedAgentModels, (models) => {
 
 .conversation-item-active,
 .conversation-item-active:hover {
-  background: var(--td-brand-color-light);
-  color: var(--td-brand-color);
+  background: var(--bg-100);
+  /* color: var(--td-brand-color); */
+  /* color: white; */
 }
 
-.conversation-item-active :deep(.t-icon) {
+
+.conversation-item-active :deep(.t-text) {
   color: var(--td-brand-color);
 }
 
@@ -510,6 +508,10 @@ watch(() => agentStore.selectedAgentModels, (models) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.conversation-title:hover {
+  color: white;
 }
 
 /* .conversation-list :deep(.t-list-item .t-link) {
