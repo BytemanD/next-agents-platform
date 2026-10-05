@@ -77,6 +77,39 @@
           </t-list-item>
         </t-list>
       </t-card>
+      <t-card size="small">
+        <template #title>MCP</template>
+        <template #description>配置智能体连接的MCP服务</template>
+        <t-list size="small">
+          <t-list-item v-for="tool in availableTools" :key="tool.name" size="small"
+            :class="tool.id in form.tools ? 'border-nap-primary/50 bg-nap-primary/5' : ''" class="rounded-lg mb-1">
+            <template #content>
+              <t-list-item-meta :title="tool.name">
+                <template #image>
+                  <t-icon :name="tool.icon" class="ml-3 mt-3" size="30" />
+                </template>
+                <template #description>
+                  <t-text :content="tool.description" />
+                  <t-tooltip v-if="tool.help" :content="tool.help">
+                    <t-icon name="info-circle" color="info"></t-icon>
+                  </t-tooltip>
+
+                  <t-form v-if="Object.keys(tool.requires).length > 0" size="small">
+                    <h6>参数：</h6>
+                    <t-form-item v-for="(_, k) in tool.requires" :label="k" :name="k">
+                      <t-input size="small" :model-value="toolArgValue(tool.id, k)"
+                        @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+                    </t-form-item>
+                  </t-form>
+                </template>
+              </t-list-item-meta>
+            </template>
+            <template #action>
+              <t-checkbox :checked="tool.id in form.tools" @change="toggleTool(tool.id)" />
+            </template>
+          </t-list-item>
+        </t-list>
+      </t-card>
     </t-col>
 
     <t-col :xs="12" :lg="4">

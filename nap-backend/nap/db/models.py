@@ -394,3 +394,15 @@ class Attachment(DBModel, table=True):
     size: int = Field(nullable=False, description="文档文件大小(bytes)")
     raw_path: str | None = Field(nullable=True, description="源文档存储路径")
     convert_path: str | None = Field(nullable=True, description="转化后文档存储路径")
+
+
+class AgentMCP(DBModel, table=True):
+    __tablename__ = "agent_mcps"  # type: ignore
+
+    creator: str = Field(nullable=False, description="创建者")
+    name: str = Field(nullable=False, description="MCP server Name")
+    url: str = Field(nullable=False, description="MCP url")
+    transport: str = Field(
+        nullable=False, default="streamable_http", description="MCP server transport"
+    )
+    api_key: str | None = Field(nullable=True, description="MCP Server API KEY")

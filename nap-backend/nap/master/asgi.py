@@ -12,6 +12,7 @@ from nap.master.api.v1 import (
     knowledge,
     knowledge_base,
     llms,
+    mcps,
     monitoring,
     sessions,
     tools,
@@ -55,6 +56,7 @@ for module in (
     tools,
     monitoring,
     attachment,
+    mcps,
 ):
     APP.include_router(module.router, prefix="/api/v1")
 

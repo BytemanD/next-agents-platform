@@ -100,6 +100,13 @@ export interface LLMPayload {
   models: string[]
 }
 
+export interface MCPPayload {
+  name: string
+  url: string
+  transport: string
+  api_key?: string | null
+}
+
 export interface KnowledgeBasePayload {
   name: string
   description: string
@@ -213,6 +220,27 @@ export class Api {
 
   async deleteLLM<T = unknown>(uuid: string) {
     const { data } = await axios.delete(`/api/v1/llms/${uuid}`)
+    return data as T
+  }
+
+  // ---------- MCP ----------
+  async fetchMCPs<T = unknown>() {
+    const { data } = await axios.get('/api/v1/mcps')
+    return data as T
+  }
+
+  async createMCP<T = unknown>(payload: MCPPayload) {
+    const { data } = await axios.post('/api/v1/mcps', payload)
+    return data as T
+  }
+
+  async updateMCP<T = unknown>(uuid: string, payload: Partial<MCPPayload>) {
+    const { data } = await axios.put(`/api/v1/mcps/${uuid}`, payload)
+    return data as T
+  }
+
+  async deleteMCP<T = unknown>(uuid: string) {
+    const { data } = await axios.delete(`/api/v1/mcps/${uuid}`)
     return data as T
   }
 

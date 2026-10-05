@@ -6,6 +6,7 @@ from nap.common.manager import BaseManager
 from nap.common.objects import ToolModel
 from nap.db.models import (
     AgentCallback,
+    AgentMCP,
     Agents,
     Attachment,
     Knowledge,
@@ -269,6 +270,30 @@ class MasterManager(BaseManager):
     def delete_attachment(self, attachment: Attachment):
         STORE_SERVICE.remove_attachment(attachment)
         attachment.delete()
+
+    def list_mcps(self):
+        return AgentMCP.query(AgentMCP.creator == context.getvar("account"))
+
+    def create_mcp(
+        self, name: str, url: str, transport: str, api_key: str | None = None
+    ):
+        mcp = AgentMCP(
+            creator=context.getvar("account"),
+            name=name,
+            url=url,
+            transport=transport,
+            api_key=api_key,
+        )
+        mcp.create()
+        return mcp
+
+    def get_mcp(self, mcp_uuid: str):
+        items = AgentMCP.query(
+            AgentMCP.creator == context.getvar("account"), AgentMCP.uuid == mcp_uuid
+        )
+        if not items:
+            return None
+        return items[0]
 
 
 MANAGER = MasterManager()

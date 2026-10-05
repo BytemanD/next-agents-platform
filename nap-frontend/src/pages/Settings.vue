@@ -1,36 +1,10 @@
 <template>
   <t-tabs :value="activeTab" @change="activeTab = $event" class="settings-tabs">
-    <t-tab-panel value="api" label="模型">
-      <t-row :gutter="12">
-        <t-col v-for="endpoint in apiEndpoints" :key="endpoint.uuid" :xs="24" :sm="12" :md="8" :xl="6">
-          <t-card :title="endpoint.name || endpoint.base_url" size="small" :bordered="true">
-            <t-descriptions :column="1" size="small" tableLayout="auto">
-              <t-descriptions-item label="地址">{{ endpoint.base_url }}</t-descriptions-item>
-              <t-descriptions-item label="密钥">{{ maskKey(endpoint.api_key) }}</t-descriptions-item>
-              <t-descriptions-item label="模型">
-                <t-space :size="4">
-                  <t-tag v-for="model in endpoint.models" :key="model" variant="light" size="small">
-                    {{ model }}
-                  </t-tag>
-                </t-space>
-              </t-descriptions-item>
-            </t-descriptions>
-            <template #actions>
-              <t-button size="small" variant="text" @click="handleEdit(endpoint)"><t-icon
-                  name="edit"></t-icon></t-button>
-              <t-popconfirm content="确认删除该模型？" @confirm="handleDelete(endpoint)">
-                <t-button theme="danger" size="small" variant="text"><t-icon name="delete"></t-icon></t-button>
-              </t-popconfirm>
-            </template>
-          </t-card>
-        </t-col>
-      </t-row>
-      <t-col :xs="24" :sm="12" :md="8" :xl="6" class="mt-4">
-        <t-button variant="dashed" @click="handleAddKey">
-          <template #icon><t-icon name="add" /></template>
-          添加模型
-        </t-button>
-      </t-col>
+    <t-tab-panel value="llm" label="模型">
+      <settings-llm></settings-llm>
+    </t-tab-panel>
+    <t-tab-panel value="mcp" label="MCP">
+      <settings-mcp></settings-mcp>
     </t-tab-panel>
 
     <t-tab-panel value="appearance" label="外观" class="panel">
@@ -91,145 +65,15 @@
         </div>
       </div>
     </t-tab-panel>
-  </t-tabs>
-
-  <t-dialog v-model:visible="createVisible" :header="editingUuid ? '编辑模型' : '添加模型'"
-    :confirm-btn="{ content: editingUuid ? '保存' : '创建', loading: submitting }" @confirm="handleCreate">
-    <t-form ref="formRef" :data="createForm" :rules="formRules" label-align="top">
-      <t-form-item label="名称" name="name">
-        <t-input v-model="createForm.name" placeholder="OpenAI" clearable />
-      </t-form-item>
-      <t-form-item label="Base URL" name="base_url">
-        <t-input v-model="createForm.base_url" placeholder="https://api.openai.com/v1" clearable />
-      </t-form-item>
-      <t-form-item label="API Key" name="api_key">
-        <t-input v-model="createForm.api_key" placeholder="sk-..." type="password" clearable />
-      </t-form-item>
-      <t-form-item label="模型" name="models">
-        <t-select-input :value="createForm.models" :input-value="modelInput" multiple allow-input
-          placeholder="输入模型名后回车添加，如 gpt-4o" @input-change="handleInputChange" @enter="handleModelsEnter"
-          @tag-change="handleModelsChange" />
-      </t-form-item>
-    </t-form>
-  </t-dialog>
+</t-tabs>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { MessagePlugin } from 'tdesign-vue-next'
-import { API } from '@/api'
-
-interface APIEndpoint {
-  uuid: string
-  name: string
-  base_url: string
-  api_key: string
-  models: string[]
-}
+import { ref } from 'vue'
+import SettingsMcp from './SettingsMCP.vue'
+import SettingsLlm from './SettingsLLM.vue'
 
 const activeTab = ref('api')
-
-const apiEndpoints = ref<APIEndpoint[]>([])
-const listLoading = ref(false)
-
-const maskKey = (key: string) =>
-  key.length > 8 ? `${key.slice(0, 4)}...${key.slice(-4)}` : '••••••••'
-
-async function fetchLLMs() {
-  listLoading.value = true
-  try {
-    const data = await API.fetchLLMs<{ llms: APIEndpoint[] }>()
-    apiEndpoints.value = data.llms || []
-  } catch {
-    MessagePlugin.error('加载模型列表失败')
-  } finally {
-    listLoading.value = false
-  }
-}
-
-onMounted(fetchLLMs)
-
-const createVisible = ref(false)
-const submitting = ref(false)
-const editingUuid = ref('')
-const formRef = ref()
-const createForm = ref({ name: '', base_url: '', api_key: '', models: [] as string[] })
-const modelInput = ref('')
-
-const formRules = {
-  base_url: [{ required: true, message: '请填写 Base URL', type: 'error' }],
-  api_key: [{ required: true, message: '请填写 API Key', type: 'error' }]
-}
-
-function handleAddKey() {
-  editingUuid.value = ''
-  createForm.value = { name: '', base_url: '', api_key: '', models: [] }
-  createVisible.value = true
-}
-
-function handleEdit(endpoint: APIEndpoint) {
-  editingUuid.value = endpoint.uuid
-  createForm.value = {
-    name: endpoint.name,
-    base_url: endpoint.base_url,
-    api_key: endpoint.api_key,
-    models: [...endpoint.models]
-  }
-  createVisible.value = true
-}
-
-function handleInputChange(v: string) {
-  modelInput.value = v
-}
-
-function handleModelsChange(value: unknown) {
-  createForm.value.models = ((value as Array<string | undefined>) || []).filter(
-    (m): m is string => typeof m === 'string' && m.trim().length > 0
-  )
-}
-
-function handleModelsEnter() {
-  modelInput.value = ''
-}
-
-async function handleCreate() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-
-  submitting.value = true
-  try {
-    const models = createForm.value.models.map((s) => s.trim()).filter(Boolean)
-    const payload = {
-      name: createForm.value.name,
-      base_url: createForm.value.base_url,
-      api_key: createForm.value.api_key,
-      models
-    }
-    if (editingUuid.value) {
-      await API.updateLLM(editingUuid.value, payload)
-      MessagePlugin.success('更新成功')
-    } else {
-      await API.createLLM(payload)
-      MessagePlugin.success('创建成功')
-    }
-    createVisible.value = false
-    fetchLLMs()
-  } catch {
-    MessagePlugin.error(editingUuid.value ? '更新失败' : '创建失败')
-  } finally {
-    submitting.value = false
-  }
-}
-
-async function handleDelete(endpoint: APIEndpoint) {
-  try {
-    await API.deleteLLM(endpoint.uuid)
-    MessagePlugin.success('删除成功')
-    fetchLLMs()
-  } catch {
-    MessagePlugin.error('删除失败')
-  }
-}
 
 const settings = ref({
   theme: 'light',
