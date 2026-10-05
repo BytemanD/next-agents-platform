@@ -24,7 +24,10 @@ async def get_mcp_server_info(
 async def get_tools(mcps: Sequence[AgentMCP]):
     client = MultiServerMCPClient(
         {
-            mcp.name: {
+            # 用 uuid 而非 name 作 key：不同 MCP 可能重名（测试库里就有两个
+            # 叫 Math 的），用 name 会互相覆盖导致工具静默丢失。
+            # key 只作连接标识，工具名来自 MCP server，不受影响。
+            mcp.uuid: {
                 "url": mcp.url,
                 "transport": mcp.transport,
                 "headers": {"Authorization": f"Bearer {mcp.api_key}"}
@@ -34,6 +37,4 @@ async def get_tools(mcps: Sequence[AgentMCP]):
             for mcp in mcps
         }
     )
-    tools = await client.get_tools()
-    print("server_info", await client.get_server_info())
-    return tools
+    return await client.get_tools()

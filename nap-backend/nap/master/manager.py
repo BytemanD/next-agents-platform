@@ -284,7 +284,9 @@ class MasterManager(BaseManager):
 
     def list_mcps(self, uuids: list[str] | None = None):
         criterion = [AgentMCP.creator == context.getvar("account")]
-        if uuids:
+        # 用 `is not None` 而非真值判断：空列表代表"本次不启用任何 MCP"，
+        # 不能退化成返回全部
+        if uuids is not None:
             criterion.append(col(AgentMCP.uuid).in_(uuids))
 
         return AgentMCP.query(*criterion)

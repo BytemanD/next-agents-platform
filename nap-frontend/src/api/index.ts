@@ -148,6 +148,12 @@ export class Api {
     return data as T
   }
 
+  // 智能体 + 其已启用的工具 / MCP 元信息，一次拿全
+  async fetchAgentDetail<T = unknown>(uuid: string) {
+    const { data } = await axios.get(`/api/v1/agents/${uuid}/detail`)
+    return data as T
+  }
+
   async createAgent<T = unknown>(payload: AgentPayload) {
     const { data } = await axios.post('/api/v1/agents', payload)
     return data as T

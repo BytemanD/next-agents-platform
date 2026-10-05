@@ -3,8 +3,9 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from langchain_core.exceptions import ModelError
 from loguru import logger
-from nap.db.models import AgentConfig, Agents
-from nap.master.manager import MANAGER
+from nap.db.models import AgentConfig, AgentMCP, Agents, LLMs
+from nap.master.api.v1.llms import LLMBrief, _to_brief
+from nap.master.manager import MANAGER, ToolModel
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
 
@@ -53,6 +54,30 @@ class AgentsResponse(BaseModel):
     agents: list[Agents]
 
 
+class AgentDetail(BaseModel):
+    """对话页用的智能体详情：工具与 MCP 元信息直接平铺进 agent 结构。
+
+    与 Agents 的区别：
+    - ``tools`` 由 ``{名称: 参数配置}`` 换成工具元信息列表（只含该 agent 已启用的）
+    - ``mcps`` 直接给关联的 MCP 对象，不再需要 ``mcp_uuids``
+    - ``llm`` 由 uuid 换成模型对象（不含 api_key）
+
+    工具的参数配置值（如 tavily api_key）不在这里返回：它们由后端在对话时
+    从库里直接读取（见 MANAGER.chat 的 tool_args），不需要下发给前端。
+    """
+
+    uuid: str
+    name: str
+    description: str
+    instruction: str
+    llm: LLMBrief
+    status: str
+    config: AgentConfig
+    knowledge_bases: list[str] = []
+    tools: list[ToolModel] = []
+    mcps: list[AgentMCP] = []
+
+
 class QueryRequest(BaseModel):
     text: str
     model: str = ""
@@ -88,6 +113,32 @@ async def get_agent(uuid: str):
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
+
+
+@router.get("/{uuid}/detail", response_model=AgentDetail)
+async def get_agent_detail(uuid: str):
+    agent = MANAGER.get_agent(uuid)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    enabled = set(agent.tools.keys())
+    # 用 query 而非 get_by_uuid：后者在找不到时抛 ValueError，会让整个接口 500
+    llm_items = LLMs.query(LLMs.uuid == agent.llm) if agent.llm else []
+    llm = llm_items[0] if llm_items else None
+    detail = AgentDetail(
+        uuid=agent.uuid,
+        name=agent.name,
+        description=agent.description,
+        instruction=agent.instruction,
+        llm=_to_brief(llm) if llm else LLMBrief(uuid=agent.llm or ""),
+        status=agent.status,
+        config=agent.config,
+        knowledge_bases=agent.knowledge_bases,
+        # 已启用的工具，联网搜索也包含在内（前端自行决定是否展示）
+        tools=[t for t in MANAGER.list_tools() if t.name in enabled],
+        mcps=MANAGER.list_mcps(agent.mcp_uuids),
+    )
+    return detail
 
 
 @router.post("", status_code=201)

@@ -32,6 +32,27 @@ class LLMResponse(BaseModel):
     updated_at: str
 
 
+class LLMBrief(BaseModel):
+    """不含密钥的 LLM 信息，用于内嵌到其他响应里。
+
+    全部字段都有默认值：agent 指向的 LLM 可能已被删除，此时也要能构造出来。
+    """
+
+    uuid: str = ""
+    name: str = ""
+    base_url: str = ""
+    models: list[str] = []
+
+
+def _to_brief(d: LLMs) -> LLMBrief:
+    return LLMBrief(
+        uuid=d.uuid,
+        name=d.name,
+        base_url=d.base_url,
+        models=d.models,
+    )
+
+
 def _to_response(d: LLMs) -> LLMResponse:
     return LLMResponse(
         uuid=d.uuid,

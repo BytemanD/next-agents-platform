@@ -21,9 +21,9 @@
             <p class="text-sm text-nap-text-secondary">还没有会话</p>
           </template>
         </t-empty>
-        <t-list v-else class=" flex-1 min-h-0 overflow-y-auto">
+        <t-list v-else class=" flex-1 min-h-0 overflow-y-auto" size="small" split>
           <t-list-item v-for="session in conversations" :key="session.uuid"
-            class="cursor-pointer rounded-2 conversation-list-item  my-1"
+            class="cursor-pointer conversation-list-item"
             :class="{ 'conversation-item-active': currentConvId === session.uuid }"
             @click="selectConversation(session.uuid)">
             <t-list-item-meta>
@@ -34,13 +34,10 @@
             <template #action>
               <t-popconfirm theme="warning" content="确定删除该会话吗？删除后不可恢复。" placement="bottom-right"
                 @confirm="deleteConversation(session.uuid)" @click.stop>
-                <!-- <span class="session-action">sdfsdf</span> -->
                 <t-link @click.stop theme="danger" hover="color" class="session-action">
-                  <t-icon name="close" color="danger"></t-icon>
+                  <t-icon name="delete" color="danger"></t-icon>
                 </t-link>
               </t-popconfirm>
-              <!-- <t-link @click.stop theme="danger"><t-icon name="close"></t-icon></t-link> -->
-              <!-- <t-link theme="danger" hover="color"><t-icon name="close"></t-icon></t-link> -->
             </template>
           </t-list-item>
         </t-list>
@@ -107,7 +104,7 @@ import type { Session, SessionMessage } from '@/types'
 import { ChatServiceConfig, type AIMessageContent, type SSEChunkData } from '@tdesign-vue-next/chat'
 import { Chatbot as TChatbot } from '@tdesign-vue-next/chat';
 import SelectButton from '@/components/common/SelectButton.vue'
-
+import { PhTrash } from '@phosphor-icons/vue'
 const agentStore = useAgentStore()
 const chatStore = useChatStore()
 
@@ -494,7 +491,7 @@ watch(() => agentStore.selectedAgentModels, (models) => {
 
 .conversation-item-active,
 .conversation-item-active:hover {
-  background: var(--bg-100);
+  background: var(--bg-300);
   /* color: var(--td-brand-color); */
   /* color: white; */
 }
