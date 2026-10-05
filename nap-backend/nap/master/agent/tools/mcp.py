@@ -2,7 +2,6 @@ from typing import Sequence
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from nap.db.models import AgentMCP
-from pystonic.utils.funcutil import timeit
 
 
 async def get_mcp_server_info(
@@ -20,7 +19,7 @@ async def get_mcp_server_info(
     return await client.get_server_info()
 
 
-@timeit
+# @timeit
 async def get_tools(mcps: Sequence[AgentMCP]):
     client = MultiServerMCPClient(
         {

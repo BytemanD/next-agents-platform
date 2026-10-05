@@ -1,11 +1,12 @@
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from langchain_core.exceptions import ModelError
 from loguru import logger
 from nap.db.models import AgentConfig, AgentMCP, Agents, LLMs
 from nap.master.api.v1.llms import LLMBrief, _to_brief
-from nap.master.manager import MANAGER, ToolModel
+from nap.master.manager import MANAGER, ChatSSE, ToolModel
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
 
@@ -91,11 +92,6 @@ class ChatRequest(BaseModel):
     knowledge_bases: list[str] | None = []
     mcp_uuids: list[str] | None = None
     attachments: list[str] = []
-
-
-class ChatSSE(BaseModel):
-    type: str
-    msg: str = ""
 
 
 @router.get(
@@ -211,6 +207,9 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 attachments=body.attachments,
                 mcp_uuids=body.mcp_uuids,
             ):
+                if isinstance(delta, ChatSSE):
+                    yield delta.model_dump_json()
+                    continue
                 reasoning_content = delta.additional_kwargs.get("reasoning_content")
                 data = ChatSSE(
                     type="thinking" if reasoning_content else "text",
@@ -219,11 +218,18 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 if not data.msg:
                     continue
                 yield data.model_dump_json()
-        except ModelError as e:
-            logger.error("model request failed: {}", e)
+        except (ModelError, httpx.ConnectError) as e:
+            logger.error("request failed: {}", e)
             data = ChatSSE(
                 type="error",
-                msg=f"Error: model request failed: {e}",
+                msg=f"Error: request failed: {e}",
+            )
+            yield data.model_dump_json()
+        except Exception as e:
+            logger.error("chat failed: {}", e)
+            data = ChatSSE(
+                type="error",
+                msg=f"Error: request failed: {e}",
             )
             yield data.model_dump_json()
 

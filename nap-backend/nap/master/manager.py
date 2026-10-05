@@ -50,6 +50,11 @@ class Message(BaseModel):
     thinking: str | None = None
 
 
+class ChatSSE(BaseModel):
+    type: str
+    msg: str = ""
+
+
 class MasterManager(BaseManager):
     def __init__(self):
         super().__init__()
@@ -217,7 +222,18 @@ class MasterManager(BaseManager):
         mcp_pool = self.list_mcps(
             mcp_uuids if mcp_uuids is not None else db_agent.mcp_uuids
         )
-        mcp_tools = await mcp.get_tools(mcp_pool)
+        mcp_tools = []
+        try:
+            mcp_tools = await mcp.get_tools(mcp_pool)
+        except ExceptionGroup as e:
+            logger.exception("get mcp tools failed: {}", e.exceptions)
+            data = ChatSSE(
+                type="error",
+                msg=f"Error: get mcp tools failed: {', '.join([str(x) for x in e.exceptions])}",
+            )
+            yield data
+            # return
+
         logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
         kb_uuids = knowledge_bases or db_agent.knowledge_bases
         runtime_context = RuntimeContext(
