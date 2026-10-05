@@ -91,6 +91,7 @@ export interface AgentPayload {
   config?: { temperature: number; max_tokens: number }
   knowledge_bases?: string[]
   tools: Record<string, Record<string, string>>
+  mcp_uuids?: string[]
 }
 
 export interface LLMPayload {

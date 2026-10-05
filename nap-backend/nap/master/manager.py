@@ -18,11 +18,13 @@ from nap.db.models import (
 from nap.db.types import AgentConfig
 from nap.master.agent.asyncio import CUSTOM_TOOLS, AsyncAgent
 from nap.master.agent.context import RuntimeContext
+from nap.master.agent.tools import mcp
 from nap.services.storage import STORE_SERVICE
 from pydantic import BaseModel
 from pystonic.common import context
 from pystonic.utils.httpclient import default_client
 from pystonic.utils.strutil import text_shorten
+from sqlmodel import col
 
 # def _resolve_attachments(file_keys: list[str]) -> list[dict]:
 #     """将 file_key 解析为 agent 可用的附件元数据"""
@@ -95,6 +97,7 @@ class MasterManager(BaseManager):
         config: AgentConfig = AgentConfig(),
         knowledge_bases: list[str] = [],
         tools: dict = {},
+        mcp_uuids: list[str] = [],
     ):
         a = Agents(
             creator=context.getvar("account", "guest"),
@@ -106,6 +109,7 @@ class MasterManager(BaseManager):
             config=config,
             knowledge_bases=knowledge_bases,
             tools=tools,
+            mcp_uuids=mcp_uuids,
         )
         a.create()
         return a
@@ -194,6 +198,7 @@ class MasterManager(BaseManager):
         custom_tools: list[str] = [],
         knowledge_bases: list[str] | None = None,
         attachments: list[str] = [],
+        mcp_uuids: list[str] | None = None,
     ):
         llm = LLMs.get_by_uuid(db_agent.llm)
         if not llm.models:
@@ -208,6 +213,12 @@ class MasterManager(BaseManager):
             )
             session.create()
 
+        # 本次请求显式指定了 MCP 就用指定的，否则回退到 agent 配置的
+        mcp_pool = self.list_mcps(
+            mcp_uuids if mcp_uuids is not None else db_agent.mcp_uuids
+        )
+        mcp_tools = await mcp.get_tools(mcp_pool)
+        logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
         kb_uuids = knowledge_bases or db_agent.knowledge_bases
         runtime_context = RuntimeContext(
             model=model or llm.models[0],
@@ -218,7 +229,7 @@ class MasterManager(BaseManager):
             session_uuid=session.uuid,
             username=context.getvar("account") or "guest",
             system_prompt=db_agent.instruction,
-            tools=[x for x in CUSTOM_TOOLS if x.name in custom_tools],
+            tools=[x for x in CUSTOM_TOOLS if x.name in custom_tools] + mcp_tools,
             knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
             attachments=attachments,
             tool_args=db_agent.tools,
@@ -271,21 +282,26 @@ class MasterManager(BaseManager):
         STORE_SERVICE.remove_attachment(attachment)
         attachment.delete()
 
-    def list_mcps(self):
-        return AgentMCP.query(AgentMCP.creator == context.getvar("account"))
+    def list_mcps(self, uuids: list[str] | None = None):
+        criterion = [AgentMCP.creator == context.getvar("account")]
+        if uuids:
+            criterion.append(col(AgentMCP.uuid).in_(uuids))
+
+        return AgentMCP.query(*criterion)
 
     def create_mcp(
         self, name: str, url: str, transport: str, api_key: str | None = None
     ):
-        mcp = AgentMCP(
+        item = AgentMCP(
             creator=context.getvar("account"),
             name=name,
             url=url,
             transport=transport,
             api_key=api_key,
         )
-        mcp.create()
-        return mcp
+
+        item.create()
+        return item
 
     def get_mcp(self, mcp_uuid: str):
         items = AgentMCP.query(

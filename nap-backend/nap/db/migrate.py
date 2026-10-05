@@ -13,6 +13,7 @@ _ALTERS: dict[str, list[tuple[str, str]]] = {
         ("tools", "TEXT NOT NULL DEFAULT '[]'"),
         ("config", "TEXT NOT NULL DEFAULT '{}'"),
         ("knowledge_bases", "TEXT NOT NULL DEFAULT '[]'"),
+        ("mcp_uuids", "TEXT NOT NULL DEFAULT '[]'"),
     ],
     "llms": [
         ("name", "TEXT NOT NULL DEFAULT ''"),

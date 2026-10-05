@@ -60,6 +60,10 @@
               <t-select v-model="selectedTools" :options="agentStore.toolOptions" placeholder="无" multiple label="工具:"
                 :min-collapsed-num="1">
               </t-select>
+              <!-- 选择MCP -->
+              <t-select v-model="selectedMcps" :options="agentStore.mcpOptions" placeholder="无" multiple label="MCP:"
+                :min-collapsed-num="1">
+              </t-select>
               <!-- 选择模型 -->
               <t-select label="模型：" v-model="selectedModel" :options="modelOptions" placeholder="选择模型"
                 class="border-rounded-10" clearable>
@@ -142,6 +146,7 @@ const chatServiceConfig = computed<ChatServiceConfig>(() => ({
         tools: enableWebSearch.value
           ? [...selectedTools.value, agentStore.webSearchTool]
           : selectedTools.value,
+        mcp_uuids: selectedMcps.value,
         attachments: attachmentKeys,
       }),
     };
@@ -334,6 +339,7 @@ function onMessageChange(e: any) {
 
 const selectedModel = ref('')
 const selectedTools = ref<string[]>([])
+const selectedMcps = ref<string[]>([])
 
 const enableWebSearch = ref(false)
 
@@ -342,6 +348,7 @@ function applyAgentTools() {
   const tools = Object.keys(agentStore.selectedAgent?.tools || {})
   enableWebSearch.value = tools.includes(agentStore.webSearchTool)
   selectedTools.value = tools.filter(t => t !== agentStore.webSearchTool)
+  selectedMcps.value = [...(agentStore.selectedAgent?.mcp_uuids || [])]
 }
 
 const welcomeSuggestions = [

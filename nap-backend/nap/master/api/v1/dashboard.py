@@ -175,7 +175,9 @@ async def dashboard():
             description=a.description,
             model=model_name(a.llm),
             status=a.status,
-            tools=list(a.tools.keys()) if isinstance(a.tools, dict) else list(a.tools or []),
+            tools=list(a.tools.keys())
+            if isinstance(a.tools, dict)
+            else list(a.tools or []),
         )
         for a in agents
     ]

@@ -72,3 +72,26 @@ class RuntimeAgentMiddleware(AgentMiddleware[AgentState, RuntimeContext]):
                 system_prompt=ctx.system_prompt,
             )
         )
+
+    def _override_tools(self, request: ModelRequest):
+        ctx: RuntimeContext = request.runtime.context
+        tool_map = {t.name: t for t in ctx.tools}
+        tool_name = request.tool_call["name"]
+        if tool_name in tool_map:
+            # 用 request.override 替换为真实的工具实例
+            return request.override(tool=tool_map[tool_name])
+        return request
+
+    def wrap_tool_call(
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+    ):
+        return handler(self._override_tools(request))
+
+    async def awrap_tool_call(
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+    ):
+        return await handler(self._override_tools(request))

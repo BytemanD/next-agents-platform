@@ -74,7 +74,6 @@ class Agents(DBModel, table=True):
     )
     llm: str = Field(nullable=False, description="LLM UUID")
     status: str = Field(nullable=False, default="active", description="智能体状态")
-
     config: AgentConfig = Field(
         default_factory=AgentConfig,
         # nullable=False,
@@ -91,6 +90,9 @@ class Agents(DBModel, table=True):
 
     tools: dict = Field(
         nullable=False, default={}, sa_type=JSON, description="启用的工具及其参数"
+    )
+    mcp_uuids: list[str] = Field(
+        nullable=False, sa_type=JSON, default=[], description="MCP UUID"
     )
 
     @classmethod

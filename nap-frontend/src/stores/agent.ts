@@ -13,6 +13,7 @@ interface AgentAPI {
   llm: string
   status: string
   tools: Record<string, Record<string, string>>
+  mcp_uuids: string[]
   created_at: string
   updated_at: string
   config: string
@@ -31,6 +32,12 @@ interface AvailableTool {
   description: string
 }
 
+interface AvailableMcp {
+  uuid: string
+  name: string
+  url: string
+}
+
 export const useAgentStore = defineStore('agent', () => {
   const agents = ref<Agent[]>([])
   const currentAgent = ref<Agent | null>(null)
@@ -38,6 +45,7 @@ export const useAgentStore = defineStore('agent', () => {
   const selectedAgentModels = ref<string[]>([])
   const loading = ref(false)
   const availableTools = ref<AvailableTool[]>([])
+  const availableMcps = ref<AvailableMcp[]>([])
 
   const activeAgents = computed(() => agents.value.filter(a => a.status === 'active'))
   const draftAgents = computed(() => agents.value.filter(a => a.status === 'draft'))
@@ -55,6 +63,14 @@ export const useAgentStore = defineStore('agent', () => {
       .map(t => ({ label: t.name, value: t.id }))
   })
 
+  // 当前智能体可用的 MCP 选项：已配置的 MCP 服务 ∩ 该 agent 配置的 mcp_uuids
+  const mcpOptions = computed(() => {
+    const allowed = selectedAgent.value?.mcp_uuids || []
+    return availableMcps.value
+      .filter(m => allowed.includes(m.uuid))
+      .map(m => ({ label: m.name || m.url, value: m.uuid }))
+  })
+
   async function fetchTools() {
     try {
       const data = await API.fetchTools<{ tools: ToolAPI[] }>()
@@ -65,6 +81,15 @@ export const useAgentStore = defineStore('agent', () => {
       }))
     } catch {
       availableTools.value = []
+    }
+  }
+
+  async function fetchMcps() {
+    try {
+      const data = await API.fetchMCPs<{ mcps: { uuid: string; name: string; url: string }[] }>()
+      availableMcps.value = data.mcps || []
+    } catch {
+      availableMcps.value = []
     }
   }
 
@@ -87,6 +112,7 @@ export const useAgentStore = defineStore('agent', () => {
         llm: a.llm,
         config: a.config,
         knowledge_bases: a.knowledge_bases,
+        mcp_uuids: a.mcp_uuids || [],
       }))
       if (!selectedAgentId.value && agents.value.length > 0) {
         selectedAgentId.value = agents.value[0].id
@@ -98,8 +124,9 @@ export const useAgentStore = defineStore('agent', () => {
 
   watch(selectedAgentId, async (id) => {
     selectedAgentModels.value = []
-    // 工具列表是全局资源，懒加载一次即可，避免每次切换 agent 重复请求
+    // 工具/MCP 列表都是全局资源，懒加载一次即可，避免每次切换 agent 重复请求
     if (!availableTools.value.length) fetchTools()
+    if (!availableMcps.value.length) fetchMcps()
     const agent = agents.value.find(a => a.id === id)
     if (!agent?.model) return
     try {
@@ -126,9 +153,11 @@ export const useAgentStore = defineStore('agent', () => {
     draftAgents,
     selectedAgent,
     toolOptions,
+    mcpOptions,
     webSearchTool: WEB_SEARCH_TOOL,
     fetchAgents,
     fetchTools,
+    fetchMcps,
     setCurrentAgent,
     enableWebSearch
   }

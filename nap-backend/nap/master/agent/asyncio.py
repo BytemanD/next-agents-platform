@@ -35,7 +35,8 @@ class AsyncAgent:
             checkpointer=self._saver,
             context_schema=RuntimeContext,
             middleware=[RuntimeAgentMiddleware()],
-            tools=[*INTERNAL_TOOLS, *CUSTOM_TOOLS],
+            # tools=[*INTERNAL_TOOLS, *CUSTOM_TOOLS],
+            tools=[*INTERNAL_TOOLS],
         )
 
     async def stop(self):
@@ -109,11 +110,6 @@ class AsyncAgent:
         item = await self._saver.aget_tuple(config)
         if not item:
             return []
-
-        for msg in item.checkpoint.get("channel_values", {}).get("messages", []):
-            if msg.type in ["human", "ai"]:
-                print("============================")
-                print(msg.id, msg.type, msg.content, msg.additional_kwargs)
 
         return [
             Message(

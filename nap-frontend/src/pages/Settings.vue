@@ -65,7 +65,7 @@
         </div>
       </div>
     </t-tab-panel>
-</t-tabs>
+  </t-tabs>
 </template>
 
 <script setup lang="ts">
@@ -73,7 +73,7 @@ import { ref } from 'vue'
 import SettingsMcp from './SettingsMCP.vue'
 import SettingsLlm from './SettingsLLM.vue'
 
-const activeTab = ref('api')
+const activeTab = ref('llm')
 
 const settings = ref({
   theme: 'light',

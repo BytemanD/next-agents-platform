@@ -77,38 +77,21 @@
           </t-list-item>
         </t-list>
       </t-card>
-      <t-card size="small">
+      <t-card size="small" class="mt-2">
         <template #title>MCP</template>
-        <template #description>配置智能体连接的MCP服务</template>
+        <template #description>选择这个智能体可以连接的 MCP 服务</template>
         <t-list size="small">
-          <t-list-item v-for="tool in availableTools" :key="tool.name" size="small"
-            :class="tool.id in form.tools ? 'border-nap-primary/50 bg-nap-primary/5' : ''" class="rounded-lg mb-1">
+          <t-list-item v-for="mcp in mcpServers" :key="mcp.uuid" size="small"
+            :class="mcp.uuid in form.mcp_uuids ? 'border-nap-primary/50 bg-nap-primary/5' : ''" class="rounded-lg mb-1">
             <template #content>
-              <t-list-item-meta :title="tool.name">
-                <template #image>
-                  <t-icon :name="tool.icon" class="ml-3 mt-3" size="30" />
-                </template>
-                <template #description>
-                  <t-text :content="tool.description" />
-                  <t-tooltip v-if="tool.help" :content="tool.help">
-                    <t-icon name="info-circle" color="info"></t-icon>
-                  </t-tooltip>
-
-                  <t-form v-if="Object.keys(tool.requires).length > 0" size="small">
-                    <h6>参数：</h6>
-                    <t-form-item v-for="(_, k) in tool.requires" :label="k" :name="k">
-                      <t-input size="small" :model-value="toolArgValue(tool.id, k)"
-                        @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
-                    </t-form-item>
-                  </t-form>
-                </template>
-              </t-list-item-meta>
+              <t-list-item-meta :title="mcp.name" />
             </template>
             <template #action>
-              <t-checkbox :checked="tool.id in form.tools" @change="toggleTool(tool.id)" />
+              <t-checkbox :checked="form.mcp_uuids.indexOf(mcp.uuid) >= 0" @change="setMcpSelected(mcp.uuid)" />
             </template>
           </t-list-item>
         </t-list>
+        <t-empty v-if="!mcpServers.length" title="暂无 MCP 服务" description="请先到「设置 - MCP」中添加" />
       </t-card>
     </t-col>
 
@@ -136,6 +119,7 @@ interface AgentForm {
   config: { temperature: number; max_tokens: number }
   knowledge_bases: string[]
   tools: Record<string, Record<string, string>>
+  mcp_uuids: string[]
 }
 
 const route = useRoute()
@@ -211,11 +195,13 @@ function defaultForm(): AgentForm {
     config: { temperature: 0.7, max_tokens: 4096 },
     knowledge_bases: [],
     tools: {},
+    mcp_uuids: [],
   }
 }
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const knowledgeOptions = ref<{ label: string; value: string }[]>([])
+const mcpServers = ref<{ uuid: string; name: string }[]>([])
 const availableTools = ref<ToolItem[]>([])
 
 interface ToolItem {
@@ -282,6 +268,15 @@ async function fetchKnowledgeBases() {
   }
 }
 
+async function fetchMcpServers() {
+  try {
+    const data = await API.fetchMCPs<{ mcps: { uuid: string; name: string }[] }>()
+    mcpServers.value = data.mcps || []
+  } catch {
+    mcpServers.value = []
+  }
+}
+
 async function fetchAgent(agentUuid: string) {
   try {
     const agent = await API.fetchAgent<AgentForm & { uuid: string }>(agentUuid)
@@ -297,6 +292,7 @@ async function fetchAgent(agentUuid: string) {
       },
       knowledge_bases: agent.knowledge_bases || [],
       tools: agent.tools || {},
+      mcp_uuids: agent.mcp_uuids || [],
     }
   } catch {
     MessagePlugin.error('加载智能体失败')
@@ -308,6 +304,15 @@ function toggleTool(toolId: string) {
     delete form.value.tools[toolId]
   } else {
     form.value.tools[toolId] = {}
+  }
+}
+
+function setMcpSelected(mcpUuid: string) {
+  if (form.value.mcp_uuids.indexOf(mcpUuid) >= 0) {
+    const idx = form.value.mcp_uuids.indexOf(mcpUuid)
+    form.value.mcp_uuids.splice(idx, 1)
+  } else {
+    form.value.mcp_uuids.push(mcpUuid)
   }
 }
 
@@ -331,6 +336,7 @@ async function handleSave(status: string) {
     config: form.value.config,
     knowledge_bases: form.value.knowledge_bases,
     tools: form.value.tools,
+    mcp_uuids: form.value.mcp_uuids,
   }
   saving.value = true
   try {
@@ -351,6 +357,7 @@ async function handleSave(status: string) {
 onMounted(() => {
   fetchLLMs()
   fetchKnowledgeBases()
+  fetchMcpServers()
   fetchTools()
   if (isEdit.value) {
     fetchAgent(route.params.id as string)

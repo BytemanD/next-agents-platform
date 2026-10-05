@@ -1,16 +1,16 @@
 from pathlib import Path
 
+from langchain_chroma import Chroma
+from langchain_core.documents import Document as RawDocument
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
 )
-from langchain_chroma import Chroma
 from loguru import logger
-from nap.common.objects import DocumentMetadata, RetrivalDocument
-from pydantic import BaseModel
-from langchain_core.documents import Document as RawDocument
-from nap.db.models import Knowledge
 from nap.common.conf import CONF
+from nap.common.objects import DocumentMetadata, RetrivalDocument
+from nap.db.models import Knowledge
+from pydantic import BaseModel
 
 
 class Collection(BaseModel):
@@ -95,10 +95,6 @@ class VectorService:
     def retrieval(self, query: str, k: int = 3):
         logger.info("retrival({}): {}", k, query)
         results = self.vectorstore.similarity_search_with_score(query, k=k)
-        # print(results)
-        # self.vectorstore.as_retriever()
-        # results2 = self.vectorstore.similarity_search(query)
-        # print(results2)
         return [
             RetrivalDocument(
                 score=score,

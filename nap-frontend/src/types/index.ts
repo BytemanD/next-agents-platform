@@ -9,6 +9,7 @@ export interface Agent {
   config: Object
   knowledge_bases: string[]
   tools: Record<string, Record<string, string>>
+  mcp_uuids: string[]
 
   createdAt: string
   updatedAt: string

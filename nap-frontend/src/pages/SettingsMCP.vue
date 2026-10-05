@@ -92,7 +92,7 @@ const transportOptions = [
 ]
 
 const formRules = {
-    name: [{ required: true, message: '请填写名称', type: 'error' }],
+    // name: [{ required: true, message: '请填写名称', type: 'error' }],
     url: [{ required: true, message: '请填写服务地址', type: 'error' }],
 }
 

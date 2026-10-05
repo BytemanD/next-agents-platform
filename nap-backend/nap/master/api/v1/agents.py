@@ -20,6 +20,7 @@ class AgentCreate(BaseModel):
     config: AgentConfig = AgentConfig()
     knowledge_bases: list[str] = []
     tools: dict = {}
+    mcp_uuids: list[str] = []
 
 
 class AgentUpdate(BaseModel):
@@ -31,20 +32,21 @@ class AgentUpdate(BaseModel):
     config: Optional[AgentConfig | dict] = None
     knowledge_bases: Optional[list[str]] = None
     tools: Optional[dict] = None
+    mcp_uuids: Optional[list[str]] = None
 
 
-class AgentResponse(BaseModel):
-    uuid: str
-    name: str
-    description: str
-    instruction: str
-    llm: str
-    status: str
-    config: dict
-    created_at: str
-    updated_at: str
-    knowledge_bases: list[str] = []
-    tools: list[str] = []
+# class AgentResponse(BaseModel):
+#     uuid: str
+#     name: str
+#     description: str
+#     instruction: str
+#     llm: str
+#     status: str
+#     config: dict
+#     created_at: str
+#     updated_at: str
+#     knowledge_bases: list[str] = []
+#     tools: list[str] = []
 
 
 class AgentsResponse(BaseModel):
@@ -62,6 +64,7 @@ class ChatRequest(BaseModel):
     session: str | None = ""
     tools: list[str] | None = []
     knowledge_bases: list[str] | None = []
+    mcp_uuids: list[str] | None = None
     attachments: list[str] = []
 
 
@@ -97,6 +100,7 @@ async def create_agent(body: AgentCreate):
         config=body.config,
         knowledge_bases=body.knowledge_bases,
         tools=body.tools,
+        mcp_uuids=body.mcp_uuids,
     )
 
 
@@ -126,6 +130,8 @@ async def update_agent(uuid: str, body: AgentUpdate):
         a.knowledge_bases = body.knowledge_bases
     if body.tools is not None:
         a.tools = body.tools
+    if body.mcp_uuids is not None:
+        a.mcp_uuids = body.mcp_uuids
 
     a.save()
     return a
@@ -152,6 +158,7 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 custom_tools=body.tools or [],
                 knowledge_bases=body.knowledge_bases or [],
                 attachments=body.attachments,
+                mcp_uuids=body.mcp_uuids,
             ):
                 reasoning_content = delta.additional_kwargs.get("reasoning_content")
                 data = ChatSSE(

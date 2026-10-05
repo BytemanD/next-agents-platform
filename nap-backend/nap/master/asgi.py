@@ -19,11 +19,9 @@ from nap.master.api.v1 import (
     users,
 )
 from nap.master.manager import MANAGER
-from pydantic import BaseModel
 from pystonic.asgi.app import create_app
 from pystonic.asgi.middlewares.trace import TraceIdMiddleware
 from pystonic.asgi.plugins import auth
-from pystonic.common import context
 from pystonic.common.log import setup_logger
 from pystonic.orm.database import create_all_tables
 from starlette.authentication import AuthenticationError
@@ -42,7 +40,12 @@ async def lifespan(app: FastAPI):
     await MANAGER.stop()
 
 
-APP = create_app(lifespan=lifespan)
+APP = create_app(
+    lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
 
 
 for module in (
@@ -75,18 +78,8 @@ auth.setup(
     on_login=_on_login,
     exclude_routes={
         ("POST", "/api/v1/users"),
-        ("GET", "/docs"),
-        ("GET", "/openapi.json"),
+        ("GET", "/api/docs"),
+        ("GET", "/api/redoc"),
+        ("GET", "/api/openapi.json"),
     },
 )
-
-
-class RefreshResponse(BaseModel):
-    token: str
-
-
-@APP.post("/api/v1/auth/token", response_model=RefreshResponse, tags=["auth"])
-def _refresh_token():
-    token = auth.JWT_SERVICE.encode(context.getvar("account"))
-    logger.success("create token success")
-    return RefreshResponse(token=token)
