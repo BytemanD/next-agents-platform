@@ -1,29 +1,33 @@
 <template>
   <AuthLayout heading="创建账号" hint="注册 NAP，开始编排你的第一个智能体" brand-title="NAP" brand-subtitle="Hand it over and take a nap">
-    <t-form :data="form" @submit="handleRegister">
-      <t-form-item label="用户名" name="username">
-        <t-input v-model="form.username" placeholder="请输入用户名">
-          <template #prefixIcon><t-icon name="user" /></template>
-        </t-input>
-      </t-form-item>
-      <t-form-item label="密码" name="password">
-        <t-input v-model="form.password" type="password" placeholder="请输入密码">
-          <template #prefixIcon><t-icon name="lock-on" /></template>
-        </t-input>
-      </t-form-item>
-      <t-form-item label="邮箱" name="email">
-        <t-input v-model="form.email" placeholder="请输入邮箱（可选）">
-          <template #prefixIcon><t-icon name="mail" /></template>
-        </t-input>
-      </t-form-item>
-      <t-form-item>
-        <t-button theme="primary" type="submit" block size="large" :loading="loading">注册</t-button>
-      </t-form-item>
-    </t-form>
+    <t-card>
+      <t-form :data="form" @submit="handleRegister">
+        <t-form-item label="用户名" name="username">
+          <t-input v-model="form.username" placeholder="请输入用户名">
+            <template #prefixIcon><t-icon name="user" /></template>
+          </t-input>
+        </t-form-item>
+        <t-form-item label="密码" name="password">
+          <t-input v-model="form.password" type="password" placeholder="请输入密码">
+            <template #prefixIcon><t-icon name="lock-on" /></template>
+          </t-input>
+        </t-form-item>
+        <t-form-item label="邮箱" name="email">
+          <t-input v-model="form.email" placeholder="请输入邮箱（可选）">
+            <template #prefixIcon><t-icon name="mail" /></template>
+          </t-input>
+        </t-form-item>
+      </t-form>
+      <template #footer>
+        <t-button theme="primary" @click="handleRegister" block size="large" :loading="loading">注册</t-button>
+      </template>
+    </t-card>
     <t-divider dashed>已经有账号？</t-divider>
-    <router-link to="/login">
-      <t-button variant="outline" block size="large">返回登录</t-button>
-    </router-link>
+    <t-space class="flex justify-right">
+      <router-link to="/login">
+        <t-link theme="primary" hover="underline"> 返回登录 </t-link>
+      </router-link>
+    </t-space>
   </AuthLayout>
 </template>
 

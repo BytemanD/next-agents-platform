@@ -11,7 +11,6 @@ dependencies = [
     "dashscope>=1.27.5",
     "fastapi>=0.141.1",
     "langchain>=1.4.0",
-    "langchain-apify>=0.1.7",
     "langchain-chroma>=1.1.0",
     "langchain-community>=0.4.2",
     "langchain-mcp-adapters>=0.3.2",

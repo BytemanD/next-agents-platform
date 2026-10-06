@@ -24,8 +24,8 @@
           <t-form-item label="模型提供商" name="llm">
             <t-select v-model="form.llm" :options="modelOptions" placeholder="选择模型" />
           </t-form-item>
-          <t-form-item label="描述">
-            <t-textarea v-model="form.description" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="这个智能体是做什么的？" />
+          <t-form-item label="描述" name="description">
+            <t-textarea v-model="form.description" placeholder="这个智能体是做什么的？" />
           </t-form-item>
           <t-divider>参数设置</t-divider>
           <t-form-item label="温度">

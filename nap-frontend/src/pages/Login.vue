@@ -1,25 +1,28 @@
 <template>
   <AuthLayout heading="欢迎回来" hint="登录 NAP，继续你的智能体工作流" brand-title="NAP" brand-subtitle="Hand it over and take a nap">
-    <t-form :data="form" @submit="handleLogin">
-      <t-form-item label="用户名" name="username">
-        <t-input v-model="form.username" placeholder="请输入用户名">
-          <template #prefixIcon><t-icon name="user" /></template>
-        </t-input>
-      </t-form-item>
-      <t-form-item label="密码" name="password">
-        <t-input v-model="form.password" type="password" placeholder="请输入密码">
-          <template #prefixIcon><t-icon name="lock-on" /></template>
-        </t-input>
-      </t-form-item>
-      <t-form-item>
-        <t-button theme="primary" type="submit" block size="large" :loading="loading" class>登录</t-button>
-      </t-form-item>
-      <br>
-    </t-form>
+    <t-card>
+      <t-form :data="form" @submit="handleLogin">
+        <t-form-item label="用户名" name="username">
+          <t-input v-model="form.username" placeholder="请输入用户名">
+            <template #prefixIcon><t-icon name="user" /></template>
+          </t-input>
+        </t-form-item>
+        <t-form-item label="密码" name="password">
+          <t-input v-model="form.password" type="password" placeholder="请输入密码">
+            <template #prefixIcon><t-icon name="lock-on" /></template>
+          </t-input>
+        </t-form-item>
+      </t-form>
+      <template #footer>
+        <t-button theme="primary" @click="handleLogin" block size="large" :loading="loading" class>登录</t-button>
+      </template>
+    </t-card>
     <t-divider dashed>还没有账号？</t-divider>
-    <router-link to="/register">
-      <t-button variant="outline" block size="large">注册新账号</t-button>
-    </router-link>
+    <t-space class="flex justify-right">
+      <router-link to="/register">
+        <t-link theme="primary">注册新账号</t-link>
+      </router-link>
+    </t-space>
   </AuthLayout>
 </template>
 
