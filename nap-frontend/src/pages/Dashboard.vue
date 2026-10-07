@@ -69,11 +69,6 @@
             <div class="hidden md:flex items-center gap-2 flex-shrink-0">
               <span
                 class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
-                <t-icon name="cpu" size="12" />
-                {{ agent.model }}
-              </span>
-              <span
-                class="inline-flex items-center gap-1 text-xs text-nap-text-secondary rounded-full bg-nap-surface-hover border border-nap-border px-2.5 py-1">
                 <t-icon name="tools" size="12" />
                 {{ agent.tools.length }} 个工具
               </span>

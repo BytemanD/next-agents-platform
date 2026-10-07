@@ -161,14 +161,6 @@ class Knowledge(DBModel, table=True):
         return str(Path("convert", self.uuid, os.path.basename(self.raw_path)))
 
     @classmethod
-    def count(cls, *criterion, **filters):
-        """返回一个 QueryBuilder 用于链式查询"""
-        stm = select(func.count(col(cls.id))).where(*criterion).filter_by(**filters)
-        with get_session() as session:
-            query = session.exec(stm)
-            return query.one()
-
-    @classmethod
     def get_pending_process(cls, limits: int = 100):
         """返回一个 QueryBuilder 用于链式查询"""
         stm = (
@@ -202,21 +194,6 @@ class Knowledge(DBModel, table=True):
         with get_session() as session:
             session.exec(stm)
             session.commit()
-
-    # @classmethod
-    # def count(cls, knowledge_bases: list[str]):
-    #     stm = (
-    #         update(cls)
-    #         .where(col(cls.knowledge_base).in_(knowledge_bases))
-    #         .where(
-    #             col(cls.status).not_in(
-    #                 [KnowledgeStatus.deleting.value, KnowledgeStatus.deleted.value]
-    #             )
-    #         )
-    #     )
-    #     with get_session() as session:
-    #         result = session.exec(stm)
-    #         return int(result.one())
 
     def set_status(self, status: KnowledgeStatus):
         self.status = status.value

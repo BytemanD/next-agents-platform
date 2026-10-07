@@ -237,7 +237,8 @@ class MasterManager(BaseManager):
         logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
         kb_uuids = knowledge_bases or db_agent.knowledge_bases
         runtime_context = RuntimeContext(
-            model=model or llm.models[0],
+            models=llm.models,
+            model=model,
             model_base_url=llm.base_url,
             model_api_key=llm.api_key,
             agent_uuid=db_agent.uuid,
@@ -281,6 +282,8 @@ class MasterManager(BaseManager):
             creator=context.getvar("account") or "guest",
             name=name,
             size=len(content),
+            raw_path=None,
+            convert_path=None,
         )
         attachment.create()
         STORE_SERVICE.save_attachment_raw(attachment, content)

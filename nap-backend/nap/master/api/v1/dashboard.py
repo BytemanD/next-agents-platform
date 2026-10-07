@@ -75,7 +75,12 @@ def _pct(cur: int, prev: int) -> int:
 def _time_ago(dt: Optional[datetime]) -> str:
     if not dt:
         return ""
-    secs = int((utcnow() - dt).total_seconds())
+    now = utcnow()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=now.tzinfo)
+    else:
+        dt = dt.astimezone(now.tzinfo)
+    secs = int((now - dt).total_seconds())
     if secs < 60:
         return "刚刚"
     if secs < 3600:

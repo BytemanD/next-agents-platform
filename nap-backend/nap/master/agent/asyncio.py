@@ -15,6 +15,7 @@ from nap.master.agent.callbacks import TraceHandler
 from nap.master.agent.context import RuntimeContext
 from nap.master.agent.middlewares import RuntimeAgentMiddleware
 from nap.master.agent.tools import user
+from pydantic import SecretStr
 from pystonic.common import context
 
 INTERNAL_TOOLS = [
@@ -31,7 +32,7 @@ class AsyncAgent:
         self._conn = aiosqlite.connect(CONF.store + "/checkpoint.sqlite")
         self._saver = AsyncSqliteSaver(self._conn)
         self._agent = create_agent(
-            ChatOpenAI(model="gpt", base_url="...", api_key="..."),
+            ChatOpenAI(model="gpt", base_url="...", api_key=SecretStr("...")),
             checkpointer=self._saver,
             context_schema=RuntimeContext,
             middleware=[RuntimeAgentMiddleware()],
@@ -86,10 +87,11 @@ class AsyncAgent:
             logger.error("request failed because rate limit")
             raise LLMRateLimitError(str(e))
 
+        print("xxxxxxxxxxxx", ctx.selected_model)
         yield AgentCallback(
             agent_uuid=ctx.agent_uuid,
             session_uuid=ctx.session_uuid,
-            model=ctx.model,
+            model=ctx.selected_model,
             creator=ctx.username,
             total_tokens=openai_callback.total_tokens,
             prompt_tokens=openai_callback.prompt_tokens,

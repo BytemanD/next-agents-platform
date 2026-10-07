@@ -29,13 +29,9 @@
     </t-col>
   </t-row>
 
-  <t-card class="mt-4" size="small">
-    <template #title><span class="text-nap-text">文档列表</span></template>
+  <t-card class="mt-4" size="small" title="文档列表">
     <template #actions>
       <t-space :size="12">
-        <t-button variant="outline" shape="circle" @click="handleRefresh">
-          <template #icon><t-icon name="refresh" /></template>
-        </t-button>
         <t-input v-model="searchQuery" placeholder="搜索文档..." clearable class="w-64">
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
@@ -43,6 +39,9 @@
         <t-button @click="showUpload = true">
           <template #icon><t-icon name="upload" /></template>
           上传文档
+        </t-button>
+        <t-button variant="text" @click="handleRefresh">
+          <template #icon><t-icon name="refresh" /></template>
         </t-button>
       </t-space>
     </template>

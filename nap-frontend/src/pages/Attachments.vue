@@ -1,11 +1,7 @@
 <template>
-  <t-card class="mt-4">
-    <template #title><span class="text-nap-text">附件列表</span></template>
+  <t-card class="mt-4" title="附件列表">
     <template #actions>
       <t-space :size="12">
-        <t-button variant="outline" shape="circle" @click="fetchAttachments">
-          <template #icon><t-icon name="refresh" /></template>
-        </t-button>
         <t-input v-model="searchQuery" placeholder="搜索附件..." clearable class="w-64">
           <template #prefixIcon><t-icon name="search" /></template>
         </t-input>
@@ -13,9 +9,20 @@
           <template #icon><t-icon name="save" /></template>
           保存到知识库
         </t-button>
+        <t-button variant="text" @click="fetchAttachments">
+          <template #icon><t-icon name="refresh" /></template>
+        </t-button>
       </t-space>
     </template>
-    <t-table size="small" :data="filteredAttachments" :columns="columns" :pagination="pagination" rowKey="uuid" hover
+    <t-empty v-if="filteredAttachments.length === 0 && !loading" class="py-10">
+      <template #description>
+        <t-text theme="secondary">在对话中上传的附件会显示在这里</t-text>
+      </template>
+      <template #image>
+        <t-icon name="file" size="40" class="text-nap-text-tertiary" />
+      </template>
+    </t-empty>
+    <t-table v-else size="small" :data="filteredAttachments" :columns="columns" :pagination="pagination" rowKey="uuid" hover
       :selected-row-keys="selectedUuids" select-on-row-click @select-change="handleSelectChange">
       <template #size="{ row }">
         {{ filesize(row.size) }}
@@ -29,28 +36,20 @@
         </t-popconfirm>
       </template>
     </t-table>
-    <t-empty v-if="filteredAttachments.length === 0 && !loading" class="py-10">
-      <template #description>
-        <p class="text-nap-text">暂无附件</p>
-        <p class="text-sm text-nap-text-secondary mt-1">在对话中上传的附件会显示在这里</p>
-      </template>
-      <template #image>
-        <t-icon name="file" size="40" class="text-nap-text-tertiary" />
-      </template>
-    </t-empty>
   </t-card>
 
-  <t-dialog v-model:visible="showKbDialog" header="选择知识库" placement="center" width="480px"
+  <t-dialog v-model:visible="showKbDialog" header="选择知识库" placement="center"
     :confirm-btn="{ content: '确认保存', loading: savingToKb }" :cancel-btn="{}" @confirm="handleSaveToKb"
     :confirm-on-enter="false">
+    <p v-if="selectedUuids.length > 0" class="text-sm text-nap-text-secondary">
+      将 {{ selectedUuids.length }} 个附件添加到所选知识库
+    </p>
+    <br>
     <t-form label-align="top">
       <t-form-item label="目标知识库">
         <t-select v-model="selectedKbUuid" :options="kbOptions" :disabled="savingToKb" placeholder="请选择知识库" />
       </t-form-item>
     </t-form>
-    <p v-if="selectedUuids.length > 0" class="text-sm text-nap-text-secondary">
-      将 {{ selectedUuids.length }} 个附件添加到所选知识库
-    </p>
   </t-dialog>
 </template>
 

@@ -1,13 +1,16 @@
 from collections.abc import Awaitable
-from typing import Callable
+from typing import Any, Callable
 
 from langchain.agents.middleware import (
     AgentMiddleware,
     AgentState,
     ModelRequest,
     ModelResponse,
+    ToolCallRequest,
 )
-from langchain_core.messages import AIMessageChunk
+from langchain_core.exceptions import ModelRateLimitError
+from langchain_core.messages import AIMessageChunk, SystemMessage, ToolMessage
+from langgraph.types import Command
 from langchain_openai import ChatOpenAI
 from loguru import logger
 from nap.master.agent.context import RuntimeContext
@@ -43,14 +46,15 @@ class ReasoningChatOpenAI(ChatOpenAI):
 
 
 class RuntimeAgentMiddleware(AgentMiddleware[AgentState, RuntimeContext]):
-    async def awrap_model_call(
-        self,
-        request: ModelRequest,
-        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
-    ) -> ModelResponse:
-        ctx: RuntimeContext = request.runtime.context
-        runtime_model = ReasoningChatOpenAI(
-            model=ctx.model,
+    @staticmethod
+    def is_quota_error(e):
+        return isinstance(e, ModelRateLimitError) or (
+            hasattr(e, "status_code") and getattr(e, "status_code") in (402, 429, 403)
+        )
+
+    def _get_runtime_model(self, ctx: RuntimeContext, model_name: str) -> ChatOpenAI:
+        return ReasoningChatOpenAI(
+            model=model_name,
             api_key=SecretStr(ctx.model_api_key),
             base_url=ctx.model_base_url,
             temperature=ctx.agent_config.temperature,
@@ -60,21 +64,50 @@ class RuntimeAgentMiddleware(AgentMiddleware[AgentState, RuntimeContext]):
             # reasoning_effort="medium",
             # use_responses_api=False,
         )
+
+    async def awrap_model_call(  # type: ignore
+        self,
+        request: ModelRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ModelResponse]],
+    ):
+        ctx: RuntimeContext = request.runtime.context  # type: ignore
         logger.info(
             "runtime tools: {}, knowledge bases: {}",
             [x.name for x in ctx.tools or []],
             [x.name for x in ctx.knowledge_bases],
         )
-        return await handler(
-            request.override(
-                model=runtime_model,
-                tools=ctx.tools,
-                system_prompt=ctx.system_prompt,
+        if ctx.model:
+            ctx.selected_model = ctx.model
+            return await handler(
+                request.override(
+                    model=self._get_runtime_model(ctx, ctx.model),
+                    tools=ctx.tools,  # type: ignore
+                    system_message=SystemMessage(content=ctx.system_prompt),
+                )
             )
-        )
+        else:
+            last_error = None
+            for model_name in ctx.models:
+                try:
+                    ctx.selected_model = model_name
+                    return await handler(
+                        request.override(
+                            model=self._get_runtime_model(ctx, model_name),
+                            tools=ctx.tools,  # type: ignore
+                            system_message=SystemMessage(content=ctx.system_prompt),
+                        )
+                    )
+                except Exception as e:
+                    if self.is_quota_error(e):  # 自己判断 429/402
+                        last_error = e
+                        continue
+                    raise
+            if last_error:
+                ctx.selected_model = ""
+                raise last_error
 
-    def _override_tools(self, request: ModelRequest):
-        ctx: RuntimeContext = request.runtime.context
+    def _override_tools(self, request: ToolCallRequest):
+        ctx: RuntimeContext = request.runtime.context  # type: ignore
         tool_map = {t.name: t for t in ctx.tools}
         tool_name = request.tool_call["name"]
         if tool_name in tool_map:
@@ -84,14 +117,14 @@ class RuntimeAgentMiddleware(AgentMiddleware[AgentState, RuntimeContext]):
 
     def wrap_tool_call(
         self,
-        request: ModelRequest,
-        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], ToolMessage | Command[Any]],
     ):
         return handler(self._override_tools(request))
 
     async def awrap_tool_call(
         self,
-        request: ModelRequest,
-        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command[Any]]],
     ):
         return await handler(self._override_tools(request))

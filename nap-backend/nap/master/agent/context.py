@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 class RuntimeContext(BaseModel):
-    model: str
+    models: list[str]
     model_base_url: str
     model_api_key: str
 
@@ -15,9 +15,13 @@ class RuntimeContext(BaseModel):
     agent_config: AgentConfig
     session_uuid: str
     username: str
+
+    model: str | None = None
     system_prompt: str = ""
     tools: list[BaseTool] = []
     knowledge_bases: Sequence[KnowledgeBase] = []
     attachments: list[str] = []
 
     tool_args: dict = {}
+
+    selected_model: str = ""
