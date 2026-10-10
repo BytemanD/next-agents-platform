@@ -1,8 +1,8 @@
 import asyncio
-from typing import Optional
+from typing import Optional, Sequence
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from nap.db.models import Attachment, Knowledge, KnowledgeBase
+from nap.db.models import Attachment, Knowledge, KnowledgeBase, User
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 from pystonic.common import context
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/knowledge-bases", tags=["知识库"])
 class KnowledgeBaseCreate(BaseModel):
     name: str
     description: str = ""
-    active: bool = True
+    # active: bool = True
 
 
 class KnowledgeBaseUpdate(BaseModel):
@@ -30,6 +30,11 @@ class KnowledgeBaseResponse(BaseModel):
     active: bool
     created_at: str
     updated_at: str
+    shared_with: list[User] = []
+
+
+class KnowledgeBasesResponse(BaseModel):
+    items: Sequence[KnowledgeBase]
 
 
 class UploadKnowledgeFromUrl(BaseModel):
@@ -37,8 +42,8 @@ class UploadKnowledgeFromUrl(BaseModel):
 
 
 @router.get("")
-async def list_kbs():
-    return {"items": KnowledgeBase.query()}
+async def list_kbs(shared: bool = False):
+    return KnowledgeBasesResponse(items=MANAGER.list_knowledge_base(shared=shared))
 
 
 @router.get("/{uuid}")
@@ -51,10 +56,8 @@ async def get_kb(uuid: str):
 
 @router.post("", status_code=201)
 async def create_kb(body: KnowledgeBaseCreate):
-    kb = KnowledgeBase(
-        name=body.name,
-        description=body.description,
-        active=body.active,
+    kb = MANAGER.create_knowledge_base(
+        body.name, description=body.description, active=True
     )
     kb.create()
     return kb
@@ -168,9 +171,8 @@ async def add_knowledge(kb_id: str, body: AddKnowledgeRequest):
         item = await asyncio.to_thread(
             MANAGER.add_knowledge_from_url,
             kb,
-            context.getvar("account") or "guest",
             web_file.url,
-            name=body.name,
+            name=web_file.name,
         )
         items.append(item)
 

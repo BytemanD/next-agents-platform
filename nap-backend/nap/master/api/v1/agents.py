@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Sequence
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -52,7 +52,7 @@ class AgentUpdate(BaseModel):
 
 
 class AgentsResponse(BaseModel):
-    agents: list[Agents]
+    agents: Sequence[Agents]
 
 
 class AgentDetail(BaseModel):
@@ -76,7 +76,7 @@ class AgentDetail(BaseModel):
     config: AgentConfig
     knowledge_bases: list[str] = []
     tools: list[ToolModel] = []
-    mcps: list[AgentMCP] = []
+    mcps: Sequence[AgentMCP] = []
 
 
 class QueryRequest(BaseModel):

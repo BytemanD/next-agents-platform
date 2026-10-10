@@ -114,6 +114,7 @@ class KnowledgeBase(DBModel, table=True):
     active: bool = Field(
         nullable=False, default=1, description="whether the knowledge base is active"
     )
+    creator: str = Field(nullable=False, description="知识库创建者UUID")
     # enrich_llm: str = Field(nullable=True)
 
     @classmethod
@@ -385,3 +386,18 @@ class AgentMCP(DBModel, table=True):
         nullable=False, default="streamable_http", description="MCP server transport"
     )
     api_key: str | None = Field(nullable=True, description="MCP Server API KEY")
+
+
+class KnowledgeBaseShared(DBModel, table=True):
+    __tablename__ = "knowledge_base_shared"  # type: ignore
+
+    knowledge_base_uuid: str = Field(
+        nullable=False, description="知识库 UUID", index=True
+    )
+    shared_with: str = Field(nullable=False, description="共享给的用户 UUID")
+
+    @classmethod
+    def get_knowledge_base_uuids_by_shared_with(cls, shared_with: str):
+        return [
+            x.knowledge_base_uuid for x in cls.query(cls.shared_with == shared_with)
+        ]

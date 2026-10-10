@@ -9,22 +9,18 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from loguru import logger
 from nap.common.conf import CONF
 from nap.common.exceptions import LLMRateLimitError
-from nap.common.objects import Message
+from nap.common.objects import Message, Toolkit
 from nap.db.models import AgentCallback, Session
 from nap.master.agent.callbacks import TraceHandler
 from nap.master.agent.context import RuntimeContext
 from nap.master.agent.middlewares import RuntimeAgentMiddleware
-from nap.master.agent.tools import user
+from nap.master.agent.tools.builtin import BUILT_IN_TOOLKIT
+from nap.master.agent.tools import web_search, mysql
 from pydantic import SecretStr
 from pystonic.common import context
 
-INTERNAL_TOOLS = [
-    user.get_username,
-    user.get_available_knowledge_bases,
-    user.get_attachments,
-    user.get_attachment_content,
-]
-CUSTOM_TOOLS = [user.retrival, user.list_documents, user.tavily_hub_search]
+
+# CUSTOM_TOOLS = web_search.WebSearchToolkit().get_tools()
 
 
 class AsyncAgent:
@@ -37,8 +33,13 @@ class AsyncAgent:
             context_schema=RuntimeContext,
             middleware=[RuntimeAgentMiddleware()],
             # tools=[*INTERNAL_TOOLS, *CUSTOM_TOOLS],
-            tools=[*INTERNAL_TOOLS],
+            tools=[*BUILT_IN_TOOLKIT.get_tools()],
         )
+        self.toolkits: list[type[Toolkit]] = [
+            web_search.WebSearchToolkit,
+            mysql.MysqlToolkit,
+        ]
+        # web_search.WebSearchToolkit.me
 
     async def stop(self):
         logger.info("close checkpointer connection")
@@ -59,7 +60,7 @@ class AsyncAgent:
     #     return "\n".join(parts)
 
     async def chat(self, ctx: RuntimeContext, query: str):
-        ctx.tools.extend(INTERNAL_TOOLS)
+        ctx.tools.extend(BUILT_IN_TOOLKIT.get_tools())
         trace_handler = TraceHandler()
         openai_callback = OpenAICallbackHandler()
         stream = self._agent.astream(
@@ -87,7 +88,6 @@ class AsyncAgent:
             logger.error("request failed because rate limit")
             raise LLMRateLimitError(str(e))
 
-        print("xxxxxxxxxxxx", ctx.selected_model)
         yield AgentCallback(
             agent_uuid=ctx.agent_uuid,
             session_uuid=ctx.session_uuid,

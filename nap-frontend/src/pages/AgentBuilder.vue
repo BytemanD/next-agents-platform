@@ -1,107 +1,132 @@
 <template>
-  <div class="flex items-center justify-between mb-6">
-    <t-space size="12">
-      <t-button variant="text" @click="$router.back()">
-        <template #icon><t-icon name="arrow-left" /></template>
-      </t-button>
-      <div>
-        <h1 class="text-2xl font-bold text-nap-text">{{ isEdit ? '编辑智能体' : '创建智能体' }}</h1>
-        <p class="text-nap-text-secondary mt-1">配置你的智能体行为与能力</p>
-      </div>
-    </t-space>
-    <t-space size="12">
-      <t-button :loading="saving" @click="handleSave('active')">保存</t-button>
-    </t-space>
-  </div>
+  <div class="h-full flex flex-col min-h-0">
+    <div class="flex items-center justify-between mb-3">
+      <t-space size="12">
+        <t-button variant="text" @click="$router.back()">
+          <template #icon><t-icon name="arrow-left" /></template>
+        </t-button>
+        <t-space align="end">
+          <h1 class="text-2xl font-bold text-nap-text">{{ isEdit ? '编辑智能体' : '创建智能体' }}</h1>
+          <p class="text-nap-text-secondary mt-1">配置你的智能体行为与能力</p>
+        </t-space>
+      </t-space>
+      <t-space size="12">
+        <t-button :loading="saving" @click="handleSave('active')">保存</t-button>
+      </t-space>
+    </div>
+    <t-layout class="flex-1 min-h-0">
+    <t-aside>
+      <t-anchor :affix-props="{ offsetTop: 150 }" container="#settings">
+        <t-anchor-item href="#基本信息" title="基本信息" />
+        <t-anchor-item href="#参数设置" title="参数设置" />
+        <t-anchor-item href="#知识库" title="知识库" />
+        <t-anchor-item href="#工具集" title="工具集" />
+        <t-anchor-item href="#MCP" title="MCP" />
+        <t-anchor-item href="#系统提示词" title="系统提示词" />
+      </t-anchor>
+    </t-aside>
+    <t-content class="p-2 min-h-0 flex-1">
+      <div id="settings" class="scroll-container h-full overflow-y-auto">
+        <t-title level="h5" id="基本信息">基本信息</t-title>
+        <t-card size="small">
+          <t-form>
+            <t-form-item label="名称" name="name">
+              <t-input placeholder="例如：研究助理" v-model="form.name" />
+            </t-form-item>
+            <t-form-item label="模型提供商" name="llm">
+              <t-select v-model="form.llm" :options="modelOptions" placeholder="选择模型" />
+            </t-form-item>
+            <t-form-item label="描述" name="description">
+              <t-textarea v-model="form.description" placeholder="这个智能体是做什么的？" />
+            </t-form-item>
+            <!-- <t-divider>参数设置</t-divider>
+            <t-form-item label="温度">
+              <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
+            </t-form-item>
+            <t-form-item label="最大 Token 数">
+              <t-input-number v-model="form.config.max_tokens" :min="256" :max="128000" :step="256" theme="normal" />
+            </t-form-item> -->
+          </t-form>
+        </t-card>
+        <t-title level="h5" id="参数设置">参数设置</t-title>
+        <t-card size="small">
+          <t-form>
+            <t-form-item label="温度">
+              <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
+            </t-form-item>
+            <t-form-item label="最大 Token 数">
+              <t-input-number v-model="form.config.max_tokens" :min="256" :max="128000" :step="256" theme="normal" />
+            </t-form-item>
+          </t-form>
+        </t-card>
 
-  <t-row :gutter="[12, 12]">
-    <t-col :xs="12" :lg="4">
-      <t-card size="small" title="基本信息">
-        <t-form>
-          <t-form-item label="名称" name="name">
-            <t-input placeholder="例如：研究助理" v-model="form.name" />
-          </t-form-item>
-          <t-form-item label="模型提供商" name="llm">
-            <t-select v-model="form.llm" :options="modelOptions" placeholder="选择模型" />
-          </t-form-item>
-          <t-form-item label="描述" name="description">
-            <t-textarea v-model="form.description" placeholder="这个智能体是做什么的？" />
-          </t-form-item>
-          <t-divider>参数设置</t-divider>
-          <t-form-item label="温度">
-            <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
-          </t-form-item>
-          <t-form-item label="最大 Token 数">
-            <t-input-number v-model="form.config.max_tokens" :min="256" :max="128000" :step="256" theme="normal" />
-          </t-form-item>
-        </t-form>
-      </t-card>
-      <t-card size="small" class="mt-2">
-        <template #title>知识库</template>
-        <template #description>关联知识源</template>
-        <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
-      </t-card>
-    </t-col>
+        <t-title level="h5" id="知识库">知识库</t-title>
+        <t-card size="small" class="mt-2" id="知识库">
+          <template #description>关联知识源</template>
+          <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
+        </t-card>
 
-    <t-col :xs="12" :lg="4">
-      <t-card size="small">
-        <template #title>工具</template>
-        <template #description>选择这个智能体可以使用的工具</template>
-        <t-list size="small">
-          <t-list-item v-for="tool in availableTools" :key="tool.name" size="small"
-            :class="tool.id in form.tools ? 'border-nap-primary/50 bg-nap-primary/5' : ''" class="rounded-lg mb-1">
-            <template #content>
-              <t-list-item-meta :title="tool.name">
-                <template #image>
-                  <t-icon :name="tool.icon" class="ml-3 mt-3" size="30" />
-                </template>
-                <template #description>
-                  <t-text :content="tool.description" />
-                  <t-tooltip v-if="tool.help" :content="tool.help">
-                    <t-icon name="info-circle" color="info"></t-icon>
-                  </t-tooltip>
-
-                  <t-form v-if="Object.keys(tool.requires).length > 0" size="small">
-                    <h6>参数：</h6>
-                    <t-form-item v-for="(_, k) in tool.requires" :label="k" :name="k">
-                      <t-input size="small" :model-value="toolArgValue(tool.id, k)"
-                        @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
-                    </t-form-item>
-                  </t-form>
-                </template>
-              </t-list-item-meta>
+        <t-title level="h5" id="工具集">工具集</t-title>
+        <t-card size="small" class="mt-2">
+          <template #description>选择这个智能体可以使用的工具</template>
+          <t-card v-for="tool in availableTools" :key="tool.id" size="small" class="mb-1"
+            :class="tool.id in form.tools ? 'bg-active' : ''">
+            <template #title>
+              <t-space>
+                <t-icon v-if="tool.icon" :name="tool.icon" size="20" />
+                <span>{{ tool.name }}</span>
+                <t-tooltip v-if="tool.help" :content="tool.help">
+                  <t-icon name="info-circle" color="info"></t-icon>
+                </t-tooltip>
+              </t-space>
             </template>
-            <template #action>
+            <template #actions>
               <t-checkbox :checked="tool.id in form.tools" @change="toggleTool(tool.id)" />
             </template>
-          </t-list-item>
-        </t-list>
-      </t-card>
-      <t-card size="small" class="mt-2">
-        <template #title>MCP</template>
-        <template #description>选择这个智能体可以连接的 MCP 服务</template>
-        <t-list size="small">
-          <t-list-item v-for="mcp in mcpServers" :key="mcp.uuid" size="small"
-            :class="mcp.uuid in form.mcp_uuids ? 'border-nap-primary/50 bg-nap-primary/5' : ''" class="rounded-lg mb-1">
-            <template #content>
-              <t-list-item-meta :title="mcp.name" />
-            </template>
-            <template #action>
-              <t-checkbox :checked="form.mcp_uuids.indexOf(mcp.uuid) >= 0" @change="setMcpSelected(mcp.uuid)" />
-            </template>
-          </t-list-item>
-        </t-list>
-        <t-empty v-if="!mcpServers.length" title="暂无 MCP 服务" description="请先到「设置 - MCP」中添加" />
-      </t-card>
-    </t-col>
+            <t-form v-if="Object.keys(tool.requires).length > 0" size="small" requiredMark label-align="left">
+              <t-form-item v-for="(v, k) in tool.requires" :key="k" :label="k" :name="k"
+                :style="{ marginBottom: '1px' }">
+                <t-input-number v-if="v['type'] == 'integer'" theme="column" size="small" :min="0" auto-width
+                  :model-value="toolArgValue(tool.id, k)"
+                  @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+                <t-input v-else size="small" :model-value="toolArgValue(tool.id, k)"
+                  @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+              </t-form-item>
+            </t-form>
+          </t-card>
+        </t-card>
 
-    <t-col :xs="12" :lg="4">
-      <t-card size="small" title="系统提示词" subtitle="定义智能体的性格、知识和行为规则。">
-        <t-textarea v-model="form.instruction" :autosize="{ minRows: 10, maxRows: 20 }" placeholder="你是一位乐于助人的助理..."
-          class="font-mono text-sm" />
-      </t-card>
-    </t-col>
-  </t-row>
+        <t-title level="h5" id="MCP">MCP</t-title>
+        <t-card size="small" class="mt-2">
+          <template #description>选择这个智能体可以连接的 MCP 服务</template>
+          <t-space break-line>
+            <t-card v-for="mcp in mcpServers" :key="mcp.uuid" size="small" 
+              :class="(form.mcp_uuids.indexOf(mcp.uuid) >= 0) ? 'bg-active' : ''">
+              <template #title>
+                <t-space>
+                  <span>{{ mcp.name }}</span>
+                </t-space>
+              </template>
+              <template #actions>
+                <t-checkbox :checked="form.mcp_uuids.indexOf(mcp.uuid) >= 0" @change="setMcpSelected(mcp.uuid)" />
+              </template>
+              {{ mcp.url }}
+            </t-card>
+          </t-space>
+          <t-empty v-if="!mcpServers.length" title="暂无 MCP 服务" description="请先到「设置 - MCP」中添加" />
+        </t-card>
+
+        <t-title level="h5" id="系统提示词">系统提示词</t-title>
+
+        <t-card size="small" subtitle="定义智能体的性格、知识和行为规则。">
+          <t-textarea v-model="form.instruction" :autosize="{ minRows: 10, maxRows: 20 }" placeholder="你是一位乐于助人的助理..."
+            class="font-mono text-sm" />
+        </t-card>
+
+      </div>
+    </t-content>
+  </t-layout>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -201,7 +226,7 @@ function defaultForm(): AgentForm {
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const knowledgeOptions = ref<{ label: string; value: string }[]>([])
-const mcpServers = ref<{ uuid: string; name: string }[]>([])
+const mcpServers = ref<{ uuid: string; name: string, url: string }[]>([])
 const availableTools = ref<ToolItem[]>([])
 
 interface ToolItem {
@@ -218,26 +243,44 @@ const TOOL_ICONS: Record<string, string> = {
   file_search: 'file-search',
   listing: 'list',
   tool: 'tool',
+  db: 'data-base',
   web_search: 'earth',
 }
 
 interface BackendTool {
-  name: string
-  description: string
-  extras?: { title?: string; type?: string, requires?: object, help?: string }
+  metadata: {
+    name: string
+    title?: string
+    type?: string
+    help?: string
+  }
+  arg_schema?: {
+    description?: string
+    properties?: Record<string, { type?: string; description?: string }>
+    required?: string[]
+  }
 }
 
 async function fetchTools() {
   try {
     const data = await API.fetchTools<{ tools: BackendTool[] }>()
-    availableTools.value = (data.tools || []).map((tool) => ({
-      id: tool.name,
-      name: tool.extras?.title || tool.name,
-      description: tool.description,
-      icon: TOOL_ICONS[tool.extras?.type || ''] || 'tool',
-      requires: tool.extras?.requires || {},
-      help: tool.extras?.help,
-    }))
+    availableTools.value = (data.tools || []).map((tool) => {
+      const meta = tool.metadata || {}
+      const props = tool.arg_schema?.properties || {}
+      const requiredKeys = tool.arg_schema?.required || []
+      const requires: Record<string, { type?: string }> = {}
+      for (const key of requiredKeys) {
+        if (key in props) requires[key] = { type: props[key]?.type }
+      }
+      return {
+        id: meta.name,
+        name: meta.title || meta.name,
+        description: tool.arg_schema?.description || meta.help || '',
+        icon: TOOL_ICONS[meta.type || ''] || 'tool',
+        requires,
+        help: meta.help || undefined,
+      }
+    })
   } catch {
     availableTools.value = []
   }
@@ -270,7 +313,7 @@ async function fetchKnowledgeBases() {
 
 async function fetchMcpServers() {
   try {
-    const data = await API.fetchMCPs<{ mcps: { uuid: string; name: string }[] }>()
+    const data = await API.fetchMCPs<{ mcps: { uuid: string; name: string; url: string }[] }>()
     mcpServers.value = data.mcps || []
   } catch {
     mcpServers.value = []
@@ -368,5 +411,15 @@ onMounted(() => {
 <style scoped>
 .settings-card {
   background-color: var(--td-bg-color-container);
+}
+
+.scroll-container {
+  /* height: 300px; */
+  /* 或 max-height: 300px; */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+  /* 纵向滚动 */
+  /* 可选：横向滚动 overflow-x: auto; */
 }
 </style>

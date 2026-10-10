@@ -1,6 +1,7 @@
+import abc
 from typing import Any
 
-from langchain_core.tools.base import BaseTool
+from langchain_core.tools.base import BaseTool, BaseToolkit
 from pydantic import BaseModel
 
 
@@ -46,3 +47,21 @@ class Message(BaseModel):
     type: str
     content: str | None = None
     thinking: str | None = None
+
+
+class ToolkitMetadata(BaseModel):
+    name: str
+    title: str = ""
+    type: str = ""
+    help: str = ""
+
+
+class Toolkit(BaseToolkit):
+    @classmethod
+    @abc.abstractmethod
+    def metadata(cls) -> ToolkitMetadata:
+        pass
+
+    @abc.abstractmethod
+    def get_tools(self) -> list[BaseTool]:
+        """获取工具列表"""

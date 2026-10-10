@@ -11,14 +11,16 @@ from nap.db.models import (
     Attachment,
     Knowledge,
     KnowledgeBase,
+    KnowledgeBaseShared,
     KnowledgeStatus,
     LLMs,
     Session,
 )
 from nap.db.types import AgentConfig
-from nap.master.agent.asyncio import CUSTOM_TOOLS, AsyncAgent
+from nap.master.agent.asyncio import AsyncAgent
 from nap.master.agent.context import RuntimeContext
-from nap.master.agent.tools import mcp
+from nap.master.agent.tools import mcp, mysql, web_search
+from nap.master.agent.tools.builtin import BUILT_IN_TOOLKIT
 from nap.services.storage import STORE_SERVICE
 from pydantic import BaseModel
 from pystonic.common import context
@@ -61,15 +63,40 @@ class MasterManager(BaseManager):
         self.knowledge_client = default_client(
             base_url=CONF.master.knowledge_base_url, raise_for_status=True
         )
-        self._agent: AsyncAgent = None
+        self._agent: AsyncAgent = AsyncAgent()
 
     async def start(self):
         await super().start()
-        self._agent = AsyncAgent()
+        # self._agent = AsyncAgent()
 
     async def stop(self):
         await super().stop()
         await self._agent.stop()
+
+    def create_knowledge_base(
+        self, name: str, description: str = "", active: bool = True
+    ):
+        item = KnowledgeBase(
+            name=name,
+            description=description,
+            creator=context.getvar("account") or "guest",
+            active=active,
+        )
+        item.create()
+        return item
+
+    def list_knowledge_base(self, shared: bool = True):
+        if not shared:
+            return KnowledgeBase.query(
+                KnowledgeBase.creator == context.getvar("account")
+            )
+        return KnowledgeBase.query(
+            col(KnowledgeBase.uuid).in_(
+                KnowledgeBaseShared.get_knowledge_base_uuids_by_shared_with(
+                    context.getvar("account")
+                )
+            )
+        )
 
     def create_llm(self, name: str, base_url: str, api_key: str, models: list[str]):
         item = LLMs(
@@ -225,7 +252,7 @@ class MasterManager(BaseManager):
         mcp_tools = []
         try:
             mcp_tools = await mcp.get_tools(mcp_pool)
-        except ExceptionGroup as e:
+        except ExceptionGroup as e:  # noqa: F821
             logger.exception("get mcp tools failed: {}", e.exceptions)
             data = ChatSSE(
                 type="error",
@@ -236,6 +263,27 @@ class MasterManager(BaseManager):
 
         logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
         kb_uuids = knowledge_bases or db_agent.knowledge_bases
+        # 动态设置tools
+        user_tools = [*BUILT_IN_TOOLKIT.get_tools()]
+        if "web_search" in custom_tools:
+            user_tools.extend(
+                web_search.WebSearchToolkit(
+                    api_key=db_agent.tools.get("web_search", {})
+                ).get_tools()
+            )
+        if "web_search" in custom_tools:
+            user_tools.extend(
+                web_search.WebSearchToolkit.model_validate(
+                    db_agent.tools.get("web_search", {})
+                ).get_tools()
+            )
+        if "mysql" in custom_tools:
+            user_tools.extend(
+                mysql.MysqlToolkit.model_validate(
+                    db_agent.tools.get("mysql", {})
+                ).get_tools()
+            )
+
         runtime_context = RuntimeContext(
             models=llm.models,
             model=model,
@@ -246,10 +294,10 @@ class MasterManager(BaseManager):
             session_uuid=session.uuid,
             username=context.getvar("account") or "guest",
             system_prompt=db_agent.instruction,
-            tools=[x for x in CUSTOM_TOOLS if x.name in custom_tools] + mcp_tools,
+            tools=user_tools + mcp_tools,
             knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
             attachments=attachments,
-            tool_args=db_agent.tools,
+            # tool_args=db_agent.tools,
         )
 
         async for event in self._agent.chat(runtime_context, query):
@@ -272,7 +320,8 @@ class MasterManager(BaseManager):
             knowledge.set_status(KnowledgeStatus.pending_delete)
 
     def list_tools(self):
-        return [ToolModel.from_llm_tool(x) for x in CUSTOM_TOOLS]
+        return self._agent.toolkits
+        # return [ToolModel.from_llm_tool(x) for x in CUSTOM_TOOLS]
 
     async def list_messages(self, session: Session | str):
         return await self._agent.list_messages(session)

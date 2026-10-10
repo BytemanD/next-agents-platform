@@ -334,7 +334,7 @@ export class Api {
 
   // ---------- Tools ----------
   async fetchTools<T = unknown>() {
-    const { data } = await axios.get<T>('/api/v1/tools')
+    const { data } = await axios.get<T>('/api/v1/toolkits')
     return data
   }
 }

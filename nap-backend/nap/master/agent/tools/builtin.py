@@ -1,7 +1,8 @@
 """用户使用的工具"""
 
-import httpx
-from langchain.tools import ToolRuntime, tool
+from langchain.tools import ToolRuntime
+from langchain_core.tools import BaseToolkit, tool
+
 from loguru import logger
 from nap.common.knowledge_client import KnowledgeClient
 from nap.db.models import Attachment
@@ -125,42 +126,17 @@ async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str
     return CONVERT_SERVICE.convert(items[0], save_convert=False)
 
 
-@tool(
-    parse_docstring=True,
-    extras={
-        "title": "网络搜索(TavilyHub)",
-        "type": "web_search",
-        "requires": {"api_key": {"type": "string"}},
-        "help": (
-            "该工具需要需要在 TavilyHub 注册账号并创建API_KEY。"
-            "官网: https://tavily.sharyuke.com/dashboard"
-        ),
-    },
-)
-def tavily_hub_search(
-    runtime: ToolRuntime[RuntimeContext], query: str, max_results: int = 5
-):
-    """TavilyHub网络搜索工具。
+class BuiltInToolkit(BaseToolkit):
+    """知识库工具集"""
 
-    当需要联网获取新闻、咨询是使用。
+    def get_tools(self) -> list:
+        return [
+            get_username,
+            get_available_knowledge_bases,
+            retrival,
+            list_documents,
+            get_attachments,
+            get_attachment_content,
+        ]
 
-    Args:
-        query: 查询文本
-        max_results: 最大返回数量
-
-    Returns:
-        查询结果
-    """
-    api_key = runtime.context.tool_args.get("tavily_hub_search").get("api_key")
-    if not api_key:
-        raise ValueError("api key is required")
-
-    logger.info("tavily search: {}", query)
-    resp = httpx.post(
-        "https://tavily.sharyuke.com/api/proxy/search",
-        headers={"Authorization": api_key},
-        json={"query": query, "max_results": max_results},
-    )
-    logger.debug("tavily search result: {}", resp.text)
-    resp.raise_for_status()
-    return resp.text
+BUILT_IN_TOOLKIT = BuiltInToolkit()

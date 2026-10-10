@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { API } from '@/api'
 import type { Agent } from '@/types'
 
-const WEB_SEARCH_TOOL = 'tavily_hub_search'
+const WEB_SEARCH_TOOL = 'web_search'
 
 interface AgentAPI {
   uuid: string

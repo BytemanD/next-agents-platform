@@ -75,4 +75,8 @@ body,
 .text-nap-accent {
   color: var(--accent-100);
 }
+.bg-active {
+  background-color: var(--td-brand-color-2);
+}
+
 </style>
