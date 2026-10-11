@@ -1,6 +1,8 @@
+import asyncio
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, Response, UploadFile
+from nap.common.exceptions import AttachmentNotExists, NoPermission
 from nap.db.models import Attachment
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
@@ -39,7 +41,7 @@ async def upload_attachment(file: UploadFile):
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
 
-    attachment = await MANAGER.save_attachment(file.filename, content)
+    attachment = await MANAGER.save_attachment(file.filename or file.file.name, content)
     return AttachmentResponse(attachment=AttachmentItem.from_model(attachment))
 
 
@@ -60,3 +62,31 @@ async def delete_attachment(uuid: str):
         raise HTTPException(status_code=403, detail="No permission")
     MANAGER.delete_attachment(attachment)
     return None
+
+
+@router.get("/{uuid}", status_code=200)
+async def get_attachment(uuid: str):
+    try:
+        attachment = MANAGER.get_attachment(uuid)
+    except AttachmentNotExists as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except NoPermission as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    return attachment
+
+
+@router.get("/{uuid}/content", status_code=200)
+async def get_attachment_content(uuid: str):
+    try:
+        attachment = MANAGER.get_attachment(uuid)
+    except AttachmentNotExists as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except NoPermission as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+    return Response(
+        content=await asyncio.to_thread(MANAGER.get_attachment_content, attachment),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{attachment.name}"'},
+    )

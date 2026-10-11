@@ -4,9 +4,10 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from langchain_core.exceptions import ModelError
 from loguru import logger
+from nap.common.objects import ToolModel, Toolkit
 from nap.db.models import AgentConfig, AgentMCP, Agents, LLMs
 from nap.master.api.v1.llms import LLMBrief, _to_brief
-from nap.master.manager import MANAGER, ChatSSE, ToolModel
+from nap.master.manager import MANAGER, ChatSSE
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
 
@@ -75,7 +76,7 @@ class AgentDetail(BaseModel):
     status: str
     config: AgentConfig
     knowledge_bases: list[str] = []
-    tools: list[ToolModel] = []
+    tools: Sequence[ToolModel] = []
     mcps: Sequence[AgentMCP] = []
 
 
@@ -131,7 +132,7 @@ async def get_agent_detail(uuid: str):
         config=agent.config,
         knowledge_bases=agent.knowledge_bases,
         # 已启用的工具，联网搜索也包含在内（前端自行决定是否展示）
-        tools=[t for t in MANAGER.list_tools() if t.name in enabled],
+        tools=[ToolModel(name=x) for x in agent.tools.keys()],
         mcps=MANAGER.list_mcps(agent.mcp_uuids),
     )
     return detail

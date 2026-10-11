@@ -1,7 +1,7 @@
 import httpx
 from loguru import logger
 from nap.common.conf import CONF
-from nap.common.exceptions import LLMIsInvalid
+from nap.common.exceptions import AttachmentNotExists, LLMIsInvalid, NoPermission
 from nap.common.manager import BaseManager
 from nap.db.models import (
     AgentCallback,
@@ -208,7 +208,7 @@ class MasterManager(BaseManager):
             knowledge_base=kb.uuid,
             creator=context.getvar("account") or "guest",
             name=attachment.name,
-            size=0,
+            size=attachment.size,
             raw_path=attachment.raw_path,
             convert_path="",
             status=KnowledgeStatus.pending_process.value,
@@ -342,6 +342,17 @@ class MasterManager(BaseManager):
     def delete_attachment(self, attachment: Attachment):
         STORE_SERVICE.remove_attachment(attachment)
         attachment.delete()
+
+    def get_attachment(self, attachment_uuid: str):
+        try:
+            attachment = Attachment.get_by_uuid(attachment_uuid)
+        except ValueError:
+            raise AttachmentNotExists(attachment_uuid)
+        if attachment.creator != context.getvar("account"):
+            raise NoPermission()
+        return attachment
+    def get_attachment_content(self, attachment: Attachment):
+        return STORE_SERVICE.get_raw(attachment)
 
     def list_mcps(self, uuids: list[str] | None = None):
         criterion = [AgentMCP.creator == context.getvar("account")]

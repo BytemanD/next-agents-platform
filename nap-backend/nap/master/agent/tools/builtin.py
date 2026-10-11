@@ -1,16 +1,19 @@
 """用户使用的工具"""
 
 from datetime import datetime
-
+from asyncio import to_thread
 from langchain.tools import ToolRuntime
 from langchain_core.tools import BaseToolkit, tool
 
 from loguru import logger
 from nap.common.knowledge_client import KnowledgeClient
 from nap.db.models import Attachment
+from nap.master.agent import asyncio
 from nap.master.agent.context import RuntimeContext
 from nap.services.convert import CONVERT_SERVICE
+from nap.services.storage import STORE_SERVICE
 from sqlmodel import col
+from pystonic.common import context
 
 KNOWLEDGE_CLIENT = KnowledgeClient()
 
@@ -140,6 +143,29 @@ async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str
     return CONVERT_SERVICE.convert(items[0], save_convert=False)
 
 
+@tool(parse_docstring=True)
+async def save_text(filename: str, content: str, encoding: str='utf-8-sig'):
+    """保存文本到文件中
+
+    但需要保存文本内容时使用
+
+    Args:
+        filename: 文件名
+        content: 文本内容
+        encoding: 文件编码
+
+    Returns:
+        文件UUID
+    """
+    attachment = Attachment(
+        creator=context.getvar("account") or "guest",
+        name=filename,
+    )
+    attachment.create()
+    await to_thread(STORE_SERVICE.save_text, attachment, content, encoding=encoding)
+    return attachment.uuid
+
+
 class BuiltInToolkit(BaseToolkit):
     """知识库工具集"""
 
@@ -147,6 +173,7 @@ class BuiltInToolkit(BaseToolkit):
         return [
             get_username,
             get_iso_datetime,
+            save_text,
             get_available_knowledge_bases,
             retrival,
             list_documents,

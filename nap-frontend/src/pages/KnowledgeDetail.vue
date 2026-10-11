@@ -61,10 +61,11 @@
         <t-tag shape="round" v-else variant="light-outline">{{ row.status }}</t-tag>
       </template>
       <template #operation="{ row }">
+        <t-button variant="text" size="small">预览</t-button>
         <t-popconfirm :content="`确定删除文档「${row.name}」吗？`" theme="danger" @confirm="handleDelete(row)">
-          <t-button variant="text" theme="danger">删除</t-button>
+          <t-button  variant="text" size="small" theme="danger" >删除</t-button>
         </t-popconfirm>
-        <t-button variant="text" theme="primary" @click="handleShowDetail(row)">详情</t-button>
+        <t-button variant="text" size="small" theme="primary" @click="handleShowDetail(row)">详情</t-button>
       </template>
     </t-table>
   </t-card>

@@ -371,9 +371,9 @@ class Attachment(DBModel, table=True):
 
     creator: str = Field(nullable=False, description="knowledge creator")
     name: str = Field(nullable=False, description="文档文件名称")
-    size: int = Field(nullable=False, description="文档文件大小(bytes)")
-    raw_path: str | None = Field(nullable=True, description="源文档存储路径")
-    convert_path: str | None = Field(nullable=True, description="转化后文档存储路径")
+    size: int = Field(nullable=False, default=0, description="文档文件大小(bytes)")
+    raw_path: str | None = Field(nullable=True, default=None, description="源文档存储路径")
+    convert_path: str | None = Field(nullable=True, default=None, description="转化后文档存储路径")
 
 
 class AgentMCP(DBModel, table=True):

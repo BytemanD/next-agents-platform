@@ -5,6 +5,7 @@ from pathlib import Path
 from loguru import logger
 from nap.common.conf import CONF
 from nap.db.models import Attachment, Knowledge
+from pystonic.utils import funcutil
 
 
 class StorageSchema(StrEnum):
@@ -22,7 +23,7 @@ class StorageService:
         return self.local_root / file_path
 
     def save_raw(self, knowledge: Knowledge, content: bytes | str):
-        file_path = f"raw/{knowledge.creator}/{knowledge.name}"
+        file_path = f"{knowledge.creator}/raw/{knowledge.name}"
         real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(content, bytes):
@@ -33,7 +34,7 @@ class StorageService:
         knowledge.save()
 
     def save_convert(self, knowledge: Knowledge, content: str):
-        file_path = f"convert/{knowledge.knowledge_base}/{knowledge.name}"
+        file_path = f"{knowledge.creator}/convert/{knowledge.knowledge_base}/{knowledge.name}"
         real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
         real_path.write_text(content)
@@ -74,20 +75,20 @@ class StorageService:
             raise ValueError("knowledge raw_path is missing")
         return self._real_path(item.raw_path)
 
-    def get_attachment_raw(self, file_key: str) -> bytes:
-        real_path = self.local_root / f"tmp/attachments/{file_key}/raw"
-        if not real_path.exists():
-            raise FileNotFoundError(f"attachment {file_key} does not exist")
-        return real_path.read_bytes()
+    # def get_attachment_raw(self, file_key: str) -> bytes:
+    #     real_path = self.local_root / f"tmp/attachments/{file_key}/raw"
+    #     if not real_path.exists():
+    #         raise FileNotFoundError(f"attachment {file_key} does not exist")
+    #     return real_path.read_bytes()
 
-    def get_attachment_path(self, file_key: str) -> Path:
-        real_path = self.local_root / f"tmp/attachments/{file_key}/raw"
-        if not real_path.exists():
-            raise FileNotFoundError(f"attachment {file_key} does not exist")
-        return real_path
+    # def get_attachment_path(self, file_key: str) -> Path:
+    #     real_path = self.local_root / f"tmp/attachments/{file_key}/raw"
+    #     if not real_path.exists():
+    #         raise FileNotFoundError(f"attachment {file_key} does not exist")
+    #     return real_path
 
     def save_attachment_raw(self, attachment: Attachment, content: bytes):
-        file_path = f"raw/{attachment.creator}/{attachment.name}"
+        file_path = f"{attachment.creator}/attachments/{attachment.name}"
         real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info("save attachment: {}({})", attachment.uuid, attachment.name)
@@ -95,30 +96,26 @@ class StorageService:
         attachment.raw_path = f"{StorageSchema.local}{file_path}"
         attachment.save()
 
-    def save_attachment_convert(self, file_key: str, content: str):
-        real_path = self.local_root / f"tmp/attachments/{file_key}/convert.txt"
+    # def save_attachment_convert(self, file_key: str, content: str):
+    #     real_path = self.local_root / f"tmp/attachments/{file_key}/convert.txt"
+    #     real_path.parent.mkdir(parents=True, exist_ok=True)
+    #     real_path.write_text(content)
+
+
+    # def has_attachment(self, file_key: str) -> bool:
+    #     return (self.local_root / f"tmp/attachments/{file_key}/raw").exists()
+
+    @funcutil.timeit
+    def save_text(self, attachment: Attachment, content: str, encoding='utf-8-sig'):
+        file_path = f"{attachment.creator}/attachments/{attachment.name}"
+        real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
-        real_path.write_text(content)
-
-    def get_attachment_convert(self, file_key: str) -> str:
-        real_path = self.local_root / f"tmp/attachments/{file_key}/convert.txt"
-        if not real_path.exists():
-            raise FileNotFoundError(f"attachment {file_key} has not been converted")
-        return real_path.read_text()
-
-    def save_attachment_name(self, file_key: str, name: str):
-        real_path = self.local_root / f"tmp/attachments/{file_key}/name.txt"
-        real_path.parent.mkdir(parents=True, exist_ok=True)
-        real_path.write_text(name)
-
-    def get_attachment_name(self, file_key: str) -> str:
-        real_path = self.local_root / f"tmp/attachments/{file_key}/name.txt"
-        if not real_path.exists():
-            return ""
-        return real_path.read_text().strip()
-
-    def has_attachment(self, file_key: str) -> bool:
-        return (self.local_root / f"tmp/attachments/{file_key}/raw").exists()
+        logger.info("save attachment: {}({})", attachment.uuid, attachment.name)
+        real_path.write_text(content, encoding=encoding)
+        logger.success('write text success')
+        attachment.raw_path = f"{StorageSchema.local}{file_path}"
+        attachment.size = len(content)
+        attachment.save()
 
 
 STORE_SERVICE = StorageService()

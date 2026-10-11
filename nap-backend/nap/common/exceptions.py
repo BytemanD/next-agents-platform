@@ -45,3 +45,13 @@ class DocumentNotFound(Exception):
 class AuthFailed(Exception):
     def __init__(self, detail: str) -> None:
         super().__init__(f"invalid token: {detail}")
+
+
+class AttachmentNotExists(Exception):
+    def __init__(self, uuid: str) -> None:
+        super().__init__(f"Attachment {uuid} not exists")
+
+
+class NoPermission(Exception):
+    def __init__(self, detail: str = "No permission") -> None:
+        super().__init__(detail)
