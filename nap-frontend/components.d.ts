@@ -70,6 +70,8 @@ declare module 'vue' {
     TStatistic: typeof import('tdesign-vue-next')['Statistic']
     TStepItem: typeof import('tdesign-vue-next')['StepItem']
     TSteps: typeof import('tdesign-vue-next')['Steps']
+    TStickyItem: typeof import('tdesign-vue-next')['StickyItem']
+    TStickyTool: typeof import('tdesign-vue-next')['StickyTool']
     TSubmenu: typeof import('tdesign-vue-next')['Submenu']
     TSwitch: typeof import('tdesign-vue-next')['Switch']
     TTable: typeof import('tdesign-vue-next')['Table']

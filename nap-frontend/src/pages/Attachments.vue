@@ -22,8 +22,8 @@
         <t-icon name="file" size="40" class="text-nap-text-tertiary" />
       </template>
     </t-empty>
-    <t-table v-else size="small" :data="filteredAttachments" :columns="columns" :pagination="pagination" rowKey="uuid" hover
-      :selected-row-keys="selectedUuids" select-on-row-click @select-change="handleSelectChange">
+    <t-table v-else size="small" :data="filteredAttachments" :columns="columns" :pagination="pagination" rowKey="uuid"
+      hover :selected-row-keys="selectedUuids" select-on-row-click @select-change="handleSelectChange">
       <template #size="{ row }">
         {{ filesize(row.size) }}
       </template>
@@ -32,8 +32,9 @@
       </template>
       <template #operation="{ row }">
         <t-popconfirm :content="`确定删除附件「${row.name}」吗？`" theme="danger" @confirm="handleDelete(row)">
-          <t-button variant="text" theme="danger">删除</t-button>
+          <t-button size="small" variant="text" theme="danger">删除</t-button>
         </t-popconfirm>
+        <t-button size="small" v-if="canPreview(row.name)" variant="text" @click="openPreview(row.uuid)">预览</t-button>
       </template>
     </t-table>
   </t-card>
@@ -77,10 +78,11 @@ const kbOptions = computed(() =>
 
 const columns: PrimaryTableCol[] = [
   { colKey: 'row-select', type: 'multiple', width: 48 },
+  { colKey: 'uuid', title: 'ID', width: 340 },
   { colKey: 'name', title: '文件名', ellipsis: true },
   { colKey: 'size', title: '大小', align: 'right' },
   { colKey: 'created_at', title: '上传时间' },
-  { colKey: 'operation', title: '操作', width: 100 },
+  { colKey: 'operation', title: '操作', width: 150 },
 ]
 
 const filteredAttachments = computed(() => {
@@ -97,6 +99,18 @@ const pagination = computed(() => ({
 
 function handleSelectChange(keys: Array<string | number>) {
   selectedUuids.value = keys.map(String)
+}
+
+function openPreview(uuid: string) {
+  window.open(`/attachments/${uuid}`, '_blank')
+}
+
+const PREVIEWABLE_EXTS = ['md', 'markdown', 'txt', 'text', 'log', 'html', 'htm']
+
+function canPreview(name: string) {
+  const i = (name || '').lastIndexOf('.')
+  if (i < 0) return false
+  return PREVIEWABLE_EXTS.includes(name.slice(i + 1).toLowerCase())
 }
 
 

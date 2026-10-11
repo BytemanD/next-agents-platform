@@ -17,6 +17,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '注册' }
   },
   {
+    path: '/attachments/:id',
+    name: 'AttachmentPreview',
+    component: () => import('@/pages/AttachmentPreview.vue'),
+    meta: { title: '附件预览' }
+  },
+  {
     path: '/',
     component: MainLayout,
     children: [

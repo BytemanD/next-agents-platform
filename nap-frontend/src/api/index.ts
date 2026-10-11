@@ -183,6 +183,18 @@ export class Api {
     return data as T
   }
 
+  async fetchAttachment<T = unknown>(uuid: string) {
+    const { data } = await axios.get(`/api/v1/attachments/${uuid}`)
+    return data as T
+  }
+
+  async fetchAttachmentContent(uuid: string) {
+    const { data } = await axios.get(`/api/v1/attachments/${uuid}/content`, {
+      responseType: 'text',
+    })
+    return data as string
+  }
+
   async deleteAttachment<T = unknown>(uuid: string) {
     const { data } = await axios.delete(`/api/v1/attachments/${uuid}`)
     return data as T
