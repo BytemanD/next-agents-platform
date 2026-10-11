@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Sequence
 
 from fastapi import APIRouter, HTTPException
 from nap.db.models import LLMs
@@ -32,6 +32,10 @@ class LLMResponse(BaseModel):
     updated_at: str
 
 
+class LLMsResponse(BaseModel):
+    llms: Sequence[LLMs] = []
+
+
 class LLMBrief(BaseModel):
     """不含密钥的 LLM 信息，用于内嵌到其他响应里。
 
@@ -42,15 +46,6 @@ class LLMBrief(BaseModel):
     name: str = ""
     base_url: str = ""
     models: list[str] = []
-
-
-def _to_brief(d: LLMs) -> LLMBrief:
-    return LLMBrief(
-        uuid=d.uuid,
-        name=d.name,
-        base_url=d.base_url,
-        models=d.models,
-    )
 
 
 def _to_response(d: LLMs) -> LLMResponse:
@@ -65,9 +60,9 @@ def _to_response(d: LLMs) -> LLMResponse:
     )
 
 
-@router.get("")
+@router.get("", response_model=LLMsResponse)
 async def list_llms():
-    return {"llms": [_to_response(x) for x in LLMs.query()]}
+    return LLMsResponse(llms=MANAGER.list_llm())
 
 
 @router.get("/{uuid}")

@@ -61,11 +61,11 @@
         <t-tag shape="round" v-else variant="light-outline">{{ row.status }}</t-tag>
       </template>
       <template #operation="{ row }">
-        <t-button variant="text" size="small">预览</t-button>
         <t-popconfirm :content="`确定删除文档「${row.name}」吗？`" theme="danger" @confirm="handleDelete(row)">
           <t-button  variant="text" size="small" theme="danger" >删除</t-button>
         </t-popconfirm>
         <t-button variant="text" size="small" theme="primary" @click="handleShowDetail(row)">详情</t-button>
+        <t-button v-if="canPreview(row.name)" variant="text" size="small" @click="openPreview(row.uuid)">预览</t-button>
       </template>
     </t-table>
   </t-card>
@@ -239,7 +239,7 @@ const columns = [
     colKey: 'created_at', title: '上传时间', width: 100, cell: (h: any, { row }: any) => h('span', new Date(row.created_at).toLocaleString())
   },
   {
-    colKey: 'operation', title: '操作', width: 80, fixed: 'right',
+    colKey: 'operation', title: '操作', width: 150, fixed: 'right',
     // cell: (h: any, { row }: any) => h('div', { class: 'flex justify-center' }, [
     //   h(Popconfirm,
     //     {
@@ -264,6 +264,18 @@ async function handleDelete(row: any) {
   } catch {
     MessagePlugin.error('删除失败')
   }
+}
+
+function openPreview(uuid: string) {
+  window.open(`/knowledges/${uuid}`, '_blank')
+}
+
+const PREVIEWABLE_EXTS = ['md', 'markdown', 'txt', 'text', 'log', 'html', 'htm']
+
+function canPreview(name: string) {
+  const i = (name || '').lastIndexOf('.')
+  if (i < 0) return false
+  return PREVIEWABLE_EXTS.includes(name.slice(i + 1).toLowerCase())
 }
 
 function handleUpload() {

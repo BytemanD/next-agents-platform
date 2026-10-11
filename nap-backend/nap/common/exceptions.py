@@ -24,7 +24,7 @@ class LLMRateLimitError(Exception):
 
 class EnrichFailed(Exception):
     def __init__(self, detail: str) -> None:
-        super().__init__(f"enrich documen failed: {detail}")
+        super().__init__(f"enrich document failed: {detail}")
 
 
 class EnrichmentAlreadyExists(Exception):

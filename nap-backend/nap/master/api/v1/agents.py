@@ -4,9 +4,9 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from langchain_core.exceptions import ModelError
 from loguru import logger
-from nap.common.objects import ToolModel, Toolkit
+from nap.common.objects import ToolModel
 from nap.db.models import AgentConfig, AgentMCP, Agents, LLMs
-from nap.master.api.v1.llms import LLMBrief, _to_brief
+from nap.master.api.v1.llms import LLMBrief
 from nap.master.manager import MANAGER, ChatSSE
 from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
@@ -118,7 +118,7 @@ async def get_agent_detail(uuid: str):
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    enabled = set(agent.tools.keys())
+    # enabled = set(agent.tools.keys())
     # 用 query 而非 get_by_uuid：后者在找不到时抛 ValueError，会让整个接口 500
     llm_items = LLMs.query(LLMs.uuid == agent.llm) if agent.llm else []
     llm = llm_items[0] if llm_items else None
@@ -127,7 +127,9 @@ async def get_agent_detail(uuid: str):
         name=agent.name,
         description=agent.description,
         instruction=agent.instruction,
-        llm=_to_brief(llm) if llm else LLMBrief(uuid=agent.llm or ""),
+        llm=LLMBrief.model_validate(llm, from_attributes=True)
+        if llm
+        else LLMBrief(uuid=agent.llm or ""),
         status=agent.status,
         config=agent.config,
         knowledge_bases=agent.knowledge_bases,

@@ -8,7 +8,6 @@ from langchain_core.tools import BaseToolkit, tool
 from loguru import logger
 from nap.common.knowledge_client import KnowledgeClient
 from nap.db.models import Attachment
-from nap.master.agent import asyncio
 from nap.master.agent.context import RuntimeContext
 from nap.services.convert import CONVERT_SERVICE
 from nap.services.storage import STORE_SERVICE
@@ -144,7 +143,7 @@ async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str
 
 
 @tool(parse_docstring=True)
-async def save_text(filename: str, content: str, encoding: str='utf-8-sig'):
+async def save_text(filename: str, content: str, encoding: str = "utf-8-sig"):
     """保存文本到文件中
 
     但需要保存文本内容时使用

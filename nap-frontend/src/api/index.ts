@@ -312,6 +312,13 @@ export class Api {
     return data
   }
 
+  async fetchKnowledgeContent(uuid: string) {
+    const { data } = await axios.get(`/api/v1/knowledges/${uuid}/content`, {
+      responseType: 'text',
+    })
+    return data as string
+  }
+
   async uploadKbFile(kbId: string, file: File) {
     const form = new FormData()
     form.append('file', file)

@@ -72,6 +72,9 @@ class MasterManager(BaseManager):
         await super().stop()
         await self._agent.stop()
 
+    def list_llm(self):
+        return LLMs.query(LLMs.user == context.getvar("account"))
+
     def create_knowledge_base(
         self, name: str, description: str = "", active: bool = True
     ):
@@ -312,6 +315,9 @@ class MasterManager(BaseManager):
             logger.error("CALL knowledge service failed: {}", e)
             knowledge.set_status(KnowledgeStatus.pending_delete)
 
+    def get_knowledge_content(self, knowledge: Knowledge) -> bytes:
+        return STORE_SERVICE.get_raw(knowledge)
+
     def list_tools(self):
         return self._agent.toolkits
         # return [ToolModel.from_llm_tool(x) for x in CUSTOM_TOOLS]
@@ -351,6 +357,7 @@ class MasterManager(BaseManager):
         if attachment.creator != context.getvar("account"):
             raise NoPermission()
         return attachment
+
     def get_attachment_content(self, attachment: Attachment):
         return STORE_SERVICE.get_raw(attachment)
 

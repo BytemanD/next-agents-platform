@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 import bcrypt
+import dotenv
 from fastapi import FastAPI
 from loguru import logger
 from nap.db.migrate import ensure_columns
@@ -22,11 +23,13 @@ from nap.master.manager import MANAGER
 from pystonic.asgi.app import create_app
 from pystonic.asgi.middlewares.trace import TraceIdMiddleware
 from pystonic.asgi.plugins import auth
-from pystonic.common.log import setup_logger
+from pystonic.common import log
+
 from pystonic.orm.database import create_all_tables
 from starlette.authentication import AuthenticationError
 
-setup_logger(remove=True)
+dotenv.load_dotenv()
+log.setup_logger(remove=True)
 
 
 @asynccontextmanager

@@ -1,6 +1,9 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+import asyncio
+from urllib.parse import quote
+
+from fastapi import APIRouter, HTTPException, Response
 from nap.db.models import Knowledge, KnowledgeStatus, KnowledgeTodo
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
@@ -66,6 +69,26 @@ async def get_knowledge_todos(uuid: str):
         raise HTTPException(status_code=404, detail="Knowledge not found")
     items = KnowledgeTodo.query(KnowledgeTodo.knowlwdge_uuid == uuid)
     return {"items": items}
+
+
+@router.get("/{uuid}/content")
+async def get_knowledge_content(uuid: str):
+    k = Knowledge.get_by_uuid(uuid)
+    if not k:
+        raise HTTPException(status_code=404, detail="Knowledge not found")
+    try:
+        content = await asyncio.to_thread(MANAGER.get_knowledge_content, k)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return Response(
+        content=content,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(k.name, safe='')}"
+        },
+    )
 
 
 @router.put("/{uuid}")

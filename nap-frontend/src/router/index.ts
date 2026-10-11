@@ -19,8 +19,14 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/attachments/:id',
     name: 'AttachmentPreview',
-    component: () => import('@/pages/AttachmentPreview.vue'),
-    meta: { title: '附件预览' }
+    component: () => import('@/pages/FilePreview.vue'),
+    meta: { title: '附件预览', source: 'attachment' }
+  },
+  {
+    path: '/knowledges/:id',
+    name: 'KnowledgePreview',
+    component: () => import('@/pages/FilePreview.vue'),
+    meta: { title: '文档预览', source: 'knowledge' }
   },
   {
     path: '/',

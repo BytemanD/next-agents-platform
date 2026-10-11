@@ -89,5 +89,7 @@ async def get_attachment_content(uuid: str):
     return Response(
         content=await asyncio.to_thread(MANAGER.get_attachment_content, attachment),
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(attachment.name, safe='')}"},
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(attachment.name, safe='')}"
+        },
     )

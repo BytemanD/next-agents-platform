@@ -23,7 +23,7 @@
     </t-loading>
 
   </div>
-  <t-button v-if="!loading && meta" class="fixed bottom-6 right-6" shape="circle" size="large" @click="handleDownload">
+  <t-button v-if="!loading && name && source === 'attachment'" class="fixed bottom-6 right-6" shape="circle" size="large" @click="handleDownload">
     <template #icon><t-icon name="download" /></template>
   </t-button>
 </template>
@@ -35,12 +35,13 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { API } from '@/api'
-import type { Attachment } from '@/types'
+import type { Attachment, KnowledgeDetail } from '@/types'
 
 const route = useRoute()
 const uuid = computed(() => String(route.params.id || ''))
+const source = computed(() => String(route.meta.source || 'attachment'))
 
-const meta = ref<Attachment | null>(null)
+const name = ref('')
 const content = ref('')
 const loading = ref(true)
 const error = ref('')
@@ -62,9 +63,8 @@ const md = new MarkdownIt({
 })
 
 const ext = computed(() => {
-  const name = meta.value?.name || ''
-  const i = name.lastIndexOf('.')
-  return i >= 0 ? name.slice(i + 1).toLowerCase() : ''
+  const i = name.value.lastIndexOf('.')
+  return i >= 0 ? name.value.slice(i + 1).toLowerCase() : ''
 })
 
 type Kind = 'markdown' | 'html' | 'text' | 'unsupported'
@@ -91,13 +91,21 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    meta.value = await API.fetchAttachment<Attachment>(uuid.value)
-    if (kind.value === 'unsupported') return
-    content.value = await API.fetchAttachmentContent(uuid.value)
+    if (source.value === 'knowledge') {
+      const detail = await API.fetchKnowledgeDetail<KnowledgeDetail>(uuid.value)
+      name.value = detail.name || ''
+      if (kind.value === 'unsupported') return
+      content.value = await API.fetchKnowledgeContent(uuid.value)
+    } else {
+      const meta = await API.fetchAttachment<Attachment>(uuid.value)
+      name.value = meta.name || ''
+      if (kind.value === 'unsupported') return
+      content.value = await API.fetchAttachmentContent(uuid.value)
+    }
   } catch (e: unknown) {
     const err = e as { response?: { status?: number }; message?: string }
     const status = err?.response?.status
-    if (status === 404) error.value = '附件不存在'
+    if (status === 404) error.value = source.value === 'knowledge' ? '文档不存在' : '附件不存在'
     else if (status === 403) error.value = '无权限'
     else error.value = err?.message || '加载失败'
   } finally {
@@ -112,7 +120,7 @@ async function handleDownload() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = meta.value?.name || 'download'
+    a.download = name.value || 'download'
     a.click()
     URL.revokeObjectURL(url)
   } catch {
@@ -235,4 +243,14 @@ onMounted(load)
   border-top: 1px solid var(--td-component-border);
 }
 
+.txt-body {
+  margin: 0;
+  padding: 4px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--td-text-color-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 </style>

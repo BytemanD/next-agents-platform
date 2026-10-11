@@ -23,7 +23,7 @@ class StorageService:
         return self.local_root / file_path
 
     def save_raw(self, knowledge: Knowledge, content: bytes | str):
-        file_path = f"{knowledge.creator}/raw/{knowledge.name}"
+        file_path = f"users/{knowledge.creator}/raw/{knowledge.name}"
         real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(content, bytes):
@@ -34,10 +34,10 @@ class StorageService:
         knowledge.save()
 
     def save_convert(self, knowledge: Knowledge, content: str):
-        file_path = f"{knowledge.creator}/convert/{knowledge.knowledge_base}/{knowledge.name}"
+        file_path = f"users/{knowledge.creator}/convert/{knowledge.knowledge_base}/{knowledge.name}"
         real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
-        real_path.write_text(content)
+        real_path.write_bytes(content.encode())
         knowledge.convert_path = f"{StorageSchema.local}{file_path}"
         knowledge.save()
 
@@ -88,7 +88,7 @@ class StorageService:
     #     return real_path
 
     def save_attachment_raw(self, attachment: Attachment, content: bytes):
-        file_path = f"{attachment.creator}/attachments/{attachment.name}"
+        file_path = f"users/{attachment.creator}/attachments/{attachment.name}"
         real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info("save attachment: {}({})", attachment.uuid, attachment.name)
@@ -101,18 +101,17 @@ class StorageService:
     #     real_path.parent.mkdir(parents=True, exist_ok=True)
     #     real_path.write_text(content)
 
-
     # def has_attachment(self, file_key: str) -> bool:
     #     return (self.local_root / f"tmp/attachments/{file_key}/raw").exists()
 
     @funcutil.timeit
-    def save_text(self, attachment: Attachment, content: str, encoding='utf-8-sig'):
-        file_path = f"{attachment.creator}/attachments/{attachment.name}"
+    def save_text(self, attachment: Attachment, content: str, encoding="utf-8-sig"):
+        file_path = f"users/{attachment.creator}/attachments/{attachment.name}"
         real_path = self._real_path(file_path)
         real_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info("save attachment: {}({})", attachment.uuid, attachment.name)
         real_path.write_text(content, encoding=encoding)
-        logger.success('write text success')
+        logger.success("write text success")
         attachment.raw_path = f"{StorageSchema.local}{file_path}"
         attachment.size = len(content)
         attachment.save()
