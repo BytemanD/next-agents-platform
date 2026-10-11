@@ -39,9 +39,7 @@ class KnowledgeResponse(BaseModel):
 
 @router.get("")
 async def list_knowledge():
-    return {
-        "items": Knowledge.query(Knowledge.status != KnowledgeStatus.delete_completed)
-    }
+    return {"items": Knowledge.query(Knowledge.status != KnowledgeStatus.deleted)}
 
 
 @router.get("/{uuid}")

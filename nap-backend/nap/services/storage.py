@@ -105,16 +105,24 @@ class StorageService:
     #     return (self.local_root / f"tmp/attachments/{file_key}/raw").exists()
 
     @funcutil.timeit
-    def save_text(self, attachment: Attachment, content: str, encoding="utf-8-sig"):
+    def save_text(
+        self,
+        attachment: Attachment,
+        content: str,
+        encoding="utf-8-sig",
+        overwrite: bool = False,
+    ):
         file_path = f"users/{attachment.creator}/attachments/{attachment.name}"
         real_path = self._real_path(file_path)
+        if real_path.exists() and not overwrite:
+            raise FileExistsError()
         real_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info("save attachment: {}({})", attachment.uuid, attachment.name)
         real_path.write_text(content, encoding=encoding)
         logger.success("write text success")
         attachment.raw_path = f"{StorageSchema.local}{file_path}"
         attachment.size = len(content)
-        attachment.save()
+        # attachment.save()
 
 
 STORE_SERVICE = StorageService()

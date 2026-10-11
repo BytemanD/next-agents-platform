@@ -7,7 +7,7 @@ from langchain_core.tools import BaseToolkit, tool
 
 from loguru import logger
 from nap.common.knowledge_client import KnowledgeClient
-from nap.db.models import Attachment
+from nap.db.models import Attachment, Knowledge
 from nap.master.agent.context import RuntimeContext
 from nap.services.convert import CONVERT_SERVICE
 from nap.services.storage import STORE_SERVICE
@@ -143,15 +143,18 @@ async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str
 
 
 @tool(parse_docstring=True)
-async def save_text(filename: str, content: str, encoding: str = "utf-8-sig"):
+async def save_text(
+    filename: str, content: str, encoding: str = "utf-8-sig", overwrite: bool = False
+):
     """保存文本到文件中
 
-    但需要保存文本内容时使用
+    当需要保存文本内容时使用。建议文件加上日期和时间，避免文件名冲突。
 
     Args:
         filename: 文件名
         content: 文本内容
         encoding: 文件编码
+        overwrite: 如果文件已经存在是否覆盖
 
     Returns:
         文件UUID
@@ -160,9 +163,43 @@ async def save_text(filename: str, content: str, encoding: str = "utf-8-sig"):
         creator=context.getvar("account") or "guest",
         name=filename,
     )
+    await to_thread(
+        STORE_SERVICE.save_text,
+        attachment,
+        content,
+        encoding=encoding,
+        overwrite=overwrite,
+    )
     attachment.create()
-    await to_thread(STORE_SERVICE.save_text, attachment, content, encoding=encoding)
     return attachment.uuid
+
+
+@tool(parse_docstring=True)
+async def get_document_preview_url(uuid: str):
+    """获取文档预览地址
+
+    当需要获取知识文档、附件或者其他文件的预览链接时使用。
+
+    Args:
+        uuid: 文档UUID
+
+    Returns:
+        预览地址,格式： [文件名](地址)
+    """
+    try:
+        item = Knowledge.get_by_uuid(uuid)
+        return f"[{item.name}](/knowledges/{uuid})"
+    except ValueError:
+        pass
+
+    try:
+        item = Attachment.get_by_uuid(uuid)
+        return f"[{item.name}](/attachments/{uuid})"
+    except ValueError:
+        pass
+
+    logger.warning("get doc with uuid: {} failed", uuid)
+    raise ValueError("doc with uuid: {} not found")
 
 
 class BuiltInToolkit(BaseToolkit):
@@ -173,6 +210,7 @@ class BuiltInToolkit(BaseToolkit):
             get_username,
             get_iso_datetime,
             save_text,
+            get_document_preview_url,
             get_available_knowledge_bases,
             retrival,
             list_documents,
