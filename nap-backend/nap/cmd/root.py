@@ -1,11 +1,16 @@
+import os
+
 import click
 
-from nap.cmd import agent, session, knowledge, knowledge_base, tools
+import dotenv
+from nap.cmd import agent, session, knowledge, llm, knowledge_base, tools
+from pystonic.common import context
 
 
 @click.group()
 def root():
-    pass
+    dotenv.load_dotenv()
+    context.setvars(account=os.getenv("NAP_USERNAME"))
 
 
 def main():
@@ -14,6 +19,7 @@ def main():
     root.add_command(agent.root)
     root.add_command(session.root)
     root.add_command(tools.root)
+    root.add_command(llm.root)
     root()
 
 

@@ -62,15 +62,22 @@ class MasterManager(BaseManager):
         self.knowledge_client = default_client(
             base_url=CONF.master.knowledge_base_url, raise_for_status=True
         )
-        self._agent: AsyncAgent = AsyncAgent()
+        self._agent: AsyncAgent | None = None
 
     async def start(self):
         await super().start()
-        # self._agent = AsyncAgent()
+        self._agent = AsyncAgent()
+
+    @property
+    def agent(self):
+        if not self._agent:
+            self._agent = AsyncAgent()
+        return self._agent
 
     async def stop(self):
         await super().stop()
-        await self._agent.stop()
+        if self._agent:
+            await self._agent.stop()
 
     def list_llm(self):
         return LLMs.query(LLMs.user == context.getvar("account"))
@@ -296,7 +303,7 @@ class MasterManager(BaseManager):
             # tool_args=db_agent.tools,
         )
 
-        async for event in self._agent.chat(runtime_context, query):
+        async for event in self.agent.chat(runtime_context, query):
             if isinstance(event, AgentCallback):
                 self.run_background_job(event.create)
                 continue
@@ -319,11 +326,11 @@ class MasterManager(BaseManager):
         return STORE_SERVICE.get_raw(knowledge)
 
     def list_tools(self):
-        return self._agent.toolkits
+        return self.agent.toolkits
         # return [ToolModel.from_llm_tool(x) for x in CUSTOM_TOOLS]
 
     async def list_messages(self, session: Session | str):
-        return await self._agent.list_messages(session)
+        return await self.agent.list_messages(session)
 
     async def save_attachment(self, name: str, content: bytes):
         attachment = Attachment(
