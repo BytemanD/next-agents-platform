@@ -1,5 +1,7 @@
 """用户使用的工具"""
 
+from datetime import datetime
+
 from langchain.tools import ToolRuntime
 from langchain_core.tools import BaseToolkit, tool
 
@@ -23,6 +25,18 @@ def get_username(runtime: ToolRuntime[RuntimeContext]):
         用户名
     """
     return runtime.context.username
+
+
+@tool
+def get_iso_datetime(runtime: ToolRuntime[RuntimeContext]):
+    """获取当前日期和时间
+
+    当需要获取当前日期和时间时使用。
+
+    Returns:
+        ISO格式日期和时间
+    """
+    return datetime.now().isoformat()
 
 
 @tool
@@ -132,11 +146,13 @@ class BuiltInToolkit(BaseToolkit):
     def get_tools(self) -> list:
         return [
             get_username,
+            get_iso_datetime,
             get_available_knowledge_bases,
             retrival,
             list_documents,
             get_attachments,
             get_attachment_content,
         ]
+
 
 BUILT_IN_TOOLKIT = BuiltInToolkit()

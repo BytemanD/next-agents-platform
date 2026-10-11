@@ -5,7 +5,6 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from nap.db.models import Attachment, Knowledge, KnowledgeBase, User
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
-from pystonic.common import context
 from starlette import status
 
 router = APIRouter(prefix="/knowledge-bases", tags=["知识库"])

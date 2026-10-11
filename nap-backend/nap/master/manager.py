@@ -3,7 +3,6 @@ from loguru import logger
 from nap.common.conf import CONF
 from nap.common.exceptions import LLMIsInvalid
 from nap.common.manager import BaseManager
-from nap.common.objects import ToolModel
 from nap.db.models import (
     AgentCallback,
     AgentMCP,
@@ -265,12 +264,6 @@ class MasterManager(BaseManager):
         kb_uuids = knowledge_bases or db_agent.knowledge_bases
         # 动态设置tools
         user_tools = [*BUILT_IN_TOOLKIT.get_tools()]
-        if "web_search" in custom_tools:
-            user_tools.extend(
-                web_search.WebSearchToolkit(
-                    api_key=db_agent.tools.get("web_search", {})
-                ).get_tools()
-            )
         if "web_search" in custom_tools:
             user_tools.extend(
                 web_search.WebSearchToolkit.model_validate(
