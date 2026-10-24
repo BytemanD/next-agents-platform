@@ -1,8 +1,8 @@
 import os
+from collections.abc import Sequence
 from datetime import date, timedelta
 from enum import IntEnum, StrEnum, auto
 from pathlib import Path
-from typing import Sequence
 
 from nap.common.exceptions import AgentNotExists
 from nap.db.types import AgentConfig, PydanticType

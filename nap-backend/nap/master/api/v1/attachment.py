@@ -62,7 +62,6 @@ async def delete_attachment(uuid: str):
     if attachment.creator != context.getvar("account"):
         raise HTTPException(status_code=403, detail="No permission")
     MANAGER.delete_attachment(attachment)
-    return None
 
 
 @router.get("/{uuid}", status_code=200)

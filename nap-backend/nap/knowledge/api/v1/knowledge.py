@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException
-
 from nap.db.models import Knowledge
 from nap.knowledge.manager import MANAGER
 

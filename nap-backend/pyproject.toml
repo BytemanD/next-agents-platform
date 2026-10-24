@@ -5,11 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.20.0",
     "apscheduler>=3.11.3",
+    "boto3>=1.43.118",
     "chromadb>=1.5.9",
     # "dashscope>=1.27.5",
     "dashscope>=1.27.5",
-    "fastapi>=0.141.1",
+    "fastapi>=0.162.0",
     "langchain>=1.4.0",
     "langchain-chroma>=1.1.0",
     "langchain-community>=0.4.2",

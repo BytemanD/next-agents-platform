@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException
 from nap.db.models import Project
 from pydantic import BaseModel
@@ -9,18 +7,18 @@ router = APIRouter(prefix="/projects", tags=["项目"])
 
 class ProjectCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
 
 
 class ProjectResponse(BaseModel):
     uuid: str
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     created_at: str
     updated_at: str
 

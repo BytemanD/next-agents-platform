@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class DocumentMetadata(BaseModel):
     knowledge_id: str | None = ""
     knowledge_path: str | None = ""
-    header1: str | None | None = None
+    header1: str | None = None
     header2: str | None = None
     header3: str | None = None
 

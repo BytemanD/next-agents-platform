@@ -11,12 +11,12 @@ class TraceHandler(BaseCallbackHandler):
     successful_requests: int = 0
     failed_requests: int = 0
     total_latency: float = 0.0  # 秒
-    latencies: list[float] = []  # 每次请求耗时（秒），用于分位数统计
 
     def __init__(self) -> None:
         super().__init__()
         self._lock = threading.Lock()
         self._starts: dict[str, float] = {}
+        self.latencies: list[float] = []  # 每次请求耗时（秒），用于分位数统计
 
     def __repr__(self) -> str:
         return (

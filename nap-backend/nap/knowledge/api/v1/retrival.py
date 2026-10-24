@@ -1,11 +1,9 @@
 from fastapi import APIRouter, HTTPException
-
 from nap.db.models import KnowledgeBase
 from nap.knowledge.manager import MANAGER
 from nap.services.vector import RetrivalDocument
 from pydantic import BaseModel
 from starlette import status
-
 
 router = APIRouter(prefix="/retrival", tags=["向量召回"])
 

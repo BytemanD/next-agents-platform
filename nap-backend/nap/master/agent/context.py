@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from langchain_core.tools import BaseTool
 from nap.db.models import KnowledgeBase

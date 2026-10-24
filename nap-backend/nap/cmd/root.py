@@ -1,9 +1,8 @@
 import os
 
 import click
-
 import dotenv
-from nap.cmd import agent, session, knowledge, llm, knowledge_base, tools
+from nap.cmd import agent, db, knowledge, knowledge_base, llm, session, tools
 from pystonic.common import context
 
 
@@ -20,6 +19,7 @@ def main():
     root.add_command(session.root)
     root.add_command(tools.root)
     root.add_command(llm.root)
+    root.add_command(db.root)
     root()
 
 

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Header, HTTPException
 from nap.common.exceptions import DocumentNotFound
 from nap.db.models import KnowledgeBase
@@ -24,7 +26,7 @@ class ListDocumentResp(BaseModel):
     response_model=ListDocumentResp,
     response_model_exclude_none=True,
 )
-async def list_documents(x_knowedge_base_id=Header()):
+async def list_documents(x_knowedge_base_id: str = Header()):
     try:
         kb = KnowledgeBase.get_by_uuid(x_knowedge_base_id)
     except ValueError:
@@ -43,7 +45,10 @@ async def list_documents(x_knowedge_base_id=Header()):
     response_model=GetDocumentResp,
     response_model_exclude_none=True,
 )
-async def get_document(doc_id: str, x_knowedge_base_id=Header()):
+async def get_document(
+    doc_id: str,
+    x_knowedge_base_id: Annotated[str | None, Header()] = None,
+):
     item = MANAGER.get_document(doc_id)
     if not item:
         raise DocumentNotFound(doc_id)

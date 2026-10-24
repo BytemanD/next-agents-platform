@@ -1,5 +1,3 @@
-from typing import Type
-
 from pydantic import BaseModel, TypeAdapter
 from sqlmodel import JSON, TypeDecorator
 
@@ -15,7 +13,7 @@ class PydanticType(TypeDecorator):
     impl = JSON
     cache_ok = True
 
-    def __init__(self, pydantic_type: Type[BaseModel], *args, **kwargs):
+    def __init__(self, pydantic_type: type[BaseModel], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._pydantic_type = pydantic_type
         self._adapter = TypeAdapter(pydantic_type)

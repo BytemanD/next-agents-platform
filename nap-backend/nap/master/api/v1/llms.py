@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from fastapi import APIRouter, HTTPException
 from nap.db.models import LLMs
@@ -16,10 +16,10 @@ class LLMCreate(BaseModel):
 
 
 class LLMUpdate(BaseModel):
-    name: Optional[str] = None
-    base_url: Optional[str] = None
-    api_key: Optional[str] = None
-    models: Optional[list[str]] = None
+    name: str | None = None
+    base_url: str | None = None
+    api_key: str | None = None
+    models: list[str] | None = None
 
 
 class LLMResponse(BaseModel):

@@ -14,11 +14,10 @@ from nap.db.models import AgentCallback, Session
 from nap.master.agent.callbacks import TraceHandler
 from nap.master.agent.context import RuntimeContext
 from nap.master.agent.middlewares import RuntimeAgentMiddleware
+from nap.master.agent.tools import mysql, web_search
 from nap.master.agent.tools.builtin import BUILT_IN_TOOLKIT
-from nap.master.agent.tools import web_search, mysql
 from pydantic import SecretStr
 from pystonic.common import context
-
 
 # CUSTOM_TOOLS = web_search.WebSearchToolkit().get_tools()
 

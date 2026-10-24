@@ -1,11 +1,10 @@
 import asyncio
 
 import click
-from nap.db.models import Agents
-from pystonic.pretty.output import print_models
-
-from nap.master.manager import MANAGER
 from nap.common.exceptions import LLMRateLimitError
+from nap.db.models import Agents
+from nap.master.manager import MANAGER
+from pystonic.pretty.output import print_models
 
 
 @click.group(name="agent")

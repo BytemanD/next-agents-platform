@@ -1,7 +1,13 @@
 import httpx
 from loguru import logger
+
 from nap.common.conf import CONF
-from nap.common.exceptions import AttachmentNotExists, LLMIsInvalid, NoPermission
+from nap.common.exceptions import (
+    AttachmentNotExists,
+    KnowledgeBaseAlreadyExists,
+    LLMIsInvalid,
+    NoPermission,
+)
 from nap.common.manager import BaseManager
 from nap.db.models import (
     AgentCallback,
@@ -85,6 +91,12 @@ class MasterManager(BaseManager):
     def create_knowledge_base(
         self, name: str, description: str = "", active: bool = True
     ):
+        items = KnowledgeBase.query_one_or_none(
+            name=name,
+            creator=context.getvar("account") or "guest",
+        )
+        if items:
+            raise KnowledgeBaseAlreadyExists(name)
         item = KnowledgeBase(
             name=name,
             description=description,
@@ -135,11 +147,17 @@ class MasterManager(BaseManager):
         description: str = "",
         instruction: str = "",
         llm: str = "",
-        config: AgentConfig = AgentConfig(),
-        knowledge_bases: list[str] = [],
-        tools: dict = {},
-        mcp_uuids: list[str] = [],
+        config: AgentConfig = None,
+        knowledge_bases: list[str] | None = None,
+        tools: dict | None = None,
+        mcp_uuids: list[str] | None = None,
     ):
+        if mcp_uuids is None:
+            mcp_uuids = []
+        if tools is None:
+            tools = {}
+        if knowledge_bases is None:
+            knowledge_bases = []
         a = Agents(
             creator=context.getvar("account", "guest"),
             name=name,
@@ -147,7 +165,7 @@ class MasterManager(BaseManager):
             instruction=instruction,
             llm=llm,
             status="active",
-            config=config,
+            config=config or AgentConfig(),
             knowledge_bases=knowledge_bases,
             tools=tools,
             mcp_uuids=mcp_uuids,
@@ -236,11 +254,15 @@ class MasterManager(BaseManager):
         query: str,
         session_id: str | None = None,
         model: str | None = None,
-        custom_tools: list[str] = [],
+        custom_tools: list[str] | None = None,
         knowledge_bases: list[str] | None = None,
-        attachments: list[str] = [],
+        attachments: list[str] | None = None,
         mcp_uuids: list[str] | None = None,
     ):
+        if attachments is None:
+            attachments = []
+        if custom_tools is None:
+            custom_tools = []
         llm = LLMs.get_by_uuid(db_agent.llm)
         if not llm.models:
             raise LLMIsInvalid(llm.uuid)
@@ -261,7 +283,7 @@ class MasterManager(BaseManager):
         mcp_tools = []
         try:
             mcp_tools = await mcp.get_tools(mcp_pool)
-        except ExceptionGroup as e:  # noqa: F821
+        except ExceptionGroup as e:
             logger.exception("get mcp tools failed: {}", e.exceptions)
             data = ChatSSE(
                 type="error",

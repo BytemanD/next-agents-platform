@@ -24,7 +24,6 @@ from pystonic.asgi.app import create_app
 from pystonic.asgi.middlewares.trace import TraceIdMiddleware
 from pystonic.asgi.plugins import auth
 from pystonic.common import log
-
 from pystonic.orm.database import create_all_tables
 from starlette.authentication import AuthenticationError
 

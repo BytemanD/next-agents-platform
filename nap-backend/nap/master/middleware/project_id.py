@@ -1,6 +1,6 @@
+from pystonic.common.context import setvars
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from pystonic.common.context import setvars
 
 
 class ProjectContextMiddleware(BaseHTTPMiddleware):

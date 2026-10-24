@@ -1,24 +1,24 @@
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Callable
 
+import jwt
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-import jwt
 from loguru import logger
 from nap.common.conf import CONF
 from pydantic import BaseModel, SecretStr
-from starlette.requests import HTTPConnection, Request
+from pystonic.common import context
+from starlette import status
 from starlette.authentication import (
     AuthCredentials,
     AuthenticationBackend,
+    AuthenticationError,
     BaseUser,
     SimpleUser,
     UnauthenticatedUser,
 )
 from starlette.middleware.authentication import AuthenticationMiddleware
-from starlette.authentication import AuthenticationError
-from starlette import status
-from pystonic.common import context
+from starlette.requests import HTTPConnection, Request
 from starlette.responses import Response
 
 
@@ -45,7 +45,9 @@ JWT_SERVICE = JWTService()
 
 
 class JWTBackend(AuthenticationBackend):
-    def __init__(self, exclude_routes: set[tuple[str, str]] = set()) -> None:
+    def __init__(self, exclude_routes: set[tuple[str, str]] | None = None) -> None:
+        if exclude_routes is None:
+            exclude_routes = set()
         super().__init__()
         self.exclude_routes = exclude_routes
 
@@ -96,7 +98,7 @@ def setup(
         exclude_routes: 需要排除认证的路由
     """
 
-    exclude_routes = exclude_routes or set([])
+    exclude_routes = exclude_routes or set()
     if login_url:
         exclude_routes.update({("POST", login_url)})
 

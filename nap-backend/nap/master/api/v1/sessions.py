@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter
 from nap.db.models import Session
 from nap.master.manager import MANAGER
@@ -9,13 +7,13 @@ router = APIRouter(prefix="/sessions", tags=["会话"])
 
 
 class SessionUpdate(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class SessionResponse(BaseModel):
     uuid: str
     project_uuid: str
-    name: Optional[str] = None
+    name: str | None = None
     created_at: str
     updated_at: str
 

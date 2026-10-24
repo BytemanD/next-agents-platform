@@ -1,5 +1,3 @@
-from typing import Optional
-
 import asyncio
 from urllib.parse import quote
 
@@ -15,15 +13,15 @@ class KnowledgeCreate(BaseModel):
     knowledge: str
     name: str
     size: int = 0
-    path: Optional[str] = None
+    path: str | None = None
     status: str = "pending"
 
 
 class KnowledgeUpdate(BaseModel):
-    name: Optional[str] = None
-    size: Optional[int] = None
-    path: Optional[str] = None
-    status: Optional[int] = None
+    name: str | None = None
+    size: int | None = None
+    path: str | None = None
+    status: int | None = None
 
 
 class KnowledgeResponse(BaseModel):
@@ -31,7 +29,7 @@ class KnowledgeResponse(BaseModel):
     knowledge: str
     name: str
     size: int
-    path: Optional[str]
+    path: str | None
     status: str
     created_at: str
     updated_at: str

@@ -1,5 +1,5 @@
-from collections.abc import Awaitable
-from typing import Any, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from langchain.agents.middleware import (
     AgentMiddleware,
@@ -10,8 +10,8 @@ from langchain.agents.middleware import (
 )
 from langchain_core.exceptions import ModelRateLimitError
 from langchain_core.messages import AIMessageChunk, SystemMessage, ToolMessage
-from langgraph.types import Command
 from langchain_openai import ChatOpenAI
+from langgraph.types import Command
 from loguru import logger
 from nap.master.agent.context import RuntimeContext
 from pydantic import SecretStr
@@ -49,7 +49,7 @@ class RuntimeAgentMiddleware(AgentMiddleware[AgentState, RuntimeContext]):
     @staticmethod
     def is_quota_error(e):
         return isinstance(e, ModelRateLimitError) or (
-            hasattr(e, "status_code") and getattr(e, "status_code") in (402, 429, 403)
+            hasattr(e, "status_code") and e.status_code in (402, 429, 403)
         )
 
     def _get_runtime_model(self, ctx: RuntimeContext, model_name: str) -> ChatOpenAI:

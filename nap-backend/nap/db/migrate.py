@@ -1,10 +1,8 @@
 """给已有 SQLite 表补充新增列（开发期轻量迁移）。"""
 
-from sqlalchemy import inspect, text
 from loguru import logger
-
-from pystonic.orm.database import get_session
-from pystonic.orm.database import _engine
+from pystonic.orm.database import _engine, get_session
+from sqlalchemy import inspect, text
 
 # table -> [(新增列, SQLite 列定义)]
 _ALTERS: dict[str, list[tuple[str, str]]] = {

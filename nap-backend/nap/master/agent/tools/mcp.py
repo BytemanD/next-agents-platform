@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from nap.db.models import AgentMCP

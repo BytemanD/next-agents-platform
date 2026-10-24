@@ -43,7 +43,7 @@ class KnowledgeManager(BaseManager):
     async def job_process_knowledges(self):
         items = []
         if CONF.db.is_sqlite():
-            db_file = CONF.db.url.lstrip("sqlite:///")
+            db_file = CONF.db.url.removeprefix("sqlite:///")
             logger.info("get lock ...")
             with portalocker.Lock(db_file + ".process.lock"):
                 items = await asyncio.to_thread(Knowledge.get_pending_process)
@@ -58,7 +58,7 @@ class KnowledgeManager(BaseManager):
     async def job_delete_knowledges(self):
         items = []
         if CONF.db.is_sqlite():
-            db_file = CONF.db.url.lstrip("sqlite:///")
+            db_file = CONF.db.url.removeprefix("sqlite:///")
             logger.info("get lock ...")
             with portalocker.Lock(db_file + ".delete.lock"):
                 items = await asyncio.to_thread(Knowledge.get_pending_delete)

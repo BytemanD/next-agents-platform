@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Optional
 
 from fastapi import APIRouter
 from nap.db.models import (
@@ -53,9 +52,7 @@ def _count_model(model, *criteria) -> int:
         return int(session.exec(stm).one())
 
 
-def _sum_tokens(
-    since: Optional[datetime] = None, until: Optional[datetime] = None
-) -> int:
+def _sum_tokens(since: datetime | None = None, until: datetime | None = None) -> int:
     cond: list = []
     if since is not None:
         cond.append(AgentCallback.created_at >= since)
@@ -72,7 +69,7 @@ def _pct(cur: int, prev: int) -> int:
     return round((cur - prev) / prev * 100) if prev > 0 else 0
 
 
-def _time_ago(dt: Optional[datetime]) -> str:
+def _time_ago(dt: datetime | None) -> str:
     if not dt:
         return ""
     now = utcnow()
@@ -162,7 +159,7 @@ async def dashboard():
     ]
 
     agents = sorted(MANAGER.get_agents(), key=lambda a: a.created_at, reverse=True)[:4]
-    llm_cache: dict[str, Optional[LLMs]] = {}
+    llm_cache: dict[str, LLMs | None] = {}
 
     def model_name(uuid: str) -> str:
         if not uuid:

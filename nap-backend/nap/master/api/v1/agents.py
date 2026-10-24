@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -27,15 +27,15 @@ class AgentCreate(BaseModel):
 
 
 class AgentUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    instruction: Optional[str] = None
-    llm: Optional[str] = None
-    status: Optional[str] = None
-    config: Optional[AgentConfig | dict] = None
-    knowledge_bases: Optional[list[str]] = None
-    tools: Optional[dict] = None
-    mcp_uuids: Optional[list[str]] = None
+    name: str | None = None
+    description: str | None = None
+    instruction: str | None = None
+    llm: str | None = None
+    status: str | None = None
+    config: AgentConfig | dict | None = None
+    knowledge_bases: list[str] | None = None
+    tools: dict | None = None
+    mcp_uuids: list[str] | None = None
 
 
 # class AgentResponse(BaseModel):
@@ -134,7 +134,7 @@ async def get_agent_detail(uuid: str):
         config=agent.config,
         knowledge_bases=agent.knowledge_bases,
         # 已启用的工具，联网搜索也包含在内（前端自行决定是否展示）
-        tools=[ToolModel(name=x) for x in agent.tools.keys()],
+        tools=[ToolModel(name=x) for x in agent.tools],
         mcps=MANAGER.list_mcps(agent.mcp_uuids),
     )
     return detail
@@ -228,7 +228,7 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 msg=f"Error: request failed: {e}",
             )
             yield data.model_dump_json()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("chat failed: {}", e)
             data = ChatSSE(
                 type="error",

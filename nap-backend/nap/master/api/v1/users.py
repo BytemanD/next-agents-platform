@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from nap.common.utils import hashpw
@@ -17,8 +16,8 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    account: Optional[str] = None
-    email: Optional[str] = None
+    account: str | None = None
+    email: str | None = None
 
 
 class UserResponse(BaseModel):

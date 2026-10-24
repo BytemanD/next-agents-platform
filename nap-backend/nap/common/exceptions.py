@@ -1,5 +1,11 @@
+class KnowledgeBaseAlreadyExists(Exception):
+    def __init__(self, name: str) -> None:
+        super().__init__(f"KnowledgeBase({name}) alredy exists")
+
+
 class KnowledgeAlreadyExists(Exception):
-    pass
+    def __init__(self, name: str) -> None:
+        super().__init__(f"knowledge {name} alredy exists")
 
 
 class AgentNotExists(Exception):

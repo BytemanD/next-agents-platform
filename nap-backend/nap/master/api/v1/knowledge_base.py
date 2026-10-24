@@ -1,7 +1,9 @@
 import asyncio
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from nap.common.exceptions import KnowledgeBaseAlreadyExists
 from nap.db.models import Attachment, Knowledge, KnowledgeBase, User
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
@@ -17,9 +19,9 @@ class KnowledgeBaseCreate(BaseModel):
 
 
 class KnowledgeBaseUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    active: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    active: bool | None = None
 
 
 class KnowledgeBaseResponse(BaseModel):
@@ -55,10 +57,13 @@ async def get_kb(uuid: str):
 
 @router.post("", status_code=201)
 async def create_kb(body: KnowledgeBaseCreate):
-    kb = MANAGER.create_knowledge_base(
-        body.name, description=body.description, active=True
-    )
-    kb.create()
+    try:
+        kb = MANAGER.create_knowledge_base(
+            body.name, description=body.description, active=True
+        )
+    except KnowledgeBaseAlreadyExists as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
     return kb
 
 
@@ -105,7 +110,7 @@ async def list_kb_knowledges(kb_id: str):
     description="从本地上传文件并添加到知识库",
     response_model=Knowledge,
 )
-async def add_knowledge_from_file(kb_id: str, file: UploadFile = File(...)):
+async def add_knowledge_from_file(kb_id: str, file: Annotated[UploadFile, File()]):
     kb = KnowledgeBase.get_by_uuid(kb_id)
     if not kb:
         raise HTTPException(

@@ -1,10 +1,9 @@
-from typing import Any, Dict, Tuple
+from typing import Any
 
+import pymysql
 from langchain_core.tools import tool
-
 from loguru import logger
 from nap.common.objects import Toolkit, ToolkitMetadata
-import pymysql
 
 
 class MysqlToolkit(Toolkit):
@@ -46,7 +45,7 @@ class MysqlToolkit(Toolkit):
         @tool(
             parse_docstring=True,
         )
-        def execute_sql(sql: str, parameters: Tuple[Any, ...] = ()) -> Dict[str, Any]:
+        def execute_sql(sql: str, parameters: tuple[Any, ...] = ()) -> dict[str, Any]:
             """执行Mysql SQL 语句
 
             需要注意的是，如果SQL包含模糊匹配符号 `%`, 传入的sql 中的`%`应该替换为 `%%`,
