@@ -28,12 +28,34 @@ NAP 是一个轻量级的 AI 智能体与知识库融合平台：支持创建、
 ## 系统架构
 
 ```mermaid
-flowchart LR
-    FE[前端 Vue 3<br/>:3000] -->|/api| MASTER[Master 服务<br/>FastAPI :8000]
-    MASTER -->|HTTP :8001| KB[Knowledge 服务<br/>FastAPI :8001]
-    MASTER --> DB
-    KB --> VEC[(ChromaDB)]
-    KB --> RAW[(文件存储)]
+flowchart TB
+    FE[前端 :3000] ==>|/api| MS
+    subgraph MS[Master服务 :8000]
+        direction TB
+        KM(知识管理)
+        CM(配置管理)
+        UM(用户管理)
+        Monitor(监控)
+        Agents(智能体<br/>LangChain,LangGraph)
+        Agents .-> TOOL((Tools))
+        Agents .-> MCP((MCP))
+    end
+    subgraph KS[Knowledge服务 :8001]
+        direction TB
+        Vector[(向量库<br/>ChromaDB)]
+        Parser(文档解析<br/>markitdown)
+    end
+    MS --> KS
+
+    MS --> DB[(数据库<br/>sqlite,mysql)]
+    MS --> Storage[(文件存储<br/>FS,S3)]
+    MS --> Cache[(缓存<br/>redis)]
+    MS --> LLM([大模型<br/>openai])
+
+    KS --> DB
+    KS --> Storage
+    KS --> Cache
+    KS --> LLM
 ```
 
 - **Master**：面向前端的业务服务，负责用户、智能体、会话、附件、监控，并编排 Agent 对话。
@@ -75,7 +97,21 @@ flowchart LR
 
 ## 快速开始
 
-### 方式一：一键脚本（推荐）
+> 首次运行前请先分别安装依赖。
+
+1. 安装依赖包
+    ```bash
+    cd nap-backend
+    uv sync
+    ```
+
+2. knowledge服务节点导入模型
+    ```bash
+    wget https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz
+    cp onnx.tar.gz ~/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
+    ```
+
+### 一键脚本
 
 项目根目录提供了按服务启动的脚本，支持类 Unix 与 Windows：
 
@@ -83,43 +119,17 @@ flowchart LR
 ./run-server.sh master       # 启动 Master 服务 (port 8000)
 ./run-server.sh knowledge    # 启动 Knowledge 服务 (port 8001)
 ./run-server.sh frontend     # 启动前端开发服务 (vite, port 3000)
-
-./run-server.sh master --port 9000   # 支持追加参数
 ```
 
-```bat
-run-server.bat master
-run-server.bat knowledge
-run-server.bat frontend
-```
+- 启动脚本支持追加/覆盖参数, 例如,启用热加载(开发模式): `./run-server.sh master --reload`
+- windows 环境使用 run-server.bat 脚本
 
-> 首次运行前请先分别安装依赖（见下）。
-
-### 方式二：手动启动
-
-**后端**（需在 `nap-backend` 目录执行）：
-
-```bash
-cd nap-backend
-uv sync                                            # 安装依赖
-
-uv run uvicorn nap.master.asgi:APP --reload --port 8000       # Master
-uv run uvicorn nap.knowledge.asgi:APP --reload --port 8001    # Knowledge
-```
-
-**前端**：
-
-```bash
-cd nap-frontend
-npm install
-npm run dev        # http://localhost:3000
-```
 
 前端开发服务器会把 `/api` 与 `/ws` 代理到 `localhost:8000`。
 
 > Master 默认通过 `http://localhost:8001` 访问 Knowledge 服务，可在配置中调整。
 
-### 服务端口
+### 默认服务端口
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
@@ -221,3 +231,12 @@ next-agents-platform/
 - **文件存储**：默认文件系统驱动，位于 `data/raw/`。
 - **鉴权**：基于 JWT，`sub` 为用户名；前端 Token 存于 `localStorage`（`nap_token`）并自动刷新。
 - **前端校验**：`npm run typecheck`（`vue-tsc --noEmit`）。
+
+
+## 其他
+
+## onnx 模型 下载
+
+
+
+

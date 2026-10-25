@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Response
@@ -7,6 +8,16 @@ from nap.master.manager import MANAGER
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/knowledges", tags=["知识"])
+
+
+class KnowledgeResponse(BaseModel):
+    uuid: str
+    name: str
+    size: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    enrichment: dict = {}
 
 
 class KnowledgeCreate(BaseModel):
@@ -24,17 +35,6 @@ class KnowledgeUpdate(BaseModel):
     status: int | None = None
 
 
-class KnowledgeResponse(BaseModel):
-    uuid: str
-    knowledge: str
-    name: str
-    size: int
-    path: str | None
-    status: str
-    created_at: str
-    updated_at: str
-
-
 @router.get("")
 async def list_knowledge():
     return {"items": Knowledge.query(Knowledge.status != KnowledgeStatus.deleted)}
@@ -45,15 +45,20 @@ async def get_knowledge(uuid: str):
     k = Knowledge.get_by_uuid(uuid)
     if not k:
         raise HTTPException(status_code=404, detail="Knowledge not found")
-    data = k.model_dump()
     enrichment = k.get_enrichment()
-    data["enrichment"] = (
-        {
+    data = KnowledgeResponse(
+        uuid=k.uuid,
+        name=k.name,
+        size=k.size,
+        status=k.status_name(),
+        created_at=k.created_at,
+        updated_at=k.updated_at,
+        enrichment={
             "keywords": enrichment.keywords,
             "summary": enrichment.summary,
         }
         if enrichment
-        else None
+        else {},
     )
     return data
 

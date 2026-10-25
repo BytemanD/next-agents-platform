@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.date import DateTrigger
 from loguru import logger
 
 
@@ -13,6 +14,7 @@ class BaseManager:
         self.host = socket.gethostname()
         self.asyncio_scheduler = AsyncIOScheduler()
         self.backgroup_scheduler = BackgroundScheduler()
+        self.shutdown = False
 
     async def start(self):
         self.asyncio_scheduler.start()
@@ -26,6 +28,26 @@ class BaseManager:
         await asyncio.to_thread(self.backgroup_scheduler.shutdown)
 
     def run_background_job(
+        self,
+        func: Callable,
+        args: tuple | None = None,
+        kwargs: dict | None = None,
+        id: str | None = None,
+        name: str | None = None,
+        after_seconds: int = 0,
+    ):
+        logger.info("run background job: {}", func)
+        self.backgroup_scheduler.add_job(
+            func,
+            trigger=DateTrigger(datetime.now(UTC) + timedelta(seconds=after_seconds)),
+            args=args,
+            kwargs=kwargs,
+            id=id,
+            name=name,
+            max_instances=1,
+        )
+
+    def run_background_job_now(
         self,
         func: Callable,
         args: tuple | None = None,

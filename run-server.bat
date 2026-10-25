@@ -26,12 +26,12 @@ goto :usage
 
 :master
 cd /d "%~dp0nap-backend"
-uv run uvicorn nap.master.asgi:APP --reload --reload-dir nap --port 8000 %EXTRA%
+uv run uvicorn nap.master.asgi:APP --reload-dir nap --port 8000 %EXTRA%
 goto :eof
 
 :knowledge
 cd /d "%~dp0nap-backend"
-uv run uvicorn nap.knowledge.asgi:APP --reload --reload-dir nap --port 8001 %EXTRA%
+uv run uvicorn nap.knowledge.asgi:APP --reload-dir nap --port 8001 %EXTRA%
 goto :eof
 
 :frontend

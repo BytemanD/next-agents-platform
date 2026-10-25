@@ -1,25 +1,24 @@
-from pydantic import BaseModel
-from pystonic.common.conf import BaseAppConfig
+from pystonic.common.conf import BaseAppConfig, FrozenBaseModel
 
 
-class VectorConfig(BaseModel):
+class VectorConfig(FrozenBaseModel):
     driver: str = "chromadb"
 
 
-class ChromaDBConfig(BaseModel):
+class ChromaDBConfig(FrozenBaseModel):
     data_path: str | None = None
 
 
-class FSStorageConfig(BaseModel):
+class FSStorageConfig(FrozenBaseModel):
     path: str = "./data/raw"
 
 
-class StorageConfig(BaseModel):
-    driver: str = "fs"
+class StorageConfig(FrozenBaseModel):
+    driver: str = "local"
     fs: FSStorageConfig = FSStorageConfig()
 
 
-class MasterConfig(BaseModel):
+class MasterConfig(FrozenBaseModel):
     knowledge_base_url: str = "http://localhost:8001"
 
 

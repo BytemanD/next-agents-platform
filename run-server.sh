@@ -21,11 +21,11 @@ shift
 case "$SERVICE" in
   master)
     cd nap-backend
-    uv run uvicorn nap.master.asgi:APP --reload --reload-dir nap --port 8000 "$@"
+    uv run uvicorn nap.master.asgi:APP --reload-dir nap --port 8000 "$@"
     ;;
   knowledge)
     cd nap-backend
-    uv run uvicorn nap.knowledge.asgi:APP --reload --reload-dir nap --port 8001 "$@"
+    uv run uvicorn nap.knowledge.asgi:APP --reload-dir nap --port 8001 "$@"
     ;;
   frontend)
     npm -C nap-frontend run dev "$@"

@@ -1,33 +1,32 @@
 import asyncio
 from datetime import UTC, datetime
 
-import portalocker
 from loguru import logger
-from nap.common.conf import CONF
 from nap.common.manager import BaseManager
 from nap.db.models import Knowledge, KnowledgeBase, KnowledgeStatus
 from nap.knowledge.graph import knowledge_process
 from nap.services.storage import STORE_SERVICE
 from nap.services.vector import VECTOR_SERVICE
+from pystonic.infra.messaging.redis import RedisMessaingQueue
 
 
 class KnowledgeManager(BaseManager):
     def __init__(self) -> None:
         super().__init__()
-        self.asyncio_scheduler.add_job(
-            self.job_process_knowledges,
-            "interval",
-            seconds=10,
-            max_instances=1,
-            coalesce=True,
-        )
-        self.asyncio_scheduler.add_job(
-            self.job_delete_knowledges,
-            "interval",
-            seconds=10,
-            max_instances=1,
-            coalesce=True,
-        )
+
+        self.run_background_job(self.job_process_knowledges, after_seconds=1)
+        # self.asyncio_scheduler.add_job(
+        #     self.job_delete_knowledges,
+        #     "interval",
+        #     seconds=10,
+        #     max_instances=1,
+        #     coalesce=True,
+        # )
+        self.messaging_driver = RedisMessaingQueue()
+
+    async def stop(self):
+        await asyncio.to_thread(self.messaging_driver.shutdown)
+        await super().stop()
 
     def list_documents(
         self,
@@ -40,37 +39,26 @@ class KnowledgeManager(BaseManager):
         docs = VECTOR_SERVICE.list_knowledges(ids=[doc_id])
         return docs[0] if docs else None
 
-    async def job_process_knowledges(self):
-        items = []
-        if CONF.db.is_sqlite():
-            db_file = CONF.db.url.removeprefix("sqlite:///")
-            logger.info("get lock ...")
-            with portalocker.Lock(db_file + ".process.lock"):
-                items = await asyncio.to_thread(Knowledge.get_pending_process)
-                Knowledge.batch_set_status(
-                    [x.uuid for x in items], KnowledgeStatus.processing.value
+    def job_process_knowledges(self):
+        for knowledge in self.messaging_driver.consume(
+            "knowledges", response_model=Knowledge
+        ):
+            if not isinstance(knowledge, Knowledge):
+                logger.warning("item {} is not Knowledge, skip", knowledge)
+                continue
+
+            if knowledge.status == KnowledgeStatus.pending_delete.value:
+                self.backgroup_scheduler.add_job(
+                    self.delete_knowledge, args=(knowledge,)
                 )
-
-        logger.info("found {} knowledge(s) to process", len(items))
-        for item in items:
-            self.backgroup_scheduler.add_job(knowledge_process.run, args=(item,))
-
-    async def job_delete_knowledges(self):
-        items = []
-        if CONF.db.is_sqlite():
-            db_file = CONF.db.url.removeprefix("sqlite:///")
-            logger.info("get lock ...")
-            with portalocker.Lock(db_file + ".delete.lock"):
-                items = await asyncio.to_thread(Knowledge.get_pending_delete)
-                Knowledge.batch_set_status(
-                    [x.uuid for x in items], KnowledgeStatus.deleting.value
+            else:
+                self.backgroup_scheduler.add_job(
+                    knowledge_process.run, args=(knowledge,)
                 )
-
-        logger.info("found {} knowledge(s) to delete", len(items))
-        for item in items:
-            await asyncio.to_thread(self.delete_knowledge, item)
+                knowledge.set_status(KnowledgeStatus.processing)
 
     def delete_knowledge(self, knowledge: Knowledge):
+        knowledge.set_status(KnowledgeStatus.deleting)
         try:
             VECTOR_SERVICE.delete_knowledge(knowledge)
         except:

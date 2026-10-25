@@ -1,6 +1,4 @@
-import os
 from enum import StrEnum
-from pathlib import Path
 
 from loguru import logger
 from nap.common.conf import CONF
@@ -17,15 +15,17 @@ class StorageSchema(StrEnum):
 
 class StorageService:
     def __init__(self):
-        # self.driver = LocalStorage(CONF.store)
-        # self.storage_schema = StorageSchema.local.value
-        self.driver = S3Storage()
-        self.storage_schema = StorageSchema.s3.value
+        if CONF.storage.driver == "local":
+            self.driver = LocalStorage(CONF.store)
+            self.storage_schema = StorageSchema.local.value
+        else:
+            self.driver = S3Storage()
+            self.storage_schema = StorageSchema.s3.value
 
-    def _real_path(self, file_path: str):
-        if file_path.startswith(self.storage_schema.value):
-            file_path = file_path.removeprefix(self.storage_schema)
-        return self.local_root / file_path
+    # def _real_path(self, file_path: str):
+    #     if file_path.startswith(self.storage_schema):
+    #         file_path = file_path.removeprefix(self.storage_schema)
+    #     return self.local_root / file_path
 
     def save_raw(self, knowledge: Knowledge, content: bytes | str):
         file_path = f"users/{knowledge.creator}/raw/{knowledge.name}"
@@ -56,12 +56,12 @@ class StorageService:
         if not item.raw_path:
             raise ValueError("knowledge raw_path is missing")
         logger.info("get knowledge raw content")
-        return self.get_raw_path(item).read_bytes()
+        return self.driver.read(self.get_raw_path(item))
 
     def get_raw_path(self, item: Knowledge | Attachment):
         if not item.raw_path:
             raise ValueError("knowledge raw_path is missing")
-        return self._real_path(item.raw_path)
+        return item.raw_path.removeprefix(self.storage_schema)
 
     # def get_attachment_raw(self, file_key: str) -> bytes:
     #     real_path = self.local_root / f"tmp/attachments/{file_key}/raw"
@@ -98,9 +98,11 @@ class StorageService:
         overwrite: bool = False,
     ):
         file_path = f"users/{attachment.creator}/attachments/{attachment.name}"
-        real_path = self._real_path(file_path)
-        if real_path.exists() and not overwrite:
+        try:
+            self.driver.get_file(file_path)
             raise FileExistsError()
+        except FileNotFoundError:
+            pass
 
         logger.info("save attachment: {}({})", attachment.uuid, attachment.name)
         self.driver.write(file_path, content)

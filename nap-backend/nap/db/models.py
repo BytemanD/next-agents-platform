@@ -6,7 +6,6 @@ from pathlib import Path
 
 from nap.common.exceptions import AgentNotExists
 from nap.db.types import AgentConfig, PydanticType
-from pydantic import field_serializer
 from pystonic.common import context
 from pystonic.orm.models import DBModel, get_session, utcnow
 from sqlmodel import JSON, Column, Field, Text, col, desc, func, select, update
@@ -129,7 +128,9 @@ class KnowledgeEnrichmen(DBModel, table=True):
     keywords: list[str] = Field(
         nullable=False, sa_type=JSON, description="抽取的关键词列表"
     )
-    summary: str = Field(nullable=False, description="文档摘要")
+    summary: str = Field(
+        nullable=False, default="", sa_type=Text, description="文档摘要"
+    )
 
 
 class Knowledge(DBModel, table=True):
@@ -147,12 +148,15 @@ class Knowledge(DBModel, table=True):
         description="知识状态(保存, 解析, 向量化, ...,  删除)",
     )
 
-    @field_serializer("status")
-    def serialize_created_at(self, value: int) -> str:
-        return KnowledgeStatus(value).name
+    # @field_serializer("status")
+    # def serialize_created_at(self, value: int) -> str:
+    #     return KnowledgeStatus(value).name
 
     def __str__(self):
         return f"{self.uuid}({self.name})"
+
+    def status_name(self):
+        return KnowledgeStatus(self.status).name
 
     def get_conver_path(self):
         if self.convert_path:

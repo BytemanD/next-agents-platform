@@ -27,6 +27,7 @@ dependencies = [
     "portalocker>=4.3.2",
     "pydantic>=2.13.5",
     "pystonic",
+    "redis>=8.1.0",
     "rich>=15.0.0",
     "sqlmodel>=0.0.42",
     "sse-starlette>=3.4.11",

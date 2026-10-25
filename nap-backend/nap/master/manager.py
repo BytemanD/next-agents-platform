@@ -1,6 +1,5 @@
 import httpx
 from loguru import logger
-
 from nap.common.conf import CONF
 from nap.common.exceptions import (
     AttachmentNotExists,
@@ -29,6 +28,7 @@ from nap.master.agent.tools.builtin import BUILT_IN_TOOLKIT
 from nap.services.storage import STORE_SERVICE
 from pydantic import BaseModel
 from pystonic.common import context
+from pystonic.infra.messaging.redis import RedisMessaingQueue
 from pystonic.utils.httpclient import default_client
 from pystonic.utils.strutil import text_shorten
 from sqlmodel import col
@@ -69,6 +69,7 @@ class MasterManager(BaseManager):
             base_url=CONF.master.knowledge_base_url, raise_for_status=True
         )
         self._agent: AsyncAgent | None = None
+        self.messaging_driver = RedisMessaingQueue()
 
     async def start(self):
         await super().start()
@@ -194,6 +195,7 @@ class MasterManager(BaseManager):
         knowledge.add_todo("convert")
         knowledge.add_todo("vector")
         knowledge.add_todo("enrich")
+        self.messaging_driver.publish("knowledges", knowledge)
         return knowledge
 
     def add_knowledge_from_url(
@@ -338,11 +340,13 @@ class MasterManager(BaseManager):
         return Session.delete_by_uuid(session_id)
 
     def delete_knowledge(self, knowledge: Knowledge):
-        try:
-            self.knowledge_client.delete(f"/api/v1/knowledges/{knowledge.uuid}")
-        except httpx.HTTPError as e:
-            logger.error("CALL knowledge service failed: {}", e)
-            knowledge.set_status(KnowledgeStatus.pending_delete)
+        knowledge.set_status(KnowledgeStatus.pending_delete)
+        self.messaging_driver.publish("knowledges", knowledge)
+        # try:
+        #     self.knowledge_client.delete(f"/api/v1/knowledges/{knowledge.uuid}")
+        # except httpx.HTTPError as e:
+        #     logger.error("CALL knowledge service failed: {}", e)
+        #     knowledge.set_status(KnowledgeStatus.pending_delete)
 
     def get_knowledge_content(self, knowledge: Knowledge) -> bytes:
         return STORE_SERVICE.get_raw(knowledge)

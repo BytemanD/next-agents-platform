@@ -1,15 +1,25 @@
 import asyncio
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from nap.common.exceptions import KnowledgeBaseAlreadyExists
-from nap.db.models import Attachment, Knowledge, KnowledgeBase, User
+from nap.db.models import Attachment, Knowledge, KnowledgeBase, KnowledgeStatus, User
 from nap.master.manager import MANAGER
 from pydantic import BaseModel
 from starlette import status
 
 router = APIRouter(prefix="/knowledge-bases", tags=["知识库"])
+
+
+class KnowledgeResponse(BaseModel):
+    uuid: str
+    name: str
+    size: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class KnowledgeBaseCreate(BaseModel):
@@ -63,7 +73,7 @@ async def create_kb(body: KnowledgeBaseCreate):
         )
     except KnowledgeBaseAlreadyExists as e:
         raise HTTPException(status_code=400, detail=str(e))
-        
+
     return kb
 
 
@@ -99,7 +109,17 @@ async def get_kb_stats(kb_id: str):
 
 @router.get("/{kb_id}/knowledges", status_code=200)
 async def list_kb_knowledges(kb_id: str):
-    knowledges = Knowledge.query(Knowledge.knowledge_base == kb_id)
+    knowledges = [
+        KnowledgeResponse(
+            uuid=x.uuid,
+            name=x.name,
+            size=x.size,
+            status=x.status_name(),
+            created_at=x.created_at,
+            updated_at=x.updated_at,
+        )
+        for x in Knowledge.query(Knowledge.status != KnowledgeStatus.deleted)
+    ]
     return {"items": knowledges}
 
 
