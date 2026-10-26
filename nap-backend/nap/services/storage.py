@@ -52,6 +52,12 @@ class StorageService:
                 continue
             self.driver.delete(file_path.removeprefix(self.storage_schema))
 
+    def get_content(self, item: Knowledge | Attachment):
+        if not item.convert_path:
+            raise ValueError("document is not convert yet")
+        logger.info("get knowledge {} content", item)
+        return self.driver.read(item.convert_path.removeprefix(self.storage_schema))
+
     def get_raw(self, item: Knowledge | Attachment):
         if not item.raw_path:
             raise ValueError("knowledge raw_path is missing")

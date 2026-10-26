@@ -18,6 +18,7 @@ class KnowledgeResponse(BaseModel):
     name: str
     size: int
     status: str
+    creator: str
     created_at: datetime
     updated_at: datetime
 
@@ -115,6 +116,7 @@ async def list_kb_knowledges(kb_id: str):
             name=x.name,
             size=x.size,
             status=x.status_name(),
+            creator=x.creator,
             created_at=x.created_at,
             updated_at=x.updated_at,
         )

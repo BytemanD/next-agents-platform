@@ -16,14 +16,14 @@
     "@tdesign-vue-next/chat": "^0.7.0",
     "@vueuse/core": "^11.3.0",
     "axios": "^1.7.9",
-    "echarts": "^5.5.1",
+    "echarts": "^6.1.0",
     "filesize": "^11.0.25",
     "highlight.js": "^11.10.0",
     "markdown-it": "^14.1.0",
     "pinia": "^2.3.0",
     "tdesign-vue-next": "^1.20.7",
     "vue": "^3.5.13",
-    "vue-echarts": "^7.0.3",
+    "vue-echarts": "^8.3.2",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
@@ -38,5 +38,8 @@
     "unplugin-vue-components": "^0.27.5",
     "vite": "^6.0.5",
     "vue-tsc": "^2.2.0"
+  },
+  "overrides": {
+    "katex": "^0.18.2"
   }
 }

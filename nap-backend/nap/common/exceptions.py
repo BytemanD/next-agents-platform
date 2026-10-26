@@ -8,6 +8,11 @@ class KnowledgeAlreadyExists(Exception):
         super().__init__(f"knowledge {name} alredy exists")
 
 
+class KnowledgeNotExists(Exception):
+    def __init__(self, uuid: str) -> None:
+        super().__init__(f"knowledge {uuid} not exists")
+
+
 class AgentNotExists(Exception):
     def __init__(self, agent_uuid: str) -> None:
         super().__init__(f"agnet {agent_uuid} not found")

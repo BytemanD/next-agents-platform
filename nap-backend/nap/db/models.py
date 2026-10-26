@@ -156,7 +156,7 @@ class Knowledge(DBModel, table=True):
     #     return KnowledgeStatus(value).name
 
     def __str__(self):
-        return f"{self.uuid}({self.name})"
+        return f"Knowledge<{self.uuid} name:{self.name}>"
 
     def status_name(self):
         return KnowledgeStatus(self.status).name

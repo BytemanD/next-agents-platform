@@ -98,21 +98,33 @@ flowchart TB
 
 ## 快速开始
 
-> 首次运行前请先分别安装依赖。
+### 部署
+首次运行前请先分别安装依赖。
 
-1. 安装依赖包
-    ```bash
-    cd nap-backend
-    uv sync
-    ```
+#### Master 节点
+```bash
+cd nap-backend
+uv sync
+```
 
-2. knowledge服务节点导入模型
-    ```bash
-    wget https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz
-    cp onnx.tar.gz ~/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
-    ```
+#### Knowledge 节点
+```bash
+cd nap-backend
+uv sync
 
-### 一键脚本
+wget https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz
+mkdir ~/.cache/chroma/onnx_models/all-MiniLM-L6-v2 -p
+cp onnx.tar.gz ~/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
+```
+
+#### Frontend 节点
+```bash
+cd nap-frontend
+npm install
+```
+
+
+### 启动脚本
 
 项目根目录提供了按服务启动的脚本，支持类 Unix 与 Windows：
 

@@ -4,7 +4,6 @@ import bcrypt
 import dotenv
 from fastapi import FastAPI
 from loguru import logger
-from nap.db.migrate import ensure_columns
 from nap.db.models import User
 from nap.master.agent.asyncio import get_checkpointer_saver
 from nap.master.api.v1 import (
@@ -36,7 +35,7 @@ log.setup_logger(remove=True)
 async def lifespan(app: FastAPI):
     logger.info("start Master ...")
     create_all_tables()
-    ensure_columns()
+
     async with get_checkpointer_saver() as saver:
         await MANAGER.setup(saver)
         await MANAGER.start()

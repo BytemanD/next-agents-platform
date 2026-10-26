@@ -6,6 +6,7 @@ from datetime import datetime
 from langchain.tools import ToolRuntime
 from langchain_core.tools import BaseToolkit, tool
 from loguru import logger
+from nap.common.exceptions import KnowledgeNotExists
 from nap.common.knowledge_client import KnowledgeClient
 from nap.db.models import Attachment, Knowledge
 from nap.master.agent.context import RuntimeContext
@@ -43,9 +44,9 @@ def get_iso_datetime(runtime: ToolRuntime[RuntimeContext]):
 
 @tool
 def get_available_knowledge_bases(runtime: ToolRuntime[RuntimeContext]):
-    """获取本次会话需要可用哪些知识库
+    """获取本次会话可用的知识库
 
-    当需要查询知道本次会话可以查询哪些知识库时使用。
+    当需要获取本次会话可查询的知识库时使用。
 
     Returns:
         匹配的文档片段列表，每段包含内容和相似度信息。
@@ -82,22 +83,42 @@ def retrival(knowledge_uuid: str, query: str, top_k: int = 3):
 
 
 @tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "file_search"})
-async def list_documents(knowledge_uuid: str):
-    """列出向量库中的中的文档。
+async def list_documents(knowledge_base_uuid: str):
+    """列出知识库中的文档。
 
-    从向量库中获取所有文档列表
+    从指定的知识库中获取所有文档列表
 
     Args:
-        knowledge_uuid: 知识库UUID
+        knowledge_base_uuid: 知识库UUID
 
     Returns:
         文档列表
     """
+    logger.info("list documents for knowledge base: {}", knowledge_base_uuid)
+    items = Knowledge.query(Knowledge.knowledge_base == knowledge_base_uuid)
+    return [x.model_dump(mode="json") for x in items]
+
+
+@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "file_search"})
+async def get_document_content(knowledge_uuid: str, encoding: str = 'utf-8'):
+    """获取知识库文档内容。
+
+    获取指定知识文档的内容。
+
+    Args:
+        knowledge_uuid: 文档UUID
+        encoding: 文档编码
+
+    Returns:
+        文档内容
+    """
+    
     logger.info("list documents for knowledge base: {}", knowledge_uuid)
-    return [
-        x.model_dump(mode="json")
-        for x in KNOWLEDGE_CLIENT.list_documents(knowledge_uuid)
-    ]
+    items = Knowledge.query(Knowledge.uuid == knowledge_uuid)
+    if not items:
+        raise KnowledgeNotExists(knowledge_uuid)
+    item = items[0]
+    return STORE_SERVICE.get_content(item).decode(encoding=encoding)
 
 
 @tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
@@ -181,7 +202,7 @@ async def get_document_preview_url(uuid: str):
     当需要获取知识文档、附件或者其他文件的预览链接时使用。
 
     Args:
-        uuid: 文档UUID
+        uuid: 文档UUID、附件UUID、其他文件UUID
 
     Returns:
         预览地址,格式： [文件名](地址)
@@ -214,6 +235,7 @@ class BuiltInToolkit(BaseToolkit):
             get_available_knowledge_bases,
             retrival,
             list_documents,
+            get_document_content,
             get_attachments,
             get_attachment_content,
         ]
