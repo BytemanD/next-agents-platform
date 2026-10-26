@@ -26,6 +26,7 @@ dependencies = [
     "openai-agents>=0.22.0",
     "portalocker>=4.3.2",
     "pydantic>=2.13.5",
+    "pymilvus>=3.0.2",
     "pystonic",
     "redis>=8.1.0",
     "rich>=15.0.0",

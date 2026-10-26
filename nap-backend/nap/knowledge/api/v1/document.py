@@ -4,19 +4,19 @@ from fastapi import APIRouter, Header, HTTPException
 from nap.common.exceptions import DocumentNotFound
 from nap.db.models import KnowledgeBase
 from nap.knowledge.manager import MANAGER
-from nap.services.vector import RetrivalDocument
 from pydantic import BaseModel
+from pystonic.infra.vector.objects import VectorDocument
 from starlette import status
 
 router = APIRouter(prefix="/documents", tags=["向量库文档"])
 
 
 class GetDocumentResp(BaseModel):
-    document: RetrivalDocument
+    document: VectorDocument
 
 
 class ListDocumentResp(BaseModel):
-    documents: list[RetrivalDocument]
+    documents: list[VectorDocument]
 
 
 @router.get(

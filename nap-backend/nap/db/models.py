@@ -120,6 +120,9 @@ class KnowledgeBase(DBModel, table=True):
     def get_by_uuids(cls, uuids: list[str]):
         return cls.query(col(cls.uuid).in_(uuids))
 
+    def collection_name(self):
+        return self.uuid.replace("-", "_")
+
 
 class KnowledgeEnrichmen(DBModel, table=True):
     __tablename__ = "knowledge_enrichments"  # type: ignore
@@ -164,6 +167,9 @@ class Knowledge(DBModel, table=True):
         if not self.raw_path:
             raise ValueError("raw_path is missing")
         return str(Path("convert", self.uuid, os.path.basename(self.raw_path)))
+
+    def collection_name(self):
+        return "c_" + self.knowledge_base.replace("-", "_")
 
     @classmethod
     def get_pending_process(cls, limits: int = 100):

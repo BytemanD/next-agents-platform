@@ -1,8 +1,10 @@
+from typing import Literal
+
 from pystonic.common.conf import BaseAppConfig, FrozenBaseModel
 
 
 class VectorConfig(FrozenBaseModel):
-    driver: str = "chromadb"
+    driver: Literal["chroma", "milvus"] = "chroma"
 
 
 class ChromaDBConfig(FrozenBaseModel):

@@ -42,7 +42,7 @@ flowchart TB
     end
     subgraph KS[Knowledge服务 :8001]
         direction TB
-        Vector[(向量库<br/>ChromaDB)]
+        RAG(RAG)
         Parser(文档解析<br/>markitdown)
     end
     MS --> KS
@@ -56,6 +56,7 @@ flowchart TB
     KS --> Storage
     KS --> Cache
     KS --> LLM
+    KS --> Vector([向量库<br/>chroma,milus])
 ```
 
 - **Master**：面向前端的业务服务，负责用户、智能体、会话、附件、监控，并编排 Agent 对话。
@@ -231,12 +232,3 @@ next-agents-platform/
 - **文件存储**：默认文件系统驱动，位于 `data/raw/`。
 - **鉴权**：基于 JWT，`sub` 为用户名；前端 Token 存于 `localStorage`（`nap_token`）并自动刷新。
 - **前端校验**：`npm run typecheck`（`vue-tsc --noEmit`）。
-
-
-## 其他
-
-## onnx 模型 下载
-
-
-
-

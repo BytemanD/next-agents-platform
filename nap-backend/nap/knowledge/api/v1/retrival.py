@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from nap.db.models import KnowledgeBase
 from nap.knowledge.manager import MANAGER
-from nap.services.vector import RetrivalDocument
 from pydantic import BaseModel
+from pystonic.infra.vector.objects import VectorDocument
 from starlette import status
 
 router = APIRouter(prefix="/retrival", tags=["向量召回"])
@@ -16,7 +16,7 @@ class PostRetrival(BaseModel):
 
 
 class PostRetrivalResp(BaseModel):
-    documents: list[RetrivalDocument] = []
+    documents: list[VectorDocument] = []
 
 
 @router.post(
