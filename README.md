@@ -56,7 +56,7 @@ flowchart TB
     KS --> Storage
     KS --> Cache
     KS --> LLM
-    KS --> Vector([向量库<br/>chroma,milus])
+    KS --> Vector[(向量库<br/>chroma,milus)]
 ```
 
 - **Master**：面向前端的业务服务，负责用户、智能体、会话、附件、监控，并编排 Agent 对话。

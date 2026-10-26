@@ -6,7 +6,7 @@
           <template #icon><t-icon name="arrow-left" /></template>
         </t-button>
         <t-space align="end">
-          <h1 class="text-2xl font-bold text-nap-text">{{ isEdit ? '编辑智能体' : '创建智能体' }}</h1>
+          <h1 class="text-2xl font-bold">{{ isEdit ? '编辑智能体' : '创建智能体' }}</h1>
           <p class="text-nap-text-secondary mt-1">配置你的智能体行为与能力</p>
         </t-space>
       </t-space>
@@ -16,7 +16,7 @@
     </div>
     <t-layout class="flex-1 min-h-0">
     <t-aside>
-      <t-anchor :affix-props="{ offsetTop: 150 }" container="#settings">
+      <t-anchor container="#settings">
         <t-anchor-item href="#基本信息" title="基本信息" />
         <t-anchor-item href="#参数设置" title="参数设置" />
         <t-anchor-item href="#知识库" title="知识库" />
@@ -25,7 +25,7 @@
         <t-anchor-item href="#系统提示词" title="系统提示词" />
       </t-anchor>
     </t-aside>
-    <t-content class="p-2 min-h-0 flex-1">
+    <t-content class="px-8 min-h-0 flex-1">
       <div id="settings" class="scroll-container h-full overflow-y-auto">
         <t-title level="h5" id="基本信息">基本信息</t-title>
         <t-card size="small">
