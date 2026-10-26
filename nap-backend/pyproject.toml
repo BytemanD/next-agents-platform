@@ -17,6 +17,7 @@ dependencies = [
     "langchain-community>=0.4.2",
     "langchain-mcp-adapters>=0.3.2",
     "langchain-openai>=1.6.2",
+    "langgraph-checkpoint-mysql[asyncmy]>=3.0.0",
     "langgraph-checkpoint-sqlite>=3.1.1",
     "loguru>=0.7.3",
     # "markitdown>=0.1.7",

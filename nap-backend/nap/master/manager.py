@@ -1,4 +1,5 @@
 import httpx
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from loguru import logger
 from nap.common.conf import CONF
 from nap.common.exceptions import (
@@ -71,20 +72,22 @@ class MasterManager(BaseManager):
         self._agent: AsyncAgent | None = None
         self.messaging_driver = RedisMessaingQueue()
 
+    async def setup(self, saver: BaseCheckpointSaver):
+        self._agent = AsyncAgent(saver)
+
     async def start(self):
         await super().start()
-        self._agent = AsyncAgent()
+        # self._agent = AsyncAgent()
 
     @property
     def agent(self):
         if not self._agent:
-            self._agent = AsyncAgent()
+            raise RuntimeError("agent is null, please call setup first")
+
         return self._agent
 
     async def stop(self):
         await super().stop()
-        if self._agent:
-            await self._agent.stop()
 
     def list_llm(self):
         return LLMs.query(LLMs.user == context.getvar("account"))

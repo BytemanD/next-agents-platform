@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from loguru import logger
 from nap.db.migrate import ensure_columns
 from nap.db.models import User
+from nap.master.agent.asyncio import get_checkpointer_saver
 from nap.master.api.v1 import (
     agents,
     attachment,
@@ -36,8 +37,11 @@ async def lifespan(app: FastAPI):
     logger.info("start Master ...")
     create_all_tables()
     ensure_columns()
-    await MANAGER.start()
-    yield
+    async with get_checkpointer_saver() as saver:
+        await MANAGER.setup(saver)
+        await MANAGER.start()
+        yield
+
     logger.info("stop Master ...")
     await MANAGER.stop()
 

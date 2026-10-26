@@ -229,7 +229,7 @@ async def chat(agent_uuid: str, body: ChatRequest):
             )
             yield data.model_dump_json()
         except Exception as e:  # noqa: BLE001
-            logger.error("chat failed: {}", e)
+            logger.exception("chat failed")
             data = ChatSSE(
                 type="error",
                 msg=f"Error: request failed: {e}",

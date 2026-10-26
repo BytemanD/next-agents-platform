@@ -1,10 +1,14 @@
-import aiosqlite
+import contextlib
+from pathlib import Path
+
 from langchain.agents import create_agent
 from langchain_community.callbacks import OpenAICallbackHandler
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langchain_openai.chat_models.base import OpenAIRateLimitError
+from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.checkpoint.mysql.asyncmy import AsyncMySaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from loguru import logger
 from nap.common.conf import CONF
@@ -18,17 +22,38 @@ from nap.master.agent.tools import mysql, web_search
 from nap.master.agent.tools.builtin import BUILT_IN_TOOLKIT
 from pydantic import SecretStr
 from pystonic.common import context
+from pystonic.orm.database import _engine
 
-# CUSTOM_TOOLS = web_search.WebSearchToolkit().get_tools()
+
+@contextlib.asynccontextmanager
+async def get_checkpointer_saver():
+    if (
+        CONF.master.agent_checkpoint_driver in ["auto", "mysql"]
+        and _engine.dialect.name == "mysql"
+    ):
+        logger.info("use mysql checkpoint saver")
+        async with AsyncMySaver.from_conn_string(CONF.db.url) as saver:
+            logger.debug("setup saver: {}", saver)
+            await saver.setup()
+            yield saver
+        return
+
+    if CONF.master.agent_checkpoint_driver == "mysql":
+        raise RuntimeError('checkpoint driver is "mysql" but db config is not mysql ')
+
+    logger.info("use sqlite checkpoint saver")
+    saver_path = Path(CONF.store, "checkpoint.sqlite")
+    saver_path.parent.mkdir(parents=True, exist_ok=True)
+    async with AsyncSqliteSaver.from_conn_string(str(saver_path)) as saver:
+        yield saver
 
 
 class AsyncAgent:
-    def __init__(self):
-        self._conn = aiosqlite.connect(CONF.store + "/checkpoint.sqlite")
-        self._saver = AsyncSqliteSaver(self._conn)
+    def __init__(self, saver: BaseCheckpointSaver):
+        self._saver = saver
         self._agent = create_agent(
             ChatOpenAI(model="gpt", base_url="...", api_key=SecretStr("...")),
-            checkpointer=self._saver,
+            checkpointer=saver,
             context_schema=RuntimeContext,
             middleware=[RuntimeAgentMiddleware()],
             # tools=[*INTERNAL_TOOLS, *CUSTOM_TOOLS],
@@ -40,9 +65,9 @@ class AsyncAgent:
         ]
         # web_search.WebSearchToolkit.me
 
-    async def stop(self):
-        logger.info("close checkpointer connection")
-        await self._conn.close()
+    # async def init(self):
+    #     if _engine.dialect.name == "mysql":
+    #         with  AIOMySQLSaver.from_conn_string(CONF.db.url) as saver:
 
     # @staticmethod
     # def _build_input(ctx: RuntimeContext, query: str) -> str:

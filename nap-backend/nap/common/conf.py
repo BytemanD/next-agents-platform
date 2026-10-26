@@ -22,6 +22,7 @@ class StorageConfig(FrozenBaseModel):
 
 class MasterConfig(FrozenBaseModel):
     knowledge_base_url: str = "http://localhost:8001"
+    agent_checkpoint_driver: Literal["auto", "mysql", "sqlite"] = "auto"
 
 
 class AppConfig(BaseAppConfig):
