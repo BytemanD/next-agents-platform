@@ -15,117 +15,139 @@
       </t-space>
     </div>
     <t-layout class="flex-1 min-h-0">
-    <t-aside>
-      <t-anchor container="#settings">
-        <t-anchor-item href="#基本信息" title="基本信息" />
-        <t-anchor-item href="#参数设置" title="参数设置" />
-        <t-anchor-item href="#知识库" title="知识库" />
-        <t-anchor-item href="#工具集" title="工具集" />
-        <t-anchor-item href="#MCP" title="MCP" />
-        <t-anchor-item href="#系统提示词" title="系统提示词" />
-      </t-anchor>
-    </t-aside>
-    <t-content class="px-8 min-h-0 flex-1">
-      <div id="settings" class="scroll-container h-full overflow-y-auto">
-        <t-title level="h5" id="基本信息">基本信息</t-title>
-        <t-card size="small">
-          <t-form>
-            <t-form-item label="名称" name="name">
-              <t-input placeholder="例如：研究助理" v-model="form.name" />
-            </t-form-item>
-            <t-form-item label="模型提供商" name="llm">
-              <t-select v-model="form.llm" :options="modelOptions" placeholder="选择模型" />
-            </t-form-item>
-            <t-form-item label="描述" name="description">
-              <t-textarea v-model="form.description" placeholder="这个智能体是做什么的？" />
-            </t-form-item>
-            <!-- <t-divider>参数设置</t-divider>
+      <t-aside>
+        <t-anchor container="#settings">
+          <t-anchor-item href="#基本信息" title="基本信息" />
+          <t-anchor-item href="#参数设置" title="参数设置" />
+          <t-anchor-item href="#知识库" title="知识库" />
+          <t-anchor-item href="#工具集" title="工具集" />
+          <t-anchor-item href="#MCP" title="MCP" />
+          <t-anchor-item href="#系统提示词" title="系统提示词" />
+        </t-anchor>
+      </t-aside>
+      <t-content class="px-8 min-h-0 flex-1">
+        <div id="settings" class="scroll-container h-full overflow-y-auto">
+          <t-title level="h5" id="基本信息">基本信息</t-title>
+          <t-card size="small">
+            <t-form>
+              <t-form-item label="名称" name="name">
+                <t-input placeholder="例如：研究助理" v-model="form.name" />
+              </t-form-item>
+              <t-form-item label="模型提供商" name="llm">
+                <t-select v-model="form.llm" :options="modelOptions" placeholder="选择模型" />
+              </t-form-item>
+              <t-form-item label="描述" name="description">
+                <t-textarea v-model="form.description" placeholder="这个智能体是做什么的？" />
+              </t-form-item>
+              <!-- <t-divider>参数设置</t-divider>
             <t-form-item label="温度">
               <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
             </t-form-item>
             <t-form-item label="最大 Token 数">
               <t-input-number v-model="form.config.max_tokens" :min="256" :max="128000" :step="256" theme="normal" />
             </t-form-item> -->
-          </t-form>
-        </t-card>
-        <t-title level="h5" id="参数设置">参数设置</t-title>
-        <t-card size="small">
-          <t-form>
-            <t-form-item label="温度">
-              <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
-            </t-form-item>
-            <t-form-item label="最大 Token 数">
-              <t-input-number v-model="form.config.max_tokens" :min="256" :max="128000" :step="256" theme="normal" />
-            </t-form-item>
-          </t-form>
-        </t-card>
-
-        <t-title level="h5" id="知识库">知识库</t-title>
-        <t-card size="small" class="mt-2" id="知识库">
-          <template #description>关联知识源</template>
-          <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
-        </t-card>
-
-        <t-title level="h5" id="工具集">工具集</t-title>
-        <t-card size="small" class="mt-2">
-          <template #description>选择这个智能体可以使用的工具</template>
-          <t-card v-for="tool in availableTools" :key="tool.id" size="small" class="mb-1"
-            :class="tool.id in form.tools ? 'bg-active' : ''">
-            <template #title>
-              <t-space>
-                <t-icon v-if="tool.icon" :name="tool.icon" size="20" />
-                <span>{{ tool.name }}</span>
-                <t-tooltip v-if="tool.help" :content="tool.help">
-                  <t-icon name="info-circle" color="info"></t-icon>
-                </t-tooltip>
-              </t-space>
-            </template>
-            <template #actions>
-              <t-checkbox :checked="tool.id in form.tools" @change="toggleTool(tool.id)" />
-            </template>
-            <t-form v-if="Object.keys(tool.requires).length > 0" size="small" requiredMark label-align="left">
-              <t-form-item v-for="(v, k) in tool.requires" :key="k" :label="k" :name="k"
-                :style="{ marginBottom: '1px' }">
-                <t-input-number v-if="v['type'] == 'integer'" theme="column" size="small" :min="0" auto-width
-                  :model-value="toolArgValue(tool.id, k)"
-                  @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
-                <t-input v-else size="small" :model-value="toolArgValue(tool.id, k)"
-                  @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+            </t-form>
+          </t-card>
+          <t-title level="h5" id="参数设置">参数设置</t-title>
+          <t-card size="small">
+            <t-form>
+              <t-form-item label="温度">
+                <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
+              </t-form-item>
+              <t-form-item label="最大 Token 数">
+                <t-input-number v-model="form.config.max_tokens" :min="256" :max="128000" :step="256" theme="normal" />
               </t-form-item>
             </t-form>
           </t-card>
-        </t-card>
 
-        <t-title level="h5" id="MCP">MCP</t-title>
-        <t-card size="small" class="mt-2">
-          <template #description>选择这个智能体可以连接的 MCP 服务</template>
-          <t-space break-line>
-            <t-card v-for="mcp in mcpServers" :key="mcp.uuid" size="small" 
-              :class="(form.mcp_uuids.indexOf(mcp.uuid) >= 0) ? 'bg-active' : ''">
+          <t-title level="h5" id="知识库">知识库</t-title>
+          <t-card size="small" class="mt-2" id="知识库">
+            <template #description>关联知识源</template>
+            <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
+          </t-card>
+
+          <t-title level="h5" id="工具集" description="选择这个智能体可以使用的工具">工具集</t-title>
+          <t-card size="small" class="mt-2">
+            <t-collapse>
+              <t-collapse-panel v-for="tool in availableTools" :header="tool.name">
+                <template #headerRightContent>
+                  <t-checkbox :checked="tool.id in form.tools" @change="toggleTool(tool.id)" />
+                </template>
+                <template #expandIcon>
+                  <t-icon v-if="tool.icon" :name="tool.icon" size="20" />
+                </template>
+                <t-text>{{ tool.help }}</t-text>
+                <t-title level="h6">参数:</t-title>
+                <t-form v-if="Object.keys(tool.requires).length > 0" size="small" requiredMark label-align="left">
+                  <t-form-item v-for="(v, k) in tool.requires" :key="k" :label="k" :name="k"
+                    :style="{ marginBottom: '1px' }">
+                    <t-input-number v-if="v['type'] == 'integer'" theme="column" size="small" :min="0" auto-width
+                      :model-value="toolArgValue(tool.id, k)"
+                      @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+                    <t-input v-else size="small" :model-value="toolArgValue(tool.id, k)"
+                      @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+                  </t-form-item>
+                </t-form>
+              </t-collapse-panel>
+            </t-collapse>
+            <template #description>选择这个智能体可以使用的工具</template>
+            <!-- <t-card v-for="tool in availableTools" :key="tool.id" size="small" class="mb-1"
+              :class="tool.id in form.tools ? 'bg-active' : ''">
               <template #title>
                 <t-space>
-                  <span>{{ mcp.name }}</span>
+                  <t-icon v-if="tool.icon" :name="tool.icon" size="20" />
+                  <span>{{ tool.name }}</span>
+                  <t-tooltip v-if="tool.help" :content="tool.help">
+                    <t-icon name="info-circle" color="info"></t-icon>
+                  </t-tooltip>
                 </t-space>
               </template>
               <template #actions>
-                <t-checkbox :checked="form.mcp_uuids.indexOf(mcp.uuid) >= 0" @change="setMcpSelected(mcp.uuid)" />
+                <t-checkbox :checked="tool.id in form.tools" @change="toggleTool(tool.id)" />
               </template>
-              {{ mcp.url }}
-            </t-card>
-          </t-space>
-          <t-empty v-if="!mcpServers.length" title="暂无 MCP 服务" description="请先到「设置 - MCP」中添加" />
-        </t-card>
+              <t-form v-if="Object.keys(tool.requires).length > 0" size="small" requiredMark label-align="left">
+                <t-form-item v-for="(v, k) in tool.requires" :key="k" :label="k" :name="k"
+                  :style="{ marginBottom: '1px' }">
+                  <t-input-number v-if="v['type'] == 'integer'" theme="column" size="small" :min="0" auto-width
+                    :model-value="toolArgValue(tool.id, k)"
+                    @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+                  <t-input v-else size="small" :model-value="toolArgValue(tool.id, k)"
+                    @update:model-value="(v: string) => setToolArg(tool.id, k, v)" />
+                </t-form-item>
+              </t-form>
+            </t-card> -->
+          </t-card>
 
-        <t-title level="h5" id="系统提示词">系统提示词</t-title>
+          <t-title level="h5" id="MCP">MCP</t-title>
+          <t-card size="small" class="mt-2">
+            <template #description>选择这个智能体可以连接的 MCP 服务</template>
+            <t-space break-line>
+              <t-card v-for="mcp in mcpServers" :key="mcp.uuid" size="small"
+                :class="(form.mcp_uuids.indexOf(mcp.uuid) >= 0) ? 'bg-active' : ''">
+                <template #title>
+                  <t-space>
+                    <span>{{ mcp.name }}</span>
+                  </t-space>
+                </template>
+                <template #actions>
+                  <t-checkbox :checked="form.mcp_uuids.indexOf(mcp.uuid) >= 0" @change="setMcpSelected(mcp.uuid)" />
+                </template>
+                {{ mcp.url }}
+              </t-card>
+            </t-space>
+            <t-empty v-if="!mcpServers.length" title="暂无 MCP 服务" description="请先到「设置 - MCP」中添加" />
+          </t-card>
 
-        <t-card size="small" subtitle="定义智能体的性格、知识和行为规则。">
-          <t-textarea v-model="form.instruction" :autosize="{ minRows: 10, maxRows: 20 }" placeholder="你是一位乐于助人的助理..."
-            class="font-mono text-sm" />
-        </t-card>
+          <t-title level="h5" id="系统提示词">系统提示词</t-title>
 
-      </div>
-    </t-content>
-  </t-layout>
+          <t-card size="small" subtitle="定义智能体的性格、知识和行为规则。">
+            <t-textarea v-model="form.instruction" :autosize="{ minRows: 10, maxRows: 20 }" placeholder="你是一位乐于助人的助理..."
+              class="font-mono text-sm" />
+          </t-card>
+
+        </div>
+      </t-content>
+    </t-layout>
   </div>
 </template>
 

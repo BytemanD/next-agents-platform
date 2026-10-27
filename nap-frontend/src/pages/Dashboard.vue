@@ -31,7 +31,7 @@
       </t-card>
     </t-col>
 
-    <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="6" :xl="2">
+    <t-col v-for="(stat, i) in stats.slice(1)" :key="stat.label" :xs="12" :sm="4" :xl="2">
       <t-card :bordered="false" class="metric-card nap-rise" :style="{ animationDelay: `${(i + 1) * 60}ms` }"
         style="min-height: 150px; border-radius: var(--nap-radius-lg)">
         <t-statistic :title="stat.label" :value="stat.value" />
@@ -44,7 +44,7 @@
   </t-row>
 
   <t-row :gutter="[8, 8]" class="my-2">
-    <t-col :xs="24" :xl="4">
+    <t-col :xs="12" :sm="6" :xl="4">
       <t-card :bordered="true" :class="{ 'nap-rise': true }" :style="{ animationDelay: '220ms' }" title="最近智能体"
         subtitle="团队的智能体运行状态" size="small">
         <template #actions>
@@ -82,7 +82,7 @@
       </t-card>
     </t-col>
 
-    <t-col :xs="24" :xl="4">
+    <t-col :xs="12" :sm="6" :xl="3">
       <t-card :bordered="true" :style="{ animationDelay: '300ms' }" title="快速开始" size="small">
         <t-list size="small" :split="true">
           <t-list-item v-for="template in templates" class="agent-row cursor-pointer"
@@ -100,11 +100,11 @@
         </t-list>
       </t-card>
     </t-col>
-    <t-col :xs="24" :xl="4">
+    <t-col :xs="12" :sm="6" :xl="3">
       <t-card :bordered="true" :style="{ animationDelay: '360ms' }" title="动态" size="small">
         <t-timeline mode="same">
           <t-timeline-item v-for="(activity, i) in activities" :key="i" :label="activity.time">{{ activity.text
-          }}</t-timeline-item>
+            }}</t-timeline-item>
         </t-timeline>
 
         <!-- <div class="activity-list">

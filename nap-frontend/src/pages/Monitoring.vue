@@ -9,13 +9,13 @@
       </t-space>
     </t-col>
   </t-row>
-  <t-row :gutter="[16, 16]">
+  <t-row :gutter="[8, 8]">
     <t-col v-for="stat in stats" :key="stat.label" :xs="12" :sm="6" :lg="3">
       <statistic-card :value="stat.value" :title="stat.label" />
     </t-col>
   </t-row>
 
-  <t-row :gutter="[14, 14]" class="my-2">
+  <t-row :gutter="[8, 8]" class="my-2">
     <t-col :xs="12" :lg="6">
       <t-card :bordered="true" title="Token 使用量" size="small">
         <div class="h-64">
