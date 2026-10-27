@@ -70,14 +70,13 @@
     </t-table>
   </t-card>
 
-  <t-dialog v-model:visible="showUpload" header="上传文档" width="700px" :on-confirm="handleUpload"
-    :confirm-on-enter="false" :footer="false">
+  <t-dialog v-model:visible="showUpload" header="上传文档" width="700px" :footer="false" @close="resetUpload">
     <t-button variant="outline" @click="() => uploadRef?.triggerUpload()" class="mb-2">
       <template #icon><t-icon name="upload"></t-icon></template>选择文件
     </t-button>
     <t-upload v-model="uploadFiles" ref="uploadRef" multiple :theme="uploadFiles.length == 0 ? 'custom' : 'file-flow'"
       :max="10" :auto-upload="false" draggable :is-batch-upload="false" :request-method="handleUpload"
-      :abridge-name="ABRIDGE_NAME">
+      :on-success="handleUploadSuccess" :on-fail="handleUploadFail" :abridge-name="ABRIDGE_NAME">
       <template #dragContent>
         <t-space class="flex justify-between" align="center" direction="vertical" :size="2">
           <t-icon name="upload" size="48" class="text-nap-primay" />
@@ -133,11 +132,16 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { MessagePlugin, Button as TButton } from 'tdesign-vue-next'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { API } from '@/api'
 import { useKnowledgeStore } from '@/stores/knowledge'
 import type { KnowledgeItem, KnowledgeBase, KnowledgeDetail, KnowledgeTodo } from '@/types'
-import type { UploadInstanceFunctions, UploadProps } from 'tdesign-vue-next';
+import type {
+  UploadFile,
+  UploadInstanceFunctions,
+  UploadProps,
+  RequestMethodResponse,
+} from 'tdesign-vue-next';
 import StatisticCard from '@/components/common/StatisticCard.vue';
 import { filesize } from 'filesize'
 
@@ -156,8 +160,7 @@ const kb = computed<KnowledgeBase | undefined>(() =>
 
 const searchQuery = ref('')
 const showUpload = ref(false)
-const uploading = ref(false)
-const uploadFiles = ref<any[]>([])
+const uploadFiles = ref<UploadFile[]>([])
 const showDetail = ref(false)
 const loadingDetail = ref(false)
 const detail = ref<KnowledgeDetail | null>(null)
@@ -278,26 +281,60 @@ function canPreview(name: string) {
   return PREVIEWABLE_EXTS.includes(name.slice(i + 1).toLowerCase())
 }
 
-function handleUpload() {
-  if (uploadFiles.value.length === 0) {
-    MessagePlugin.error('请选择文件')
-    return
-  }
-  uploading.value = true
-  const tasks = uploadFiles.value.map(file =>
-    API.uploadKbFile(baseUuid.value, file.raw || file)
+/**
+ * t-upload 的 requestMethod 必须返回 RequestMethodResponse 的 Promise，
+ * 否则组件内部的 uploading 状态不会被重置，上传按钮会一直显示“上传中”。
+ *
+ * 同时这里只处理组件传入的文件：is-batch-upload=false 时组件会按文件
+ * 逐个调用本方法，若直接遍历 uploadFiles 会把同一批文件重复上传。
+ */
+async function handleUpload(
+  input: UploadFile | UploadFile[]
+): Promise<RequestMethodResponse> {
+  const files = (Array.isArray(input) ? input : input ? [input] : []).filter(
+    (file): file is UploadFile => !!file
   )
-  Promise.all(tasks)
-    .then(() => {
-      MessagePlugin.success('上传成功')
-      showUpload.value = false
-      uploadFiles.value = []
-      return knowledgeStore.fetchKnowledgeItems(baseUuid.value)
-    })
-    .catch(() => MessagePlugin.error('上传失败'))
-    .finally(() => {
-      uploading.value = false
-    })
+  const rawFiles = files
+    .map(file => file.raw)
+    .filter((file): file is File => !!file)
+
+  if (rawFiles.length === 0) {
+    return { status: 'fail', error: '请选择文件', response: {} }
+  }
+
+  try {
+    await Promise.all(
+      rawFiles.map(file => API.uploadKbFile(baseUuid.value, file))
+    )
+    return { status: 'success', response: { files } }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : '上传失败'
+    return { status: 'fail', error: detail, response: {} }
+  }
+}
+
+async function handleUploadSuccess() {
+  MessagePlugin.success('上传成功')
+  showUpload.value = false
+  uploadFiles.value = []
+  try {
+    await knowledgeStore.fetchKnowledgeItems(baseUuid.value)
+  } catch {
+    MessagePlugin.error('刷新文档列表失败')
+  }
+}
+
+function handleUploadFail(context: any) {
+  const name = context?.file?.name || '文件'
+  const detail =
+    context?.file?.response?.error ||
+    context?.response?.error ||
+    '上传失败'
+  MessagePlugin.error(`「${name}」${detail}`)
+}
+
+function resetUpload() {
+  uploadFiles.value = []
 }
 
 const STATUS_TEXT: Record<string, string> = {

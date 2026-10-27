@@ -103,7 +103,7 @@ const userMenuOptions = [
 
 const userMenuHandler = (data: any) => {
   if (data.value == 'settings') {
-    router.push('settings')
+    router.push('/settings')
     return
   }
   if (data.value == 'signout') {
