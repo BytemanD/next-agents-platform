@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 16 156 80" role="img" aria-labelledby="napC-title napC-desc">
+  <title id="napC-title">nap — monoline wordmark</title>
+  <desc id="napC-desc">The lowercase word nap drawn in a single geometric stroke, closed with a gold period.</desc>
+  <g fill="none" stroke="#124A4E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 24V60"/>
+    <path d="M16 39A15 15 0 0 1 46 39V60"/>
+    <circle cx="80" cy="42" r="14"/>
+    <path d="M94 38V60"/>
+    <path d="M110 24V88"/>
+    <circle cx="124" cy="42" r="14"/>
+  </g>
+  <circle cx="152" cy="55" r="5" fill="#D2A054"/>
+</svg>

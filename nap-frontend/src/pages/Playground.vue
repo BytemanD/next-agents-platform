@@ -77,7 +77,7 @@
           <div class="flex flex-col items-center gap-4 relative">
             <div class="welcome-logo-wrap">
               <span class="welcome-logo-ring"></span>
-              <AppLogo size="large" :show-text="false" />
+              <app-logo variant="mark" size="80px"></app-logo>
             </div>
             <h1 class="welcome-title text-2xl font-semibold">你好，有什么我能帮你的吗？</h1>
             <p class="text-sm text-nap-muted">选择右侧会话继续，或直接提问开始一段新对话</p>

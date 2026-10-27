@@ -40,16 +40,9 @@
 
     <t-tab-panel value="about" label="关于" class="panel">
       <div class="flex items-center gap-4 mb-6">
-        <div
-          class="w-14 h-14 rounded-2xl bg-nap-gradient flex items-center justify-center text-white text-2xl font-bold shadow-[0_8px_24px_rgba(79,70,229,0.3)]"
-          style="font-family: var(--font-display)">
-          N
-        </div>
-        <div>
-          <p class="text-lg font-semibold text-nap-text" style="font-family: var(--font-display)">NAP</p>
-          <p class="text-sm text-nap-text-secondary">Hand it over and take a nap</p>
-        </div>
+        <app-logo></app-logo>
       </div>
+      <p class="text-sm text-nap-text-secondary">Hand it over and take a nap</p>
       <div class="space-y-0 divide-y divide-nap-border">
         <div class="flex justify-between py-3 text-sm">
           <span class="text-nap-text-secondary">版本</span>

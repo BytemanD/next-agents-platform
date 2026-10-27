@@ -10,7 +10,7 @@
       <div class="auth-brand__inner">
         <div class="auth-brand__logo">
           <span class="auth-brand__ring"></span>
-          <AppLogo size="large" :show-text="false" />
+          <app-logo variant="mark" size="100px"></app-logo>
         </div>
         <h1 class="auth-brand__title"><span v-for="(ch, i) in titleLetters" :key="i" class="auth-brand__letter"
             :style="{ '--i': i }">{{ ch }}</span></h1>

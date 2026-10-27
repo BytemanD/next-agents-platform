@@ -2,9 +2,8 @@
   <t-aside :class="uiStore.collapsed ? 'w-16' : 'w-58'">
     <t-menu :value="currentPath" :collapsed="uiStore.collapsed" @change="handleMenuChange" class='border-r'>
       <template #logo>
-        <AppLogo :show-text="!uiStore.collapsed" />
+        <app-logo :variant="uiStore.collapsed ? 'icon' : 'lockup'" :size="uiStore.collapsed ? '34px' : '50px'"></app-logo>
       </template>
-
       <t-button block shape="round" @click="handleMenuChange('/playground')" style="margin-bottom: 20px;">
         <template #icon>
           <ChatBubbleIcon />

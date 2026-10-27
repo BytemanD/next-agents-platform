@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NAP 品牌标识 · N</title>
+<style>
+  :root{
+    --paper:#F7F1E4;
+    --paper-2:#F1EADA;
+    --ink:#16272A;
+    --ink-2:#5A6B6B;
+    --ink-3:#8C9A98;
+    --teal:#124A4E;
+    --teal-2:#296266;
+    --gold:#D2A054;
+    --night:#0E2B2E;
+    --line:rgba(18,74,78,.14);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"Space Grotesk","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:56px 40px 96px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  .kicker{
+    font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--teal-2);font-weight:600;margin:0 0 18px
+  }
+  h1{
+    font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.03em;
+    font-weight:600;margin:0 0 18px;max-width:18ch
+  }
+  h1 span{
+    background:linear-gradient(45deg,#124A4E 10%,#7C7B57 60%,#D2A054 92%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .lede{font-size:16px;line-height:1.65;color:var(--ink-2);max-width:62ch;margin:0}
+  .lede b{color:var(--ink);font-weight:600}
+  .meta{
+    display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:28px;
+    font-size:12px;color:var(--ink-3);letter-spacing:.02em
+  }
+  .meta span{display:inline-flex;align-items:center;gap:8px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+
+  hr.rule{border:0;border-top:1px solid var(--line);margin:44px 0}
+
+  /* palette */
+  .palette{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .sw{border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .sw i{display:block;height:64px}
+  .sw p{margin:0;padding:10px 12px 12px;font-size:11px;line-height:1.5;color:var(--ink-2)}
+  .sw p b{display:block;font-size:12px;color:var(--ink);font-weight:600;letter-spacing:.01em}
+
+  /* section head */
+  .sec{margin-top:64px}
+  .head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+  .num{font-size:12px;letter-spacing:.18em;color:var(--gold);font-weight:700;padding-top:6px}
+  h2{font-size:26px;letter-spacing:-.02em;margin:0;font-weight:600}
+  h2 em{font-style:normal;color:var(--ink-3);font-weight:400;font-size:16px;margin-left:10px;letter-spacing:0}
+  .badge{
+    font-size:10px;letter-spacing:.14em;padding:4px 9px;border-radius:999px;
+    background:var(--teal);color:var(--paper);font-weight:600;transform:translateY(-2px)
+  }
+  .why{margin:12px 0 24px;color:var(--ink-2);font-size:14px;line-height:1.7;max-width:72ch}
+  .why b{color:var(--ink);font-weight:600}
+
+  /* stages */
+  .stage{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+  .panel{border-radius:14px;border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;min-height:236px;padding:26px}
+  .panel.light{background:#FFFDF8}
+  .panel.dark{background:var(--night);border-color:transparent}
+  .panel .row{display:flex;align-items:center;gap:30px;flex-wrap:wrap}
+  .panel .label{
+    font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);
+    margin-bottom:auto;padding-bottom:22px
+  }
+  .panel.dark .label{color:rgba(247,241,228,.45)}
+
+  .sizes{display:flex;align-items:flex-end;gap:26px;margin-top:18px}
+  .sizes figure{margin:0;text-align:center}
+  .sizes img{display:block;margin:0 auto 8px}
+  .sizes figcaption{font-size:10px;color:var(--ink-3);letter-spacing:.06em}
+
+  .files{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .files code{
+    font-family:"SFMono-Regular",ui-monospace,Menlo,monospace;font-size:11px;
+    background:var(--paper-2);color:var(--ink-2);border:1px solid var(--line);
+    padding:5px 9px;border-radius:6px
+  }
+
+  /* gradient spec */
+  .grad{border-radius:14px;border:1px solid var(--line);background:#FFFDF8;padding:24px 26px 22px}
+  .grad .bar{height:64px;border-radius:8px;background:linear-gradient(45deg,#124A4E 0%,#2C6668 45%,#7C7B57 80%,#D2A054 100%)}
+  .grad .axis{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);letter-spacing:.06em;margin-top:10px}
+  .stops{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px}
+  .stop{font-size:11px;color:var(--ink-2);line-height:1.5}
+  .stop i{display:block;width:100%;height:6px;border-radius:3px;margin-bottom:7px}
+  .stop b{color:var(--ink);font-weight:600;font-family:"SFMono-Regular",ui-monospace,Menlo,monospace;font-size:11px}
+  .grad .note{margin:18px 0 0;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+  .grad .note b{color:var(--ink)}
+
+  /* mocks */
+  .mocks{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;align-items:start;margin-top:30px}
+  .caption{font-size:11px;color:var(--ink-3);letter-spacing:.04em;margin:0 0 8px 2px}
+  .mock{
+    border-radius:14px;background:var(--night);padding:18px 22px;
+    display:flex;align-items:center;gap:16px;border:1px solid rgba(0,0,0,.2)
+  }
+  .mock .nav{margin-left:auto;display:flex;gap:18px;font-size:12px;color:rgba(247,241,228,.55)}
+  .mock .nav b{color:#F7F1E4;font-weight:500}
+  .tag{
+    font-size:11px;padding:5px 10px;border-radius:999px;
+    border:1px solid rgba(210,160,84,.5);color:var(--gold);letter-spacing:.03em
+  }
+  .side{border-radius:14px;background:#FFFDF8;border:1px solid var(--line);padding:16px;height:100%}
+  .side .lock{display:flex;align-items:center;padding:2px 6px 18px}
+  .side .lock img{height:38px}
+  .side .item{
+    display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-2);
+    padding:8px 10px;border-radius:8px;margin-bottom:2px
+  }
+  .side .item i{width:13px;height:13px;border:1.5px solid currentColor;border-radius:3px;opacity:.5}
+  .side .item.on{background:#E9F0EB;color:var(--teal);font-weight:600}
+  .side .item.on i{border-radius:50%;opacity:.9}
+
+  footer{margin-top:72px;padding-top:24px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--ink-3)}
+  @media (max-width:820px){
+    body{padding:36px 20px 64px}
+    .stage,.mocks{grid-template-columns:1fr}
+    .palette{grid-template-columns:repeat(2,1fr)}
+    .stops{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kicker">NAP · Next-generation Agent Platform</p>
+  <h1>像手写一样，<br><span>从天黑写到天亮。</span></h1>
+  <p class="lede">N 是躺下的 Z，也是品牌名的首字母。它由<b>三笔手写笔画</b>叠成 —— 竖、斜、再一竖 —— 笔锋起收略重、中段略轻，整体<b>向右倾斜 12°</b>，像随手签下的名字。颜色沿整枚标记从左下角的<b>夜青</b>一路走到右上角的<b>灯金</b>，<b>没有接缝</b>。</p>
+
+  <div class="meta">
+    <span><i class="dot"></i>96 网格 · 三笔手写 · 圆角 26</span>
+    <span><i class="dot"></i>右倾 12° · 45° 渐变</span>
+    <span><i class="dot"></i>纯 SVG · 无字体依赖</span>
+  </div>
+
+  <hr class="rule">
+
+  <div class="palette">
+    <div class="sw"><i style="background:#124A4E"></i><p><b>Night Teal</b>#124A4E 起点</p></div>
+    <div class="sw"><i style="background:#296266"></i><p><b>Harbor</b>#296266 过渡</p></div>
+    <div class="sw"><i style="background:#F7F1E4"></i><p><b>Paper</b>#F7F1E4 底色</p></div>
+    <div class="sw"><i style="background:#D2A054"></i><p><b>Lamp</b>#D2A054 终点</p></div>
+    <div class="sw"><i style="background:#0E2B2E"></i><p><b>Midnight</b>#0E2B2E 深底</p></div>
+  </div>
+
+  <!-- 01 primary -->
+  <section class="sec">
+    <div class="head"><span class="num">01</span><h2>主标<em>图标 + 字标</em></h2><span class="badge">推荐</span></div>
+    <p class="why">手写体的 N：左竖、斜线、右竖<b>三笔叠成</b>，笔锋在起收处略重、中段略轻，整体向右倾斜 12°，收笔圆头、没有尖角。字标 <b>nap.</b> 仍是几何单线，和手写标记形成松紧对比，句点取终点色。</p>
+
+    <div class="stage">
+      <div class="panel light">
+        <span class="label">Horizontal lockup</span>
+        <div class="row"><img src="../../nap-frontend/public/brand/lockup.svg" alt="NAP 横版组合" style="height:96px"></div>
+        <div class="sizes">
+          <figure><img src="../../nap-frontend/public/brand/icon.svg" width="64" height="64" alt="64px"><figcaption>64</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon.svg" width="32" height="32" alt="32px"><figcaption>32</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon.svg" width="24" height="24" alt="24px"><figcaption>24 · small</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon.svg" width="16" height="16" alt="16px"><figcaption>16 · small</figcaption></figure>
+        </div>
+      </div>
+      <div class="panel dark">
+        <span class="label">Icon · dark surface</span>
+        <div class="row">
+          <img src="../../nap-frontend/public/brand/icon-midnight.svg" alt="深底方" style="height:112px">
+          <img src="../../nap-frontend/public/brand/mark-reversed.svg" alt="无底反白" style="height:96px">
+        </div>
+        <div class="sizes">
+          <figure><img src="../../nap-frontend/public/brand/icon-midnight.svg" width="48" height="48" alt="48px"><figcaption>48</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon-midnight.svg" width="28" height="28" alt="28px"><figcaption>28</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon-midnight.svg" width="16" height="16" alt="16px"><figcaption>16</figcaption></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="mocks">
+      <div>
+        <p class="caption">应用顶栏</p>
+        <div class="mock">
+          <img src="../../nap-frontend/public/brand/lockup-reversed.svg" alt="" style="height:34px">
+          <span class="tag">v0.1</span>
+          <div class="nav"><b>对话</b><span>智能体</span><span>知识库</span><span>监控</span></div>
+        </div>
+      </div>
+      <div>
+        <p class="caption">侧边栏</p>
+        <div class="side">
+          <div class="lock"><img src="../../nap-frontend/public/brand/icon.svg" alt="N" style="height:38px;margin-right:12px"><img src="../../nap-frontend/public/brand/wordmark.svg" alt="nap." style="height:30px"></div>
+          <div class="item on"><i></i>对话</div>
+          <div class="item"><i></i>知识库</div>
+          <div class="item"><i></i>智能体</div>
+          <div class="item"><i></i>监控中心</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="files">
+      <code>icon.svg</code><code>icon-small.svg</code><code>lockup.svg</code><code>mark-reversed.svg</code><code>lockup-reversed.svg</code>
+    </div>
+  </section>
+
+  <!-- 02 gradient -->
+  <section class="sec">
+    <div class="head"><span class="num">02</span><h2>渐变<em>三笔，一道坡</em></h2></div>
+    <p class="why">渐变用 <code>userSpaceOnUse</code> 铺在整枚标记上，而不是每笔各自渐变 —— 所以三笔虽然分开，颜色却是<b>同一道 45° 的坡</b>：左下角 0% 是夜青，右上角 100% 是灯金。中间经过一段青灰橄榄（不是脏灰），像铜器上的包浆，这是两个色相在感知空间里的自然路径。</p>
+
+    <div class="grad">
+      <div class="bar"></div>
+      <div class="axis"><span>0% · 左下角</span><span>45°</span><span>100% · 右上角</span></div>
+      <div class="stops">
+        <div class="stop"><i style="background:#124A4E"></i><b>#124A4E</b><br>0% Night Teal</div>
+        <div class="stop"><i style="background:#2C6668"></i><b>#2C6668</b><br>45% Harbor</div>
+        <div class="stop"><i style="background:#7C7B57"></i><b>#7C7B57</b><br>80% Patina</div>
+        <div class="stop"><i style="background:#D2A054"></i><b>#D2A054</b><br>100% Lamp</div>
+      </div>
+      <p class="note"><b>小尺寸另走一档：</b>24px 以下用 <code>icon-small.svg</code>，终点压深到 <b>#B8863C</b>。金色在纸白上本来就轻，压深一点，16px 的右上角才不会糊掉。</p>
+    </div>
+  </section>
+
+  <!-- 03 variants -->
+  <section class="sec">
+    <div class="head"><span class="num">03</span><h2>变体<em>同一枚标记的不同场合</em></h2></div>
+    <p class="why">纸白方是默认形态（应用图标、favicon）；圆章用于头像和社交；午夜方和无底反白用于深色界面。深色下渐变整体提亮一档，夜青换成 <b>#3F8080</b>，否则起点会消失在底色里。</p>
+
+    <div class="stage">
+      <div class="panel light">
+        <span class="label">Paper · Circle · Small</span>
+        <div class="row">
+          <img src="../../nap-frontend/public/brand/icon.svg" alt="方" style="height:104px">
+          <img src="../../nap-frontend/public/brand/icon-circle.svg" alt="圆章" style="height:104px">
+          <img src="../../nap-frontend/public/brand/icon.svg" alt="小尺寸" style="height:52px">
+        </div>
+        <div class="sizes">
+          <figure><img src="../../nap-frontend/public/brand/icon-circle.svg" width="56" height="56" alt="56px"><figcaption>circle</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon-circle.svg" width="32" height="32" alt="32px"><figcaption>32</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon-circle.svg" width="24" height="24" alt="24px"><figcaption>24</figcaption></figure>
+        </div>
+      </div>
+      <div class="panel dark">
+        <span class="label">Midnight surface</span>
+        <div class="row">
+          <img src="../../nap-frontend/public/brand/icon-midnight.svg" alt="深底方" style="height:104px">
+          <img src="../../nap-frontend/public/brand/icon-circle.svg" alt="深底圆" style="height:104px;box-shadow:0 0 0 1px rgba(247,241,228,.12);border-radius:50%">
+        </div>
+        <div class="sizes">
+          <figure><img src="../../nap-frontend/public/brand/icon-midnight.svg" width="40" height="40" alt="40px"><figcaption>40</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/icon-midnight.svg" width="24" height="24" alt="24px"><figcaption>24</figcaption></figure>
+        </div>
+      </div>
+    </div>
+
+    <div class="files"><code>icon.svg</code><code>icon-circle.svg</code><code>icon-midnight.svg</code><code>mark-reversed.svg</code></div>
+  </section>
+
+  <!-- 04 wordmark -->
+  <section class="sec">
+    <div class="head"><span class="num">04</span><h2>字标 nap.<em>路径即字形</em></h2></div>
+    <p class="why">单一线宽、圆头收笔、金色句点，没有字体依赖，任何环境渲染一致。放在侧边栏顶部、登录页、文档封面都成立；需要更正式的场合可以全大写 <b>NAP</b>，间距 +40。</p>
+
+    <div class="stage">
+      <div class="panel light">
+        <span class="label">Wordmark</span>
+        <div class="row"><img src="../../nap-frontend/public/brand/wordmark.svg" alt="nap 字标" style="height:64px"></div>
+        <div class="sizes">
+          <figure><img src="../../nap-frontend/public/brand/wordmark.svg" alt="" style="height:48px"><figcaption>large</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/wordmark.svg" alt="" style="height:32px"><figcaption>medium</figcaption></figure>
+          <figure><img src="../../nap-frontend/public/brand/wordmark.svg" alt="" style="height:22px"><figcaption>small</figcaption></figure>
+        </div>
+      </div>
+      <div class="panel dark">
+        <span class="label">Wordmark · reversed</span>
+        <div class="row"><img src="../../nap-frontend/public/brand/wordmark-reversed.svg" alt="nap 字标反白" style="height:56px"></div>
+        <div class="row" style="margin-top:14px"><img src="../../nap-frontend/public/brand/wordmark-reversed.svg" alt="" style="height:28px"></div>
+      </div>
+    </div>
+
+    <div class="files"><code>wordmark.svg</code><code>wordmark-reversed.svg</code></div>
+  </section>
+
+  <footer>
+    <span>图标 96 网格 / 字标 156×80 网格；横版组合里图标 80、字标线宽落到 7.5。</span>
+    <span>下一步可导出：favicon 16 / 32 / 180、应用图标 512、PNG 透明底、单色黑与纯白。</span>
+  </footer>
+
+</div>
+</body>
+</html>

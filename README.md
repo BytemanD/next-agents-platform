@@ -2,6 +2,9 @@
 
 > Hand it over and take a nap.
 
+<img src="nap-frontend/public/brand/lockup.svg" alt="Brand" height="100">
+
+
 NAP 是一个轻量级的 AI 智能体与知识库融合平台：支持创建、配置多种智能体并与之对话，同时以知识库驱动检索增强，让每一次回答都有据可依。
 
 | 预览 |  |
@@ -30,7 +33,7 @@ NAP 是一个轻量级的 AI 智能体与知识库融合平台：支持创建、
 ```mermaid
 flowchart TB
     FE[前端 :3000] ==>|/api| MS
-    subgraph MS[Master服务 :8000]
+    subgraph MS[Master服务 :18000]
         direction TB
         KM(知识管理)
         CM(配置管理)
@@ -40,7 +43,7 @@ flowchart TB
         Agents .-> TOOL((Tools))
         Agents .-> MCP((MCP))
     end
-    subgraph KS[Knowledge服务 :8001]
+    subgraph KS[Knowledge服务 :18001]
         direction TB
         RAG(RAG)
         Parser(文档解析<br/>markitdown)
@@ -129,8 +132,8 @@ npm install
 项目根目录提供了按服务启动的脚本，支持类 Unix 与 Windows：
 
 ```bash
-./run-server.sh master       # 启动 Master 服务 (port 8000)
-./run-server.sh knowledge    # 启动 Knowledge 服务 (port 8001)
+./run-server.sh master       # 启动 Master 服务 (port 18000)
+./run-server.sh knowledge    # 启动 Knowledge 服务 (port 18001)
 ./run-server.sh frontend     # 启动前端开发服务 (vite, port 3000)
 ```
 
@@ -138,16 +141,16 @@ npm install
 - windows 环境使用 run-server.bat 脚本
 
 
-前端开发服务器会把 `/api` 与 `/ws` 代理到 `localhost:8000`。
+前端开发服务器会把 `/api` 与 `/ws` 代理到 `localhost:18000`。
 
-> Master 默认通过 `http://localhost:8001` 访问 Knowledge 服务，可在配置中调整。
+> Master 默认通过 `http://localhost:18001` 访问 Knowledge 服务，可在配置中调整。
 
 ### 默认服务端口
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| Master | 8000 | 业务 API，接口文档 `/api/docs` |
-| Knowledge | 8001 | 向量化与检索 |
+| Master | 18000 | 业务 API，接口文档 `/api/docs` |
+| Knowledge | 18001 | 向量化与检索 |
 | Frontend | 3000 | 开发服务器 |
 
 ---
@@ -193,7 +196,7 @@ next-agents-platform/
 
 基础路径：`/api/v1`，除注册与登录外均需携带 `Authorization: Bearer <token>`。
 
-### Master 服务（:8000）
+### Master 服务（:18000）
 
 | 模块 | 路径 | 主要接口 |
 |------|------|---------|
@@ -210,7 +213,7 @@ next-agents-platform/
 | 监控 | `/monitoring` | `token-usage`、`models`、`latency` |
 | 仪表盘 | `/dashboard` | 运行状态与指标汇总 |
 
-### Knowledge 服务（:8001）
+### Knowledge 服务（:18001）
 
 | 模块 | 路径 | 主要接口 |
 |------|------|---------|
@@ -244,3 +247,7 @@ next-agents-platform/
 - **文件存储**：默认文件系统驱动，位于 `data/raw/`。
 - **鉴权**：基于 JWT，`sub` 为用户名；前端 Token 存于 `localStorage`（`nap_token`）并自动刷新。
 - **前端校验**：`npm run typecheck`（`vue-tsc --noEmit`）。
+
+## Brand Design
+
+[README.md](docs/brand/README.md)

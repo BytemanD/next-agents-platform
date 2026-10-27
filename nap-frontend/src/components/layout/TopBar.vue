@@ -1,4 +1,5 @@
 <template>
+
   <t-header>
     <t-head-menu>
       <template #logo>
@@ -70,8 +71,8 @@ const router = useRouter()
 const showSearch = ref(false)
 const searchQuery = ref('')
 const uiStore = useUIStore()
-
 const currentTitle = computed(() => route.meta.title as string || '仪表盘')
+
 
 const authStore = useAuthStore()
 const userName = ref('')
@@ -80,6 +81,9 @@ function redirectToLogin() {
   authStore.logout()
   router.replace('/login')
 }
+const themeMode = computed(() => {
+  return document.documentElement.getAttribute('theme-mode')
+})
 
 onMounted(async () => {
   if (!authStore.token) {

@@ -28,7 +28,7 @@
       <t-content class="px-8 min-h-0 flex-1">
         <div id="settings" class="scroll-container h-full overflow-y-auto">
           <t-title level="h5" id="基本信息">基本信息</t-title>
-          <t-card size="small">
+          <t-card size="small" :bordered="false">
             <t-form>
               <t-form-item label="名称" name="name">
                 <t-input placeholder="例如：研究助理" v-model="form.name" />
@@ -49,7 +49,7 @@
             </t-form>
           </t-card>
           <t-title level="h5" id="参数设置">参数设置</t-title>
-          <t-card size="small">
+          <t-card size="small" :bordered="false">
             <t-form>
               <t-form-item label="温度">
                 <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
@@ -61,13 +61,13 @@
           </t-card>
 
           <t-title level="h5" id="知识库">知识库</t-title>
-          <t-card size="small" class="mt-2" id="知识库">
+          <t-card size="small" class="mt-2" id="知识库" :bordered="false">
             <template #description>关联知识源</template>
             <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
           </t-card>
 
           <t-title level="h5" id="工具集" description="选择这个智能体可以使用的工具">工具集</t-title>
-          <t-card size="small" class="mt-2">
+          <t-card size="small" class="mt-2" :bordered="false" >
             <t-collapse>
               <t-collapse-panel v-for="tool in availableTools" :header="tool.name">
                 <template #headerRightContent>
@@ -119,7 +119,7 @@
           </t-card>
 
           <t-title level="h5" id="MCP">MCP</t-title>
-          <t-card size="small" class="mt-2">
+          <t-card size="small" class="mt-2" :bordered="false">
             <template #description>选择这个智能体可以连接的 MCP 服务</template>
             <t-space break-line>
               <t-card v-for="mcp in mcpServers" :key="mcp.uuid" size="small"
@@ -140,7 +140,7 @@
 
           <t-title level="h5" id="系统提示词">系统提示词</t-title>
 
-          <t-card size="small" subtitle="定义智能体的性格、知识和行为规则。">
+          <t-card size="small" subtitle="定义智能体的性格、知识和行为规则。" :bordered="false" >
             <t-textarea v-model="form.instruction" :autosize="{ minRows: 10, maxRows: 20 }" placeholder="你是一位乐于助人的助理..."
               class="font-mono text-sm" />
           </t-card>

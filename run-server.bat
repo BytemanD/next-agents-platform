@@ -26,12 +26,12 @@ goto :usage
 
 :master
 cd /d "%~dp0nap-backend"
-uv run uvicorn nap.master.asgi:APP --reload-dir nap --port 8000 %EXTRA%
+uv run uvicorn nap.master.asgi:APP --reload-dir nap --port 18000 %EXTRA%
 goto :eof
 
 :knowledge
 cd /d "%~dp0nap-backend"
-uv run uvicorn nap.knowledge.asgi:APP --reload-dir nap --port 8001 %EXTRA%
+uv run uvicorn nap.knowledge.asgi:APP --reload-dir nap --port 18001 %EXTRA%
 goto :eof
 
 :frontend
@@ -41,7 +41,7 @@ goto :eof
 :usage
 echo Usage: %SCRIPT% {master^|knowledge^|frontend} [extra args...]
 echo.
-echo   master     启动 Master 服务 (port 8000)
-echo   knowledge  启动 Knowledge 服务 (port 8001)
+echo   master     启动 Master 服务 (port 18000)
+echo   knowledge  启动 Knowledge 服务 (port 18001)
 echo   frontend   启动前端开发服务 (vite)
 exit /b 1
