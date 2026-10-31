@@ -3,9 +3,10 @@ from datetime import datetime
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Response
+from pydantic import BaseModel
+
 from nap.db.models import Knowledge, KnowledgeStatus, KnowledgeTodo
 from nap.master.manager import MANAGER
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/knowledges", tags=["知识"])
 

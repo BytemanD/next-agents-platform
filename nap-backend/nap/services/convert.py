@@ -2,9 +2,10 @@ import io
 
 import markitdown
 from loguru import logger
+from pydantic import BaseModel
+
 from nap.db.models import Attachment, Knowledge
 from nap.services.storage import STORE_SERVICE
-from pydantic import BaseModel
 
 
 class Collection(BaseModel):

@@ -1,7 +1,8 @@
 import click
+from pystonic.pretty.output import print_models
+
 from nap.common.knowledge_client import KnowledgeClient
 from nap.db.models import KnowledgeBase
-from pystonic.pretty.output import print_models
 
 KNOWLEDGE_CLIENT = KnowledgeClient()
 

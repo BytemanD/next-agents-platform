@@ -4,11 +4,12 @@ from datetime import date, timedelta
 from enum import IntEnum, StrEnum, auto
 from pathlib import Path
 
-from nap.common.exceptions import AgentNotExists
-from nap.db.types import AgentConfig, PydanticType
 from pystonic.common import context
 from pystonic.orm.models import DBModel, get_session, utcnow
-from sqlmodel import JSON, Column, Field, Text, col, desc, func, select, update
+from sqlmodel import JSON, Column, Field, Text, col, func, select, update
+
+from nap.common.exceptions import AgentNotExists
+from nap.db.types import AgentConfig, PydanticType
 
 
 class KnowledgeStatus(IntEnum):
@@ -121,7 +122,7 @@ class KnowledgeBase(DBModel, table=True):
         return cls.query(col(cls.uuid).in_(uuids))
 
     def collection_name(self):
-        return self.uuid.replace("-", "_")
+        return "c_" + self.uuid.replace("-", "_")
 
 
 class KnowledgeEnrichmen(DBModel, table=True):
@@ -262,26 +263,26 @@ class KnowledgeTodo(DBModel, table=True):
         self.set_status("completed")
 
 
-class Session(DBModel, table=True):
-    __tablename__ = "sessions"  # type: ignore
+# class Session(DBModel, table=True):
+#     __tablename__ = "sessions"  # type: ignore
 
-    user: str = Field(nullable=False, default="guest", description="所属用户")
-    agent: str = Field(nullable=False, description="智能体 UUID")
-    title: str = Field(nullable=True, default="", description="会话标题")
+#     user: str = Field(nullable=False, default="guest", description="所属用户")
+#     agent: str = Field(nullable=False, description="智能体 UUID")
+#     title: str = Field(nullable=True, default="", description="会话标题")
 
-    @classmethod
-    def get_recent(cls, agent_uuid: str):
-        stm = (
-            select(cls)
-            .where(
-                cls.user == _get_account(),
-                cls.agent == agent_uuid,
-            )
-            .order_by(desc(cls.created_at))
-        )
+#     @classmethod
+#     def get_recent(cls, agent_uuid: str):
+#         stm = (
+#             select(cls)
+#             .where(
+#                 cls.user == _get_account(),
+#                 cls.agent == agent_uuid,
+#             )
+#             .order_by(desc(cls.created_at))
+#         )
 
-        with get_session() as session:
-            return session.exec(stm).all()
+#         with get_session() as session:
+#             return session.exec(stm).all()
 
 
 class AgentCallback(DBModel, table=True):

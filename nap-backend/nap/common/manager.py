@@ -7,6 +7,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
 from loguru import logger
+from pystonic.common import context
 
 
 class BaseManager:
@@ -64,3 +65,6 @@ class BaseManager:
             name=name,
             next_run_time=datetime.now(UTC) + timedelta(seconds=1),
         )
+
+    def get_request_account(self):
+        return context.getvar("account") or "guest"

@@ -1,9 +1,10 @@
 import asyncio
 
 import click
+from pystonic.pretty.output import print_models
+
 from nap.db.models import Session
 from nap.master.manager import MANAGER
-from pystonic.pretty.output import print_models
 
 
 @click.group(name="session")

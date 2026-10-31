@@ -1,49 +1,22 @@
 """用户使用的工具"""
 
-from asyncio import to_thread
-from datetime import datetime
-
 from langchain.tools import ToolRuntime
 from langchain_core.tools import BaseToolkit, tool
 from loguru import logger
+from sqlmodel import col
+
 from nap.common.exceptions import KnowledgeNotExists
 from nap.common.knowledge_client import KnowledgeClient
 from nap.db.models import Attachment, Knowledge
-from nap.master.agent.context import RuntimeContext
+from nap.master.agent.context import NapRuntimeContext
 from nap.services.convert import CONVERT_SERVICE
 from nap.services.storage import STORE_SERVICE
-from pystonic.common import context
-from sqlmodel import col
 
 KNOWLEDGE_CLIENT = KnowledgeClient()
 
 
 @tool
-def get_username(runtime: ToolRuntime[RuntimeContext]):
-    """获取当前用户名
-
-    当需要获取当前用户名时使用。
-
-    Returns:
-        用户名
-    """
-    return runtime.context.username
-
-
-@tool
-def get_iso_datetime(runtime: ToolRuntime[RuntimeContext]):
-    """获取当前日期和时间
-
-    当需要获取当前日期和时间时使用。
-
-    Returns:
-        ISO格式日期和时间
-    """
-    return datetime.now().isoformat()
-
-
-@tool
-def get_available_knowledge_bases(runtime: ToolRuntime[RuntimeContext]):
+def get_available_knowledge_bases(runtime: ToolRuntime[NapRuntimeContext]):
     """获取本次会话可用的知识库
 
     当需要获取本次会话可查询的知识库时使用。
@@ -58,7 +31,7 @@ def get_available_knowledge_bases(runtime: ToolRuntime[RuntimeContext]):
     ]
 
 
-@tool(parse_docstring=True, extras={"title": "向量召回", "type": "file_search"})
+@tool(parse_docstring=True)
 def retrival(knowledge_uuid: str, query: str, top_k: int = 3):
     """搜索向量库，返回与查询语义最相关的文档片段。
 
@@ -76,13 +49,19 @@ def retrival(knowledge_uuid: str, query: str, top_k: int = 3):
         如果没有找到相关资料，返回空列表。
     """
     logger.info("retrival for knowledge base: {}", knowledge_uuid)
+    docs = KNOWLEDGE_CLIENT.retrival(knowledge_uuid, query, top_k=top_k)
+    logger.info(
+        "retrival return ({}) docs: {}",
+        len(docs),
+        [x.model_dump(mode="json", exclude={"content"}) for x in docs],
+    )
     return [
         x.model_dump(mode="json")
         for x in KNOWLEDGE_CLIENT.retrival(knowledge_uuid, query, top_k=top_k)
     ]
 
 
-@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "file_search"})
+@tool(parse_docstring=True)
 async def list_documents(knowledge_base_uuid: str):
     """列出知识库中的文档。
 
@@ -99,8 +78,8 @@ async def list_documents(knowledge_base_uuid: str):
     return [x.model_dump(mode="json") for x in items]
 
 
-@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "file_search"})
-async def get_document_content(knowledge_uuid: str, encoding: str = 'utf-8'):
+@tool(parse_docstring=True)
+async def get_document_content(knowledge_uuid: str, encoding: str = "utf-8"):
     """获取知识库文档内容。
 
     获取指定知识文档的内容。
@@ -112,7 +91,7 @@ async def get_document_content(knowledge_uuid: str, encoding: str = 'utf-8'):
     Returns:
         文档内容
     """
-    
+
     logger.info("list documents for knowledge base: {}", knowledge_uuid)
     items = Knowledge.query(Knowledge.uuid == knowledge_uuid)
     if not items:
@@ -121,8 +100,8 @@ async def get_document_content(knowledge_uuid: str, encoding: str = 'utf-8'):
     return STORE_SERVICE.get_content(item).decode(encoding=encoding)
 
 
-@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
-async def get_attachments(runtime: ToolRuntime[RuntimeContext]):
+@tool(parse_docstring=True)
+async def get_attachments(runtime: ToolRuntime[NapRuntimeContext]):
     """获取会话附件
 
     当需要获取会话上下文中的附件列表时使用。
@@ -132,6 +111,8 @@ async def get_attachments(runtime: ToolRuntime[RuntimeContext]):
         附件列表
     """
     logger.info("list attachments with uuid: {}", runtime.context.attachments)
+    if not runtime.context.attachments:
+        return []
     return [
         x.model_dump(mode="json")
         for x in Attachment.query(
@@ -141,8 +122,8 @@ async def get_attachments(runtime: ToolRuntime[RuntimeContext]):
     ]
 
 
-@tool(parse_docstring=True, extras={"title": "查看向量库文档", "type": "search"})
-async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str):
+@tool(parse_docstring=True)
+async def get_attachment_content(runtime: ToolRuntime[NapRuntimeContext], uuid: str):
     """获取附件内容
 
     当需要获取会话附件内容时使用。
@@ -161,38 +142,6 @@ async def get_attachment_content(runtime: ToolRuntime[RuntimeContext], uuid: str
         return f"ERROR: attachment {uuid} not exists"
     logger.info("get Attachment content for {}", uuid)
     return CONVERT_SERVICE.convert(items[0], save_convert=False)
-
-
-@tool(parse_docstring=True)
-async def save_text(
-    filename: str, content: str, encoding: str = "utf-8-sig", overwrite: bool = False
-):
-    """保存文本到文件中
-
-    当需要保存文本内容时使用。建议文件加上日期和时间，避免文件名冲突。
-
-    Args:
-        filename: 文件名
-        content: 文本内容
-        encoding: 文件编码
-        overwrite: 如果文件已经存在是否覆盖
-
-    Returns:
-        文件UUID
-    """
-    attachment = Attachment(
-        creator=context.getvar("account") or "guest",
-        name=filename,
-    )
-    await to_thread(
-        STORE_SERVICE.save_text,
-        attachment,
-        content,
-        encoding=encoding,
-        overwrite=overwrite,
-    )
-    attachment.create()
-    return attachment.uuid
 
 
 @tool(parse_docstring=True)
@@ -223,14 +172,11 @@ async def get_document_preview_url(uuid: str):
     raise ValueError("doc with uuid: {} not found")
 
 
-class BuiltInToolkit(BaseToolkit):
+class Toolkit(BaseToolkit):
     """知识库工具集"""
 
     def get_tools(self) -> list:
         return [
-            get_username,
-            get_iso_datetime,
-            save_text,
             get_document_preview_url,
             get_available_knowledge_bases,
             retrival,
@@ -241,4 +187,4 @@ class BuiltInToolkit(BaseToolkit):
         ]
 
 
-BUILT_IN_TOOLKIT = BuiltInToolkit()
+TOOLKIT = Toolkit()

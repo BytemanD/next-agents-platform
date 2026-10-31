@@ -1,4 +1,5 @@
 from loguru import logger
+
 from nap.common.conf import CONF
 from nap.db.models import Knowledge, KnowledgeBase
 
@@ -31,7 +32,7 @@ class VectorService:
         self.driver.add_document(
             content,
             collection=knowledge.collection_name(),
-            metadata={"knowledge_id": knowledge.uuid},
+            metadata={"knowledge_id": knowledge.uuid, "knowledge_name": knowledge.name},
         )
         logger.success("{} add document success", knowledge.uuid)
 
@@ -48,9 +49,11 @@ class VectorService:
 
         logger.success("delete knowledge({}) success", knowledge)
 
-    def retrieval(self, query: str, k: int = 3):
-        logger.info("retrival({}): {}", k, query)
-        return self.driver.retrieval(query, k=k)
+    def retrieval(self, knowledge_base: KnowledgeBase, query: str, k: int = 3):
+        logger.info("retrival(k={}): {}", k, query)
+        return self.driver.retrieval(
+            query, k=k, collection=knowledge_base.collection_name()
+        )
 
 
 VECTOR_SERVICE = VectorService()

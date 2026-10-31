@@ -1,10 +1,11 @@
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from nap.common.utils import hashpw
-from nap.db.models import User
 from pydantic import BaseModel, SecretStr
 from pystonic.common import context
+
+from nap.common.utils import hashpw
+from nap.db.models import User
 
 router = APIRouter(prefix="/users", tags=["用户"])
 

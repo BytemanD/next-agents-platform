@@ -1,11 +1,12 @@
 from enum import StrEnum
 
 from loguru import logger
-from nap.common.conf import CONF
-from nap.db.models import Attachment, Knowledge
 from pystonic.infra.storage.local import LocalStorage
 from pystonic.infra.storage.s3 import S3Storage
 from pystonic.utils import funcutil
+
+from nap.common.conf import CONF
+from nap.db.models import Attachment, Knowledge
 
 
 class StorageSchema(StrEnum):

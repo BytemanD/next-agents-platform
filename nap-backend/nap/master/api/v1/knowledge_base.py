@@ -4,11 +4,12 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from pydantic import BaseModel
+from starlette import status
+
 from nap.common.exceptions import KnowledgeBaseAlreadyExists
 from nap.db.models import Attachment, Knowledge, KnowledgeBase, KnowledgeStatus, User
 from nap.master.manager import MANAGER
-from pydantic import BaseModel
-from starlette import status
 
 router = APIRouter(prefix="/knowledge-bases", tags=["知识库"])
 

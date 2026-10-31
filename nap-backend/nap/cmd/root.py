@@ -2,8 +2,9 @@ import os
 
 import click
 import dotenv
-from nap.cmd import agent, db, knowledge, knowledge_base, llm, session, tools
 from pystonic.common import context
+
+from nap.cmd import agent, db, knowledge, knowledge_base, llm, session, tools
 
 
 @click.group()

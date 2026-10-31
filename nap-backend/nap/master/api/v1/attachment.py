@@ -3,11 +3,12 @@ from datetime import datetime
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Response, UploadFile
+from pydantic import BaseModel
+from pystonic.common import context
+
 from nap.common.exceptions import AttachmentNotExists, NoPermission
 from nap.db.models import Attachment
 from nap.master.manager import MANAGER
-from pydantic import BaseModel
-from pystonic.common import context
 
 router = APIRouter(prefix="/attachments", tags=["附件"])
 

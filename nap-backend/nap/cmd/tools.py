@@ -1,8 +1,9 @@
 import asyncio
 
 import click
-from nap.master.manager import MANAGER
 from pystonic.pretty.output import print_models
+
+from nap.master.manager import MANAGER
 
 
 @click.group(name="tool")

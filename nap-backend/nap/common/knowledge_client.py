@@ -1,6 +1,7 @@
-from nap.common.conf import CONF
-from nap.common.objects import RetrivalDocument
+from pystonic.infra.vector.objects import VectorDocument
 from pystonic.utils.httpclient import default_client
+
+from nap.common.conf import CONF
 
 
 class KnowledgeClient:
@@ -21,7 +22,7 @@ class KnowledgeClient:
             headers={"x-knowedge-base-id": knowledge_base},
         )
         return [
-            RetrivalDocument.model_validate(x) for x in resp.json().get("documents", [])
+            VectorDocument.model_validate(x) for x in resp.json().get("documents", [])
         ]
 
     def list_documents(self, knowledge_base: str):
@@ -30,7 +31,7 @@ class KnowledgeClient:
             headers={"x-knowedge-base-id": knowledge_base},
         )
         return [
-            RetrivalDocument.model_validate(x) for x in resp.json().get("documents", [])
+            VectorDocument.model_validate(x) for x in resp.json().get("documents", [])
         ]
 
     def get_document(
@@ -43,4 +44,4 @@ class KnowledgeClient:
             "/api/v1/documents",
             headers={"x-knowedge-base-id": knowledge_base},
         )
-        return RetrivalDocument.model_validate(resp.json().get("document", {}))
+        return VectorDocument.model_validate(resp.json().get("document", {}))

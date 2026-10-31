@@ -1,19 +1,20 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter
+from pydantic import BaseModel
+from pystonic.agents.langchain_agent.agent import AgentSession
+from pystonic.common import context
+from pystonic.orm.models import get_session, utcnow
+from sqlmodel import col, func, select
+
 from nap.db.models import (
     AgentCallback,
     Agents,
     Knowledge,
     KnowledgeStatus,
     LLMs,
-    Session,
 )
 from nap.master.manager import MANAGER
-from pydantic import BaseModel
-from pystonic.common import context
-from pystonic.orm.models import get_session, utcnow
-from sqlmodel import col, func, select
 
 router = APIRouter(prefix="/dashboard", tags=["仪表盘"])
 
@@ -109,13 +110,15 @@ async def dashboard():
         Knowledge.created_at < week,
     )
 
-    ses_total = _count_model(Session, Session.user == account)
-    ses_cur = _count_model(Session, Session.user == account, Session.created_at >= week)
+    ses_total = _count_model(AgentSession, AgentSession.user == account)
+    ses_cur = _count_model(
+        AgentSession, AgentSession.user == account, AgentSession.created_at >= week
+    )
     ses_prev = _count_model(
-        Session,
-        Session.user == account,
-        Session.created_at >= prev,
-        Session.created_at < week,
+        AgentSession,
+        AgentSession.user == account,
+        AgentSession.created_at >= prev,
+        AgentSession.created_at < week,
     )
 
     ag_total = _count_model(Agents, Agents.creator == account)
@@ -189,7 +192,7 @@ async def dashboard():
     for k in sorted(knowledges, key=lambda x: x.created_at, reverse=True)[:3]:
         events.append(("knowledge", f"知识库新增了文档「{k.name}」", k.created_at))
 
-    sessions = Session.query(Session.user == account)
+    sessions = AgentSession.query(AgentSession.user == account)
     for s in sorted(sessions, key=lambda x: x.created_at, reverse=True)[:3]:
         events.append(
             ("session", f"开始了新会话「{s.title or '新会话'}」", s.created_at)

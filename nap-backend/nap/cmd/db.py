@@ -4,6 +4,7 @@ import click
 from alembic import command
 from alembic.config import Config
 from loguru import logger
+
 from nap.common.conf import CONF
 
 

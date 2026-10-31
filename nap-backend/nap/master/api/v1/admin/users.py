@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from nap.db.models import User
 from pydantic import BaseModel, SecretStr
+
+from nap.db.models import User
 
 router = APIRouter(prefix="/users", tags=["用户"])
 

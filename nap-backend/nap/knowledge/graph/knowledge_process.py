@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import NotRequired, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+
 from nap.common.exceptions import KnowledgeProcessFailed
 from nap.db.models import Knowledge, KnowledgeStatus
 from nap.services.convert import CONVERT_SERVICE

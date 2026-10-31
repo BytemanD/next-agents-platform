@@ -13,13 +13,6 @@ class DocumentMetadata(BaseModel):
     header3: str | None = None
 
 
-class RetrivalDocument(BaseModel):
-    id: str | None = None
-    content: str | None = None
-    metadata: DocumentMetadata = DocumentMetadata()
-    score: float | None = None
-
-
 class ToolModel(BaseModel):
     class Extras(BaseModel):
         title: str = ""

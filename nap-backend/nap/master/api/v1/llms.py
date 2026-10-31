@@ -1,9 +1,10 @@
 from collections.abc import Sequence
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
 from nap.db.models import LLMs
 from nap.master.manager import MANAGER
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/llms", tags=["模型"])
 

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
-from nap.db.models import KnowledgeBase
-from nap.knowledge.manager import MANAGER
+from fastapi import APIRouter
+from loguru import logger
 from pydantic import BaseModel
 from pystonic.infra.vector.objects import VectorDocument
-from starlette import status
+
+from nap.db.models import KnowledgeBase
+from nap.knowledge.manager import MANAGER
 
 router = APIRouter(prefix="/retrival", tags=["向量召回"])
 
@@ -29,10 +30,9 @@ class PostRetrivalResp(BaseModel):
 async def retrival(body: PostRetrival):
     try:
         kb = KnowledgeBase.get_by_uuid(body.knowledge_base)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="knowledge base not found"
-        )
+    except ValueError as e:
+        logger.warning("get knowledge failed: {}", e)
+        return PostRetrivalResp()
     results = MANAGER.retrival(kb, body.query, top_k=body.top_k)
     return PostRetrivalResp(
         documents=[x for x in results if (x.score and x.score <= body.score_threshold)]

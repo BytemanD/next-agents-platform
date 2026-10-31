@@ -1,12 +1,13 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
-from nap.common.exceptions import DocumentNotFound
-from nap.db.models import KnowledgeBase
-from nap.knowledge.manager import MANAGER
 from pydantic import BaseModel
 from pystonic.infra.vector.objects import VectorDocument
 from starlette import status
+
+from nap.common.exceptions import DocumentNotFound
+from nap.db.models import KnowledgeBase
+from nap.knowledge.manager import MANAGER
 
 router = APIRouter(prefix="/documents", tags=["向量库文档"])
 

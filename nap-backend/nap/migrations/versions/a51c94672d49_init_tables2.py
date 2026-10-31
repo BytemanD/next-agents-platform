@@ -8,10 +8,11 @@ Create Date: 2026-10-15 16:42:19.531184
 
 from collections.abc import Sequence
 
-import nap.db.types
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
+
+import nap.db.types
 
 # revision identifiers, used by Alembic.
 revision: str = "a51c94672d49"

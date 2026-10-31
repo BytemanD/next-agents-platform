@@ -1,11 +1,17 @@
 from contextlib import asynccontextmanager
 
 import bcrypt
-import dotenv
 from fastapi import FastAPI
 from loguru import logger
+from pystonic.agents.langchain_agent.agent import get_checkpointer_saver
+from pystonic.asgi.app import create_app
+from pystonic.asgi.middlewares.trace import TraceIdMiddleware
+from pystonic.asgi.plugins import auth
+from pystonic.common import log
+from pystonic.orm.database import create_all_tables
+from starlette.authentication import AuthenticationError
+
 from nap.db.models import User
-from nap.master.agent.asyncio import get_checkpointer_saver
 from nap.master.api.v1 import (
     agents,
     attachment,
@@ -20,14 +26,7 @@ from nap.master.api.v1 import (
     users,
 )
 from nap.master.manager import MANAGER
-from pystonic.asgi.app import create_app
-from pystonic.asgi.middlewares.trace import TraceIdMiddleware
-from pystonic.asgi.plugins import auth
-from pystonic.common import log
-from pystonic.orm.database import create_all_tables
-from starlette.authentication import AuthenticationError
 
-dotenv.load_dotenv()
 log.setup_logger(remove=True)
 
 

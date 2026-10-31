@@ -1,6 +1,20 @@
+from pathlib import Path
+
 import httpx
+from langchain.messages import AIMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from loguru import logger
+from pydantic import BaseModel, SecretStr
+from pystonic.agents.langchain_agent.agent import AsyncAgent
+from pystonic.agents.langchain_agent.callbacks import RequestHandler, get_openai_handler
+from pystonic.agents.langchain_agent.tools import builtin, mcp
+from pystonic.common import context
+from pystonic.common.conf import LLMProviderConfig
+from pystonic.infra.messaging.redis import RedisMessaingQueue
+from pystonic.utils.httpclient import default_client
+from pystonic.utils.strutil import text_shorten
+from sqlmodel import col
+
 from nap.common.conf import CONF
 from nap.common.exceptions import (
     AttachmentNotExists,
@@ -19,20 +33,12 @@ from nap.db.models import (
     KnowledgeBaseShared,
     KnowledgeStatus,
     LLMs,
-    Session,
+    # Session,
 )
 from nap.db.types import AgentConfig
-from nap.master.agent.asyncio import AsyncAgent
-from nap.master.agent.context import RuntimeContext
-from nap.master.agent.tools import mcp, mysql, web_search
-from nap.master.agent.tools.builtin import BUILT_IN_TOOLKIT
+from nap.master.agent.context import NapRuntimeContext
+from nap.master.agent.tools import base, knowledge, mysql, web_search
 from nap.services.storage import STORE_SERVICE
-from pydantic import BaseModel
-from pystonic.common import context
-from pystonic.infra.messaging.redis import RedisMessaingQueue
-from pystonic.utils.httpclient import default_client
-from pystonic.utils.strutil import text_shorten
-from sqlmodel import col
 
 # def _resolve_attachments(file_keys: list[str]) -> list[dict]:
 #     """将 file_key 解析为 agent 可用的附件元数据"""
@@ -71,9 +77,21 @@ class MasterManager(BaseManager):
         )
         self._agent: AsyncAgent | None = None
         self.messaging_driver = RedisMessaingQueue()
+        self.toolkits = [web_search.Toolkit, mysql.Toolkit]
+        self.builtin_tools = (
+            builtin.WorkToolkit(
+                enable_read=False,
+                enable_write=False,
+                enable_execute_shell=False,
+                enable_web_get=False,
+                enable_get_platform_info=False,
+            ).get_tools()
+            + base.TOOLKIT.get_tools()
+            + knowledge.TOOLKIT.get_tools()
+        )
 
     async def setup(self, saver: BaseCheckpointSaver):
-        self._agent = AsyncAgent(saver)
+        self._agent = AsyncAgent(saver, context_schema=NapRuntimeContext)
 
     async def start(self):
         await super().start()
@@ -95,7 +113,7 @@ class MasterManager(BaseManager):
     def create_knowledge_base(
         self, name: str, description: str = "", active: bool = True
     ):
-        items = KnowledgeBase.query_one_or_none(
+        items = KnowledgeBase.get_first(
             name=name,
             creator=context.getvar("account") or "guest",
         )
@@ -151,7 +169,7 @@ class MasterManager(BaseManager):
         description: str = "",
         instruction: str = "",
         llm: str = "",
-        config: AgentConfig = None,
+        config: AgentConfig | None = None,
         knowledge_bases: list[str] | None = None,
         tools: dict | None = None,
         mcp_uuids: list[str] | None = None,
@@ -250,9 +268,6 @@ class MasterManager(BaseManager):
         knowledge.add_todos("convert", "vector", "enrich")
         return knowledge
 
-    def list_session(self):
-        return Session.query()
-
     async def chat(
         self,
         db_agent: Agents,
@@ -271,23 +286,29 @@ class MasterManager(BaseManager):
         llm = LLMs.get_by_uuid(db_agent.llm)
         if not llm.models:
             raise LLMIsInvalid(llm.uuid)
-        if session_id:
-            session = Session.get_by_uuid(session_id)
-        else:
-            session = Session(
-                user=context.getvar("account", context.getvar("account")),
-                agent=db_agent.uuid,
-                title=text_shorten(query, wide=10),
-            )
-            session.create()
+        session = self.agent.get_or_create_session(
+            session_id=session_id,
+            user=context.getvar("account", context.getvar("account")),
+            agent=db_agent.uuid,
+            title=text_shorten(query, wide=10),
+        )
 
         # 本次请求显式指定了 MCP 就用指定的，否则回退到 agent 配置的
-        mcp_pool = self.list_mcps(
-            mcp_uuids if mcp_uuids is not None else db_agent.mcp_uuids
-        )
         mcp_tools = []
         try:
-            mcp_tools = await mcp.get_tools(mcp_pool)
+            mcp_tools = await mcp.get_tools(
+                [
+                    mcp.MCP(
+                        url=x.url,
+                        transport=x.transport,
+                        name=x.name,
+                        api_key=x.api_key,
+                    )
+                    for x in self.list_mcps(
+                        mcp_uuids if mcp_uuids is not None else db_agent.mcp_uuids
+                    )
+                ]
+            )
         except ExceptionGroup as e:
             logger.exception("get mcp tools failed: {}", e.exceptions)
             data = ChatSSE(
@@ -300,7 +321,7 @@ class MasterManager(BaseManager):
         logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
         kb_uuids = knowledge_bases or db_agent.knowledge_bases
         # 动态设置tools
-        user_tools = [*BUILT_IN_TOOLKIT.get_tools()]
+        user_tools = []
         if "web_search" in custom_tools:
             user_tools.extend(
                 web_search.WebSearchToolkit.model_validate(
@@ -314,52 +335,72 @@ class MasterManager(BaseManager):
                 ).get_tools()
             )
 
-        runtime_context = RuntimeContext(
-            models=llm.models,
-            model=model,
-            model_base_url=llm.base_url,
-            model_api_key=llm.api_key,
-            agent_uuid=db_agent.uuid,
-            agent_config=db_agent.config,
-            session_uuid=session.uuid,
-            username=context.getvar("account") or "guest",
+        ctx = NapRuntimeContext(
+            providers={
+                llm.name: LLMProviderConfig(
+                    base_url=llm.base_url,
+                    api_key=SecretStr(llm.api_key),
+                    models=llm.models,
+                )
+            },
+            thread_id=session.uuid,
+            temperature=db_agent.config.temperature,
             system_prompt=db_agent.instruction,
-            tools=user_tools + mcp_tools,
+            tools=self.builtin_tools + user_tools + mcp_tools,
+            workspace=Path(CONF.store, "agent_workspace", context.getvar("account")),
+            username=context.getvar("account") or "guest",
+            # agent_uuid=db_agent.uuid,
+            # agent_config=db_agent.config,
             knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
             attachments=attachments,
-            # tool_args=db_agent.tools,
         )
-
-        async for event in self.agent.chat(runtime_context, query):
-            if isinstance(event, AgentCallback):
-                self.run_background_job(event.create)
-                continue
+        trace_handler = RequestHandler()
+        openai_callback = get_openai_handler()
+        async for event in self.agent.astream(
+            ctx,
+            query,
+            callbacks=[trace_handler, openai_callback],
+            event_types=(AIMessage,),
+        ):
             yield event
 
-    async def list_sessions(self, agent_uuid: str):
-        return Session.get_recent(agent_uuid)
+        agent_callback = AgentCallback(
+            agent_uuid=db_agent.uuid,
+            session_uuid=session.uuid,
+            model=ctx.selected_model,
+            creator=ctx.username,
+            total_tokens=openai_callback.total_tokens,
+            prompt_tokens=openai_callback.prompt_tokens,
+            completion_tokens=openai_callback.completion_tokens,
+            total_cost=openai_callback.total_cost,
+            total_requests=trace_handler.total_requests,
+            success_requests=trace_handler.successful_requests,
+            failed_requests=trace_handler.failed_requests,
+            total_latency=round(trace_handler.total_latency, 3),
+            latencies=[round(x * 1000, 1) for x in trace_handler.latencies],
+        )
+        agent_callback.create()
 
-    async def delete_session(self, session_id: str):
-        return Session.delete_by_uuid(session_id)
+    async def list_agent_sessions(self, agent_uuid: str):
+        return self.agent.list_session(
+            user=self.get_request_account(), agent=agent_uuid
+        )
+
+    async def delete_agent_session(self, session_id: str):
+        return self.agent.delete_session(session_id)
+
+    async def list_agent_messages(self, session_id: str):
+        return await self.agent.list_messages(session_id)
 
     def delete_knowledge(self, knowledge: Knowledge):
         knowledge.set_status(KnowledgeStatus.pending_delete)
         self.messaging_driver.publish("knowledges", knowledge)
-        # try:
-        #     self.knowledge_client.delete(f"/api/v1/knowledges/{knowledge.uuid}")
-        # except httpx.HTTPError as e:
-        #     logger.error("CALL knowledge service failed: {}", e)
-        #     knowledge.set_status(KnowledgeStatus.pending_delete)
 
     def get_knowledge_content(self, knowledge: Knowledge) -> bytes:
         return STORE_SERVICE.get_raw(knowledge)
 
     def list_tools(self):
-        return self.agent.toolkits
-        # return [ToolModel.from_llm_tool(x) for x in CUSTOM_TOOLS]
-
-    async def list_messages(self, session: Session | str):
-        return await self.agent.list_messages(session)
+        return self.toolkits
 
     async def save_attachment(self, name: str, content: bytes):
         attachment = Attachment(

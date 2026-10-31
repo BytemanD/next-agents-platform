@@ -1,9 +1,12 @@
+from collections.abc import Sequence
+
 from fastapi import APIRouter, HTTPException
-from nap.db.models import AgentMCP
-from nap.master.agent.tools import mcp
-from nap.master.manager import MANAGER
 from pydantic import BaseModel
+from pystonic.agents.langchain_agent.tools import mcp
 from starlette import status
+
+from nap.db.models import AgentMCP
+from nap.master.manager import MANAGER
 
 router = APIRouter(prefix="/mcps", tags=["MCP"])
 
@@ -23,7 +26,7 @@ class MCPUpdate(BaseModel):
 
 
 class MCPsResponse(BaseModel):
-    mcps: list[AgentMCP] = []
+    mcps: Sequence[AgentMCP] = []
 
 
 @router.get("", response_model=MCPsResponse)
@@ -45,8 +48,7 @@ async def _get_mcp_name(url: str, transport: str, api_key: str | None = None):
     server_info = await mcp.get_mcp_server_info(
         "test_mcp", url, transport, api_key=api_key
     )
-    if server_info and server_info.get("test_mcp"):
-        return server_info.get("test_mcp").serverInfo.name
+    return server_info["test_mcp"].serverInfo.name
 
 
 @router.post("", status_code=201, response_model=AgentMCP)

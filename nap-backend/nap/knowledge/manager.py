@@ -2,12 +2,13 @@ import asyncio
 from datetime import UTC, datetime
 
 from loguru import logger
+from pystonic.infra.messaging.redis import RedisMessaingQueue
+
 from nap.common.manager import BaseManager
 from nap.db.models import Knowledge, KnowledgeBase, KnowledgeStatus
 from nap.knowledge.graph import knowledge_process
 from nap.services.storage import STORE_SERVICE
 from nap.services.vector import VECTOR_SERVICE
-from pystonic.infra.messaging.redis import RedisMessaingQueue
 
 
 class KnowledgeManager(BaseManager):
@@ -84,7 +85,7 @@ class KnowledgeManager(BaseManager):
             query,
             top_k,
         )
-        return VECTOR_SERVICE.retrieval(query, k=top_k)
+        return VECTOR_SERVICE.retrieval(knowledge_base, query, k=top_k)
 
 
 MANAGER = KnowledgeManager()

@@ -1,7 +1,8 @@
 from fastapi import APIRouter
+from pydantic import BaseModel
+
 from nap.common.objects import ToolkitMetadata
 from nap.master.manager import MANAGER
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/toolkits", tags=["工具"])
 
@@ -23,9 +24,7 @@ class ToolsResponse(BaseModel):
 async def list_tools():
     return ToolkitsResponse(
         tools=[
-            ToolkitResponse(
-                metadata=tool.metadata(), arg_schema=tool.model_json_schema()
-            )
-            for tool in MANAGER.list_tools()
+            ToolkitResponse(metadata=x.metadata(), arg_schema=x.model_json_schema())
+            for x in MANAGER.list_tools()
         ]
     )

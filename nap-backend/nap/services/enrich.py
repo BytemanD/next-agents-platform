@@ -2,10 +2,11 @@ from langchain.agents import create_agent
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from loguru import logger
-from nap.common.exceptions import EnrichFailed, EnrichmentAlreadyExists
-from nap.db.models import Knowledge, KnowledgeEnrichmen, LLMs
 from pydantic import SecretStr
 from pystonic.utils import funcutil
+
+from nap.common.exceptions import EnrichFailed, EnrichmentAlreadyExists
+from nap.db.models import Knowledge, KnowledgeEnrichmen, LLMs
 
 ENRICH_TEMPLATE = """
 请阅读以下文档内容，完成三项任务：

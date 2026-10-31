@@ -4,12 +4,13 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from langchain_core.exceptions import ModelError
 from loguru import logger
+from pydantic import BaseModel
+from sse_starlette import EventSourceResponse
+
 from nap.common.objects import ToolModel
 from nap.db.models import AgentConfig, AgentMCP, Agents, LLMs
 from nap.master.api.v1.llms import LLMBrief
 from nap.master.manager import MANAGER, ChatSSE
-from pydantic import BaseModel
-from sse_starlette import EventSourceResponse
 
 router = APIRouter(prefix="/agents", tags=["智能体"])
 

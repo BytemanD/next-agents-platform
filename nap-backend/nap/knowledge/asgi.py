@@ -3,11 +3,12 @@ from contextlib import asynccontextmanager
 import dotenv
 from fastapi import FastAPI
 from loguru import logger
-from nap.knowledge.api.v1 import document, retrival
-from nap.knowledge.manager import MANAGER
 from pystonic.asgi.app import create_app
 from pystonic.common import log
 from pystonic.orm.database import create_all_tables
+
+from nap.knowledge.api.v1 import document, retrival
+from nap.knowledge.manager import MANAGER
 
 dotenv.load_dotenv()
 
