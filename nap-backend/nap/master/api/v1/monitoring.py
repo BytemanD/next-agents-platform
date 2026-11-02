@@ -22,7 +22,7 @@ async def models():
     stm = (
         select(col(AgentCallback.model))
         .where(
-            AgentCallback.creator == (context.getvar("account") or "guest"),
+            AgentCallback.creator == (context.account() or "guest"),
         )
         .distinct()
     )

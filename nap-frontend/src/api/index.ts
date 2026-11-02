@@ -88,7 +88,7 @@ export interface AgentPayload {
   instruction: string
   llm: string
   status: string
-  config?: { temperature: number; max_tokens: number }
+  config?: { temperature: number; max_tokens: number, suggestion_max: number }
   knowledge_bases?: string[]
   tools: Record<string, Record<string, string>>
   mcp_uuids?: string[]

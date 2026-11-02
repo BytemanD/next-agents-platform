@@ -31,7 +31,7 @@ class UserResponse(BaseModel):
 
 @router.get("/me", response_model=UserResponse)
 async def get_user():
-    u = User.get_by_username(context.getvar("account") or "")
+    u = User.get_by_username(context.account() or "")
     if not u:
         raise HTTPException(status_code=404, detail="User not found")
     return u

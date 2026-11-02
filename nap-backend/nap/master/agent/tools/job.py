@@ -23,12 +23,10 @@ def refresh_agent_suggestions(
 
 
 class Toolkit(BaseToolkit):
-    """知识库工具集"""
+    """任务相关工具集"""
 
-    def get_tools(self) -> list:
-        return [
-            refresh_agent_suggestions,
-        ]
+    def get_tools(self):
+        return [refresh_agent_suggestions]
 
 
 TOOLKIT = Toolkit()

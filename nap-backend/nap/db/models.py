@@ -33,7 +33,7 @@ class KnowledgeAction(StrEnum):
 
 
 def _get_account():
-    return context.getvar("account") or "guest"
+    return context.account() or "guest"
 
 
 class User(DBModel, table=True):
@@ -51,7 +51,7 @@ class User(DBModel, table=True):
         return items[0]
 
 
-class LLMs(DBModel, table=True):
+class LLM(DBModel, table=True):
     __tablename__ = "llms"  # type: ignore
 
     user: str = Field(nullable=False, default="guest", description="所属用户")
@@ -63,7 +63,7 @@ class LLMs(DBModel, table=True):
     )
 
 
-class Agents(DBModel, table=True):
+class Agent(DBModel, table=True):
     __tablename__ = "agents"  # type: ignore
 
     creator: str = Field(nullable=False, description="创建者UUID")
@@ -104,6 +104,9 @@ class Agents(DBModel, table=True):
 
     def get_knowledge_bases(self):
         return KnowledgeBase.query(col(KnowledgeBase.uuid).in_(self.knowledge_bases))
+
+    def suggestion_max(self):
+        return self.config.suggestion_max or 0
 
 
 class KnowledgeBase(DBModel, table=True):
@@ -297,7 +300,7 @@ class AgentCallback(DBModel, table=True):
     ):
         since = utcnow() - timedelta(days=days)
         filters = [
-            AgentCallback.creator == (context.getvar("account") or "guest"),
+            AgentCallback.creator == (context.account() or "guest"),
             col(AgentCallback.created_at) >= since,
         ]
         if agent_uuid:

@@ -51,7 +51,7 @@ class BaseManager:
         )
 
     def get_request_account(self):
-        return context.getvar("account") or "guest"
+        return context.account() or "guest"
 
     def add_async_job(
         self,

@@ -39,13 +39,6 @@
               <t-form-item label="描述" name="description">
                 <t-textarea v-model="form.description" placeholder="这个智能体是做什么的？" />
               </t-form-item>
-              <!-- <t-divider>参数设置</t-divider>
-            <t-form-item label="温度">
-              <t-slider v-model="form.config.temperature" :min="0" :max="2" :step="0.1" show-step />
-            </t-form-item>
-            <t-form-item label="最大 Token 数">
-              <t-input-number v-model="form.config.max_tokens" :min="256" :max="128000" :step="256" theme="normal" />
-            </t-form-item> -->
             </t-form>
           </t-card>
           <t-title level="h5" id="参数设置">参数设置</t-title>
@@ -64,10 +57,15 @@
           <t-card size="small" class="mt-2" id="知识库" :bordered="false">
             <template #description>关联知识源</template>
             <t-select v-model="form.knowledge_bases" multiple :options="knowledgeOptions" placeholder="选择知识库" />
+            <t-form class="mt-6" label-width="120px">
+              <t-form-item label="建议问题生成数量">
+                <t-slider v-model="form.config.suggestion_max" :min="0" :max="10" show-step />
+              </t-form-item>
+            </t-form>
           </t-card>
 
           <t-title level="h5" id="工具集" description="选择这个智能体可以使用的工具">工具集</t-title>
-          <t-card size="small" class="mt-2" :bordered="false" >
+          <t-card size="small" class="mt-2" :bordered="false">
             <t-collapse>
               <t-collapse-panel v-for="tool in availableTools" :header="tool.name">
                 <template #headerRightContent>
@@ -140,7 +138,7 @@
 
           <t-title level="h5" id="系统提示词">系统提示词</t-title>
 
-          <t-card size="small" subtitle="定义智能体的性格、知识和行为规则。" :bordered="false" >
+          <t-card size="small" subtitle="定义智能体的性格、知识和行为规则。" :bordered="false">
             <t-textarea v-model="form.instruction" :autosize="{ minRows: 10, maxRows: 20 }" placeholder="你是一位乐于助人的助理..."
               class="font-mono text-sm" />
           </t-card>
@@ -163,7 +161,7 @@ interface AgentForm {
   llm: string
   instruction: string
   status: string
-  config: { temperature: number; max_tokens: number }
+  config: { temperature: number; max_tokens: number, suggestion_max: number }
   knowledge_bases: string[]
   tools: Record<string, Record<string, string>>
   mcp_uuids: string[]
@@ -239,7 +237,10 @@ function defaultForm(): AgentForm {
     llm: '',
     instruction: DEFAULT_INSTRUCTION,
     status: 'draft',
-    config: { temperature: 0.7, max_tokens: 4096 },
+    config: {
+      temperature: 0.7, max_tokens: 4096,
+      suggestion_max: 0,
+    },
     knowledge_bases: [],
     tools: {},
     mcp_uuids: [],
@@ -353,7 +354,8 @@ async function fetchAgent(agentUuid: string) {
       status: agent.status || 'draft',
       config: {
         temperature: agent.config?.temperature ?? 1,
-        max_tokens: agent.config?.max_tokens ?? null
+        max_tokens: agent.config?.max_tokens ?? null,
+        suggestion_max: agent.config?.suggestion_max ?? 0,
       },
       knowledge_bases: agent.knowledge_bases || [],
       tools: agent.tools || {},
@@ -443,5 +445,10 @@ onMounted(() => {
   scrollbar-color: #d1d5db transparent;
   /* 纵向滚动 */
   /* 可选：横向滚动 overflow-x: auto; */
+}
+
+:deep(.t-form__item) {
+  margin-bottom: 4px;
+  /* 默认值通常较大，可以按需调小 */
 }
 </style>

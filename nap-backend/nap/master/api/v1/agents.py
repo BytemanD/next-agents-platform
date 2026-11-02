@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sse_starlette import EventSourceResponse
 
 from nap.common.objects import ToolModel
-from nap.db.models import AgentConfig, AgentMCP, Agents, LLMs
+from nap.db.models import LLM, Agent, AgentConfig, AgentMCP
 from nap.master.api.v1.llms import LLMBrief
 from nap.master.manager import MANAGER, ChatSSE
 
@@ -54,7 +54,7 @@ class AgentUpdate(BaseModel):
 
 
 class AgentsResponse(BaseModel):
-    agents: Sequence[Agents]
+    agents: Sequence[Agent]
 
 
 class AgentDetail(BaseModel):
@@ -105,7 +105,7 @@ async def list_agents():
     return AgentsResponse(agents=MANAGER.get_agents())
 
 
-@router.get("/{uuid}", response_model=Agents)
+@router.get("/{uuid}", response_model=Agent)
 async def get_agent(uuid: str):
     agent = MANAGER.get_agent(uuid)
     if not agent:
@@ -121,7 +121,7 @@ async def get_agent_detail(uuid: str):
 
     # enabled = set(agent.tools.keys())
     # 用 query 而非 get_by_uuid：后者在找不到时抛 ValueError，会让整个接口 500
-    llm_items = LLMs.query(LLMs.uuid == agent.llm) if agent.llm else []
+    llm_items = LLM.query(LLM.uuid == agent.llm) if agent.llm else []
     llm = llm_items[0] if llm_items else None
     detail = AgentDetail(
         uuid=agent.uuid,
@@ -157,7 +157,7 @@ async def create_agent(body: AgentCreate):
 
 @router.put("/{uuid}")
 async def update_agent(uuid: str, body: AgentUpdate):
-    a = Agents.get_by_uuid(uuid)
+    a = Agent.get_by_uuid(uuid)
     if not a:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -190,7 +190,7 @@ async def update_agent(uuid: str, body: AgentUpdate):
 
 @router.delete("/{uuid}", status_code=204)
 async def delete_agent(uuid: str):
-    a = Agents.get_by_uuid(uuid)
+    a = Agent.get_by_uuid(uuid)
     if not a:
         raise HTTPException(status_code=404, detail="Agent not found")
     a.delete()
@@ -202,11 +202,11 @@ async def chat(agent_uuid: str, body: ChatRequest):
     async def event_generator():
         try:
             async for delta in MANAGER.chat(
-                Agents.get_by_uuid(agent_uuid),
+                Agent.get_by_uuid(agent_uuid),
                 body.query,
                 session_id=body.session,
                 # model=body.model,
-                custom_tools=body.tools or [],
+                custom_toolkits=body.tools or [],
                 knowledge_bases=body.knowledge_bases or [],
                 attachments=body.attachments,
                 mcp_uuids=body.mcp_uuids,

@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from nap.db.models import LLMs
+from nap.db.models import LLM
 from nap.master.manager import MANAGER
 
 router = APIRouter(prefix="/llms", tags=["模型"])
@@ -34,7 +34,7 @@ class LLMResponse(BaseModel):
 
 
 class LLMsResponse(BaseModel):
-    llms: Sequence[LLMs] = []
+    llms: Sequence[LLM] = []
 
 
 class LLMBrief(BaseModel):
@@ -49,7 +49,7 @@ class LLMBrief(BaseModel):
     models: list[str] = []
 
 
-def _to_response(d: LLMs) -> LLMResponse:
+def _to_response(d: LLM) -> LLMResponse:
     return LLMResponse(
         uuid=d.uuid,
         name=d.name,
@@ -68,20 +68,20 @@ async def list_llms():
 
 @router.get("/{uuid}")
 async def get_llm(uuid: str):
-    d = LLMs.get_by_uuid(uuid)
+    d = LLM.get_by_uuid(uuid)
     if not d:
         raise HTTPException(status_code=404, detail="LLM not found")
     return _to_response(d)
 
 
-@router.post("", status_code=201, response_model=LLMs)
+@router.post("", status_code=201, response_model=LLM)
 async def create_llm(body: LLMCreate):
     return MANAGER.create_llm(body.name, body.base_url, body.api_key, body.models)
 
 
 @router.put("/{uuid}")
 async def update_llm(uuid: str, body: LLMUpdate):
-    d = LLMs.get_by_uuid(uuid)
+    d = LLM.get_by_uuid(uuid)
     if not d:
         raise HTTPException(status_code=404, detail="LLM not found")
 
@@ -100,7 +100,7 @@ async def update_llm(uuid: str, body: LLMUpdate):
 
 @router.delete("/{uuid}", status_code=204)
 async def delete_llm(uuid: str):
-    d = LLMs.get_by_uuid(uuid)
+    d = LLM.get_by_uuid(uuid)
     if not d:
         raise HTTPException(status_code=404, detail="LLM not found")
     d.delete()

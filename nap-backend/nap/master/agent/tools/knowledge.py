@@ -7,7 +7,7 @@ from sqlmodel import col
 
 from nap.common.exceptions import KnowledgeNotExists
 from nap.common.knowledge_client import KnowledgeClient
-from nap.db.models import Attachment, Knowledge
+from nap.db.models import Attachment, Knowledge, KnowledgeEnrichmen
 from nap.master.agent.context import NapRuntimeContext
 from nap.services.convert import CONVERT_SERVICE
 from nap.services.storage import STORE_SERVICE
@@ -101,6 +101,24 @@ async def get_document_content(knowledge_uuid: str, encoding: str = "utf-8"):
 
 
 @tool(parse_docstring=True)
+async def get_document_summary(knowledge_uuid: str):
+    """获取知识库文档摘要
+
+    获取指定知识文档的摘要。
+
+    Args:
+        knowledge_uuid: 文档UUID
+
+    Returns:
+        文档摘要
+    """
+
+    logger.info("list documents for knowledge: {}", knowledge_uuid)
+    item = KnowledgeEnrichmen.get_first(KnowledgeEnrichmen.knowledge == knowledge_uuid)
+    return item and item.summary or ""
+
+
+@tool(parse_docstring=True)
 async def get_attachments(runtime: ToolRuntime[NapRuntimeContext]):
     """获取会话附件
 
@@ -172,19 +190,24 @@ async def get_document_preview_url(uuid: str):
     raise ValueError("doc with uuid: {} not found")
 
 
-class Toolkit(BaseToolkit):
+class KnowledgeToolkit(BaseToolkit):
     """知识库工具集"""
 
-    def get_tools(self) -> list:
-        return [
+    disable_retrival: bool = False
+
+    def get_tools(self):
+        items = [
             get_document_preview_url,
             get_available_knowledge_bases,
-            retrival,
             list_documents,
             get_document_content,
+            get_document_summary,
             get_attachments,
             get_attachment_content,
         ]
+        if not self.disable_retrival:
+            items.append(retrival)
+        return items
 
 
-TOOLKIT = Toolkit()
+TOOLKIT = KnowledgeToolkit()

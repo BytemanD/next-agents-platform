@@ -60,7 +60,7 @@ async def delete_attachment(uuid: str):
         attachment = Attachment.get_by_uuid(uuid)
     except ValueError:
         raise HTTPException(status_code=404, detail="Attachment not found")
-    if attachment.creator != context.getvar("account"):
+    if attachment.creator != context.account():
         raise HTTPException(status_code=403, detail="No permission")
     MANAGER.delete_attachment(attachment)
 

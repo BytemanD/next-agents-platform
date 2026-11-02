@@ -6,7 +6,7 @@ from pydantic import SecretStr
 from pystonic.utils import funcutil
 
 from nap.common.exceptions import EnrichFailed, EnrichmentAlreadyExists
-from nap.db.models import Knowledge, KnowledgeEnrichmen, LLMs
+from nap.db.models import LLM, Knowledge, KnowledgeEnrichmen
 
 ENRICH_TEMPLATE = """
 请阅读以下文档内容，完成三项任务：
@@ -81,7 +81,7 @@ class EnrichmentService:
     @funcutil.timeit
     def enrich(self, knowledge: Knowledge, content: str, replace: bool = False):
         # TODO: use config
-        items = LLMs.query(LLMs.user == knowledge.creator)
+        items = LLM.query(LLM.user == knowledge.creator)
         if not items:
             raise EnrichFailed("llm is empty")
         llm = items[0]

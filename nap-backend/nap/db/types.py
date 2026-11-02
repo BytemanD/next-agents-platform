@@ -6,6 +6,7 @@ class AgentConfig(BaseModel):
     temperature: float = 1
     # max_tokens: int = 4096
     max_tokens: int | None = None
+    suggestion_max: int | None = 0
 
 
 # ---------- 通用 TypeDecorator ----------
@@ -30,6 +31,3 @@ class PydanticType(TypeDecorator):
             return None
         # 自动补全缺失字段（Pydantic 默认值）
         return self._adapter.validate_python(value)
-
-
-TYPE_AGENT_CONFIG = PydanticType(AgentConfig)

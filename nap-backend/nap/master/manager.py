@@ -4,7 +4,7 @@ from pathlib import Path
 import httpx
 from apscheduler.triggers.cron import CronTrigger
 from langchain.messages import AIMessage
-from langchain_core.tools.base import BaseTool
+from langchain_core.tools.base import BaseTool, BaseToolkit
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from loguru import logger
 from pydantic import BaseModel, SecretStr
@@ -27,16 +27,16 @@ from nap.common.exceptions import (
 )
 from nap.common.manager import BaseManager
 from nap.db.models import (
+    LLM,
+    Agent,
     AgentCallback,
     AgentMCP,
-    Agents,
     AgentSuggestion,
     Attachment,
     Knowledge,
     KnowledgeBase,
     KnowledgeBaseShared,
     KnowledgeStatus,
-    LLMs,
 )
 from nap.db.types import AgentConfig
 from nap.master.agent.context import NapRuntimeContext
@@ -99,21 +99,21 @@ class MasterManager(BaseManager):
         await super().stop()
 
     def list_llm(self):
-        return LLMs.query(LLMs.user == context.getvar("account"))
+        return LLM.query(LLM.user == context.account())
 
     def create_knowledge_base(
         self, name: str, description: str = "", active: bool = True
     ):
         items = KnowledgeBase.get_first(
             name=name,
-            creator=context.getvar("account") or "guest",
+            creator=context.account() or "guest",
         )
         if items:
             raise KnowledgeBaseAlreadyExists(name)
         item = KnowledgeBase(
             name=name,
             description=description,
-            creator=context.getvar("account") or "guest",
+            creator=context.account() or "guest",
             active=active,
         )
         item.create()
@@ -121,20 +121,18 @@ class MasterManager(BaseManager):
 
     def list_knowledge_base(self, shared: bool = True):
         if not shared:
-            return KnowledgeBase.query(
-                KnowledgeBase.creator == context.getvar("account")
-            )
+            return KnowledgeBase.query(KnowledgeBase.creator == context.account())
         return KnowledgeBase.query(
             col(KnowledgeBase.uuid).in_(
                 KnowledgeBaseShared.get_knowledge_base_uuids_by_shared_with(
-                    context.getvar("account")
+                    context.account()
                 )
             )
         )
 
     def create_llm(self, name: str, base_url: str, api_key: str, models: list[str]):
-        item = LLMs(
-            user=context.getvar("account"),
+        item = LLM(
+            user=context.account(),
             name=name,
             base_url=base_url,
             api_key=api_key,
@@ -144,12 +142,10 @@ class MasterManager(BaseManager):
         return item
 
     def get_agents(self):
-        return Agents.query(Agents.creator == context.getvar("account"))
+        return Agent.query(Agent.creator == context.account())
 
     def get_agent(self, uuid: str):
-        items = Agents.query(
-            Agents.creator == context.getvar("account"), Agents.uuid == uuid
-        )
+        items = Agent.query(Agent.creator == context.account(), Agent.uuid == uuid)
         if not items:
             return None
         return items[0]
@@ -171,7 +167,7 @@ class MasterManager(BaseManager):
             tools = {}
         if knowledge_bases is None:
             knowledge_bases = []
-        a = Agents(
+        a = Agent(
             creator=context.getvar("account", "guest"),
             name=name,
             description=description,
@@ -193,7 +189,7 @@ class MasterManager(BaseManager):
 
         knowledge = Knowledge(
             knowledge_base=kb.uuid,
-            creator=context.getvar("account") or "guest",
+            creator=context.account() or "guest",
             name=filename,
             size=len(content),
             raw_path="",
@@ -225,7 +221,7 @@ class MasterManager(BaseManager):
 
         knowledge = Knowledge(
             knowledge_base=kb.uuid,
-            creator=context.getvar("account") or "guest",
+            creator=context.account() or "guest",
             name=name or "unknown",
             size=len(content),
             raw_path="",
@@ -248,7 +244,7 @@ class MasterManager(BaseManager):
 
         knowledge = Knowledge(
             knowledge_base=kb.uuid,
-            creator=context.getvar("account") or "guest",
+            creator=context.account() or "guest",
             name=attachment.name,
             size=attachment.size,
             raw_path=attachment.raw_path,
@@ -259,29 +255,13 @@ class MasterManager(BaseManager):
         knowledge.add_todos("convert", "vector", "enrich")
         return knowledge
 
-    async def chat(
+    async def _get_chat_tools(
         self,
-        db_agent: Agents,
-        query: str,
-        session_id: str | None = None,
-        custom_tools: Sequence[str | BaseTool] | None = None,
-        knowledge_bases: list[str] | None = None,
-        attachments: list[str] | None = None,
+        db_agent: Agent,
         mcp_uuids: list[str] | None = None,
+        disable_retrival=False,
+        custom_toolkits: Sequence[str | BaseToolkit] | None = None,
     ):
-        attachments = attachments or []
-        custom_tools = custom_tools or []
-        llm = LLMs.get_by_uuid(db_agent.llm)
-        if not llm.models:
-            raise LLMIsInvalid(llm.uuid)
-        session = self.agent.get_or_create_session(
-            session_id=session_id,
-            user=context.getvar("account", context.getvar("account")),
-            agent=db_agent.uuid,
-            title=text_shorten(query, wide=10),
-        )
-
-        # 本次请求显式指定了 MCP 就用指定的，否则回退到 agent 配置的
         mcp_tools = []
         try:
             mcp_tools = await mcp.get_tools(
@@ -298,32 +278,74 @@ class MasterManager(BaseManager):
                 ]
             )
         except ExceptionGroup as e:
-            logger.exception("get mcp tools failed: {}", e.exceptions)
-            data = ChatSSE(
-                type="error",
-                msg=f"Error: get mcp tools failed: {', '.join([str(x) for x in e.exceptions])}",
-            )
-            yield data
-            # return
-
-        kb_uuids = knowledge_bases or db_agent.knowledge_bases
-        # 动态设置tools
-        user_tools = []
-        if "web_search" in custom_tools:
-            user_tools.extend(
-                web_search.WebSearchToolkit.model_validate(
-                    db_agent.tools.get("web_search", {})
-                ).get_tools()
-            )
-        if "mysql" in custom_tools:
-            user_tools.extend(
-                mysql.MysqlToolkit.model_validate(
-                    db_agent.tools.get("mysql", {})
-                ).get_tools()
-            )
-        user_tools.extend([x for x in custom_tools if isinstance(x, BaseTool)])
+            logger.error("get mcp tools failed: {}", e.exceptions)
         logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
 
+        custom_toolkits = custom_toolkits or []
+        custom_toolkit_tools: list[BaseTool] = []
+        for toolkit in custom_toolkits or []:
+            if isinstance(toolkit, str):
+                if toolkit == "web_search":
+                    custom_toolkit_tools.extend(
+                        web_search.WebSearchToolkit.model_validate(
+                            db_agent.tools.get("web_search", {})
+                        ).get_tools()
+                    )
+                elif toolkit == "mysql":
+                    custom_toolkit_tools.extend(
+                        mysql.MysqlToolkit.model_validate(
+                            db_agent.tools.get("mysql", {})
+                        ).get_tools()
+                    )
+                else:
+                    logger.warning("unknown toolkit: {}", toolkit)
+            else:
+                custom_toolkit_tools.extend(toolkit.get_tools())
+        return [
+            *builtin.WorkToolkit(
+                enable_read=False,
+                enable_write=False,
+                enable_execute_shell=False,
+                enable_web_get=False,
+                enable_get_platform_info=False,
+            ).get_tools(),
+            *base.TOOLKIT.get_tools(),
+            *knowledge.KnowledgeToolkit(disable_retrival=disable_retrival).get_tools(),
+            *mcp_tools,
+            *custom_toolkit_tools,
+        ]
+
+    async def chat(
+        self,
+        db_agent: Agent,
+        query: str,
+        session_id: str | None = None,
+        knowledge_bases: list[str] | None = None,
+        attachments: list[str] | None = None,
+        mcp_uuids: list[str] | None = None,
+        custom_toolkits: Sequence[str | BaseToolkit] | None = None,
+        disable_retrival: bool = False,
+    ):
+        attachments = attachments or []
+        custom_tools = custom_toolkits or []
+        llm = LLM.get_by_uuid(db_agent.llm)
+        if not llm.models:
+            raise LLMIsInvalid(llm.uuid)
+        session = self.agent.get_or_create_session(
+            session_id=session_id,
+            user=context.getvar("account", context.account()),
+            agent=db_agent.uuid,
+            title=text_shorten(query, wide=10),
+        )
+
+        runtime_tools = await self._get_chat_tools(
+            db_agent,
+            mcp_uuids,
+            disable_retrival=disable_retrival,
+            custom_toolkits=custom_tools,
+        )
+
+        kb_uuids = knowledge_bases or db_agent.knowledge_bases
         ctx = NapRuntimeContext(
             providers={
                 llm.name: LLMProviderConfig(
@@ -335,9 +357,9 @@ class MasterManager(BaseManager):
             thread_id=session.uuid,
             temperature=db_agent.config.temperature,
             system_prompt=db_agent.instruction,
-            tools=self.builtin_tools + user_tools + mcp_tools,
-            workspace=Path(CONF.store, "agent_workspace", context.getvar("account")),
-            username=context.getvar("account") or "guest",
+            tools=runtime_tools,
+            workspace=Path(CONF.store, "agent_workspace", context.account()),
+            username=context.account() or "guest",
             agent_uuid=db_agent.uuid,
             # agent_config=db_agent.config,
             knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
@@ -393,7 +415,7 @@ class MasterManager(BaseManager):
 
     async def save_attachment(self, name: str, content: bytes):
         attachment = Attachment(
-            creator=context.getvar("account") or "guest",
+            creator=context.account() or "guest",
             name=name,
             size=len(content),
             raw_path=None,
@@ -404,7 +426,7 @@ class MasterManager(BaseManager):
         return attachment
 
     def list_attachments(self):
-        creator = context.getvar("account")
+        creator = context.account()
         return sorted(
             Attachment.query(Attachment.creator == creator),
             key=lambda a: a.created_at,
@@ -420,7 +442,7 @@ class MasterManager(BaseManager):
             attachment = Attachment.get_by_uuid(attachment_uuid)
         except ValueError:
             raise AttachmentNotExists(attachment_uuid)
-        if attachment.creator != context.getvar("account"):
+        if attachment.creator != context.account():
             raise NoPermission()
         return attachment
 
@@ -428,7 +450,7 @@ class MasterManager(BaseManager):
         return STORE_SERVICE.get_raw(attachment)
 
     def list_mcps(self, uuids: list[str] | None = None):
-        criterion = [AgentMCP.creator == context.getvar("account")]
+        criterion = [col(AgentMCP.creator) == context.account()]
         # 用 `is not None` 而非真值判断：空列表代表"本次不启用任何 MCP"，
         # 不能退化成返回全部
         if uuids is not None:
@@ -440,7 +462,7 @@ class MasterManager(BaseManager):
         self, name: str, url: str, transport: str, api_key: str | None = None
     ):
         item = AgentMCP(
-            creator=context.getvar("account"),
+            creator=context.account(),
             name=name,
             url=url,
             transport=transport,
@@ -452,25 +474,31 @@ class MasterManager(BaseManager):
 
     def get_mcp(self, mcp_uuid: str):
         items = AgentMCP.query(
-            AgentMCP.creator == context.getvar("account"), AgentMCP.uuid == mcp_uuid
+            AgentMCP.creator == context.account(), AgentMCP.uuid == mcp_uuid
         )
         if not items:
             return None
         return items[0]
 
-    async def _refresh_agent_suggestions(self, db_agent: Agents):
-        logger.info("start to refresh suggestions for agent: {}", db_agent.uuid)
+    async def _refresh_agent_suggestions(self, agent: Agent):
+        if agent.suggestion_max() <= 0:
+            return
+        logger.info("start to refresh suggestions for agent: {}", agent.uuid)
         async for _ in self.chat(
-            db_agent,
-            "根据知识库文档生成3个简短的建议, 并使用工具保存到数据库",
-            custom_tools=job.TOOLKIT.get_tools(),
+            agent,
+            (
+                f"根据知识库文档**摘要**生成最多 {agent.suggestion_max()} 个简短的建议, "
+                "并使用工具保存到数据库. 禁止读取文档的完整内容."
+            ),
+            custom_toolkits=[job.TOOLKIT],
+            disable_retrival=True,
         ):
             pass
-        logger.success("refresh suggestions success for agent: {}", db_agent.uuid)
+        logger.success("refresh suggestions success for agent: {}", agent.uuid)
 
     async def job_create_agent_suggestions(self):
         context.set_account("MASTER")
-        for db_agent in Agents.query():
+        for db_agent in Agent.query():
             if self.shutdown_event.is_set():
                 break
             await self._refresh_agent_suggestions(db_agent)

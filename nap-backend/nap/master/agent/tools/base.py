@@ -44,7 +44,7 @@ async def save_text(
         文件UUID
     """
     attachment = Attachment(
-        creator=context.getvar("account") or "guest",
+        creator=context.account() or "guest",
         name=filename,
     )
     await to_thread(
@@ -61,7 +61,7 @@ async def save_text(
 class Toolkit(BaseToolkit):
     """知识库工具集"""
 
-    def get_tools(self) -> list:
+    def get_tools(self):
         return [get_username, save_text]
 
 

@@ -8,11 +8,11 @@ from pystonic.orm.models import get_session, utcnow
 from sqlmodel import col, func, select
 
 from nap.db.models import (
+    LLM,
+    Agent,
     AgentCallback,
-    Agents,
     Knowledge,
     KnowledgeStatus,
-    LLMs,
 )
 from nap.master.manager import MANAGER
 
@@ -92,7 +92,7 @@ def _time_ago(dt: datetime | None) -> str:
 
 @router.get("", response_model=DashboardResponse)
 async def dashboard():
-    account = context.getvar("account") or "guest"
+    account = context.account() or "guest"
     now = utcnow()
     week = now - timedelta(days=7)
     prev = now - timedelta(days=14)
@@ -121,13 +121,13 @@ async def dashboard():
         AgentSession.created_at < week,
     )
 
-    ag_total = _count_model(Agents, Agents.creator == account)
-    ag_cur = _count_model(Agents, Agents.creator == account, Agents.created_at >= week)
+    ag_total = _count_model(Agent, Agent.creator == account)
+    ag_cur = _count_model(Agent, Agent.creator == account, Agent.created_at >= week)
     ag_prev = _count_model(
-        Agents,
-        Agents.creator == account,
-        Agents.created_at >= prev,
-        Agents.created_at < week,
+        Agent,
+        Agent.creator == account,
+        Agent.created_at >= prev,
+        Agent.created_at < week,
     )
 
     tok_total = _sum_tokens()
@@ -162,13 +162,13 @@ async def dashboard():
     ]
 
     agents = sorted(MANAGER.get_agents(), key=lambda a: a.created_at, reverse=True)[:4]
-    llm_cache: dict[str, LLMs | None] = {}
+    llm_cache: dict[str, LLM | None] = {}
 
     def model_name(uuid: str) -> str:
         if not uuid:
             return ""
         if uuid not in llm_cache:
-            items = LLMs.query(LLMs.uuid == uuid)
+            items = LLM.query(LLM.uuid == uuid)
             llm_cache[uuid] = items[0] if items else None
         llm = llm_cache[uuid]
         return llm.models[0] if llm and llm.models else (llm.name if llm else uuid)
@@ -198,7 +198,7 @@ async def dashboard():
             ("session", f"开始了新会话「{s.title or '新会话'}」", s.created_at)
         )
 
-    agent_names = {a.uuid: a.name for a in Agents.query()}
+    agent_names = {a.uuid: a.name for a in Agent.query()}
     callbacks = sorted(AgentCallback.query(), key=lambda c: c.created_at, reverse=True)[
         :5
     ]
