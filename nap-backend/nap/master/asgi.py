@@ -14,6 +14,7 @@ from starlette.authentication import AuthenticationError
 from nap.db.models import User
 from nap.master.api.v1 import (
     agents,
+    agents_suggestions,
     attachment,
     dashboard,
     knowledge,
@@ -64,6 +65,7 @@ for module in (
     monitoring,
     attachment,
     mcps,
+    agents_suggestions,
 ):
     APP.include_router(module.router, prefix="/api/v1")
 

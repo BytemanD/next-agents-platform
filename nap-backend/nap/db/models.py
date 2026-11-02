@@ -400,7 +400,23 @@ class AgentSuggestion(DBModel, table=True):
     __tablename__ = "agent_suggestions"  # type: ignore
 
     agent: str = Field(nullable=False, description="Agent UUID", index=True)
-    suggestion: str = Field(nullable=False, description="Agent UUID", index=True)
+    suggestion: str = Field(nullable=False, description="建议问题", index=True)
+
+    @classmethod
+    def get_by_agent(cls, agent_uuid: str):
+        return cls.query(col(cls.agent) == agent_uuid)
+
+    @classmethod
+    def set_by_agent(cls, agent_uuid: str, suggestions: Sequence[str]):
+        """覆盖保存智能体的建议问题，自动去重并忽略空字符串"""
+        cls.remove_by_agent(agent_uuid)
+        seen: set[str] = set()
+        for suggestion in suggestions:
+            text = suggestion.strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            cls(agent=agent_uuid, suggestion=text).create()
 
     @classmethod
     def remove_by_agent(cls, agent_uuid: str):

@@ -12,6 +12,7 @@ from nap_client.v1.models import (
     Agent,
     AgentDetail,
     AgentsResponse,
+    AgentSuggestions,
     Attachment,
     AttachmentResponse,
     AttachmentsResponse,
@@ -486,6 +487,11 @@ class NapClientV1:
 
     def dashboard(self) -> Dashboard:
         return Dashboard.model_validate(self._json(self._get("/api/v1/dashboard")))
+
+    def get_agent_suggestions(self, agent_id: str):
+        return AgentSuggestions.model_validate(
+            self._get("/api/v1/agent-suggestions", params={"agent": agent_id}).json()
+        ).suggestions
 
 
 CLIENT = NapClientV1()

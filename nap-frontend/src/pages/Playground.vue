@@ -72,7 +72,7 @@
           </template>
         </t-chatbot>
         <div v-if="agentStore.selectedAgentId && !hasMessages"
-          class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none welcome">
+          class="absolute inset-0 flex flex-col items-center justify-center">
           <div class="flex flex-col items-center gap-4 relative">
             <div class="welcome-logo-wrap">
               <span class="welcome-logo-ring"></span>
@@ -80,13 +80,14 @@
             </div>
             <h1 class="welcome-title text-2xl font-semibold">你好，有什么我能帮你的吗？</h1>
             <p class="text-sm text-nap-muted">选择右侧会话继续，或直接提问开始一段新对话</p>
-
-            <div class="welcome-suggestions pointer-events-auto">
-              <button v-for="s in welcomeSuggestions" :key="s" class="welcome-chip" @click="useSuggestion(s)">
-                <t-icon name="chat" size="14" />
+            <br>
+            <t-space break-line align="center">
+              <t-button v-for="s in welcomeSuggestions" :key="s" shape="round" @click="useSuggestion(s)"
+                class="bg-brand-6 border-0">
+                <template #icon><t-icon name="chat" /></template>
                 {{ s }}
-              </button>
-            </div>
+              </t-button>
+            </t-space>
           </div>
         </div>
       </div>
@@ -349,11 +350,10 @@ function applyAgentTools() {
   selectedMcps.value = [...(agentStore.selectedAgent?.mcp_uuids || [])]
 }
 
-const welcomeSuggestions = [
-  '帮我总结这份文档的重点',
-  '用 Python 写一段数据分析脚本',
-  '解释这段代码的含义',
-]
+const welcomeSuggestions = ref<string[]>([
+  '帮我总结知识库的重点',
+  '根据知识库文档总结一份报告',
+])
 
 const modelOptions = computed(() =>
   agentStore.selectedAgentModels.map(m => ({ label: m, value: m }))
@@ -448,6 +448,19 @@ async function fetchSessions() {
     MessagePlugin.error('加载会话列表失败')
   }
 }
+async function fetchAgentSuggestions() {
+  if (!agentStore.selectedAgentId) {
+    welcomeSuggestions.value = []
+    return
+  }
+  try {
+    const data = await API.fetchAgentSuggestions<{ suggestions: string[] }>(agentStore.selectedAgentId)
+    welcomeSuggestions.value = data.suggestions
+  } catch {
+    welcomeSuggestions.value = []
+    MessagePlugin.error('加载建议问题失败')
+  }
+}
 
 onMounted(async () => {
   await agentStore.fetchAgents()
@@ -457,6 +470,7 @@ onMounted(async () => {
     await nextTick()
     restoreKeyDisplay(currentKey.value)
     fetchSessions()
+    fetchAgentSuggestions()
   }
 })
 

@@ -299,3 +299,7 @@ class Dashboard(APIModel):
     stats: list[DashboardStat] = []
     recent_agents: list[DashboardAgent] = []
     activities: list[DashboardActivity] = []
+
+
+class AgentSuggestions(APIModel):
+    suggestions: list[str]

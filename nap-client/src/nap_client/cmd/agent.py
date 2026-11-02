@@ -27,7 +27,9 @@ def root():
     "Agent management"
 
 
-def _instruction(instruction: str, instruction_file: str | None) -> str | None:
+def _instruction(instruction: str | None, instruction_file: str | None) -> str | None:
+    if not instruction and not instruction_file:
+        return None
     from_file = read_text(instruction_file)
     return from_file if from_file is not None else instruction
 
@@ -187,3 +189,10 @@ def chat_agent(
         click.echo()
     if failed:
         raise click.exceptions.Exit(1)
+
+
+@root.command("suggestions")
+@click.argument("uuid")
+def get_agent_suggestions(uuid: str):
+    for i, item in enumerate(CLIENT.get_agent_suggestions(uuid), start=1):
+        print(f"{i:>2}. {item}")

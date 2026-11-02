@@ -14,13 +14,9 @@ def refresh_agent_suggestions(
 
     当需要更新智能体建议问题列表时调用
     """
-    AgentSuggestion.remove_by_agent(runtime.context.agent_uuid)
-    logger.info("removed agent sugguestions")
-    for suggestion in suggestions:
-        item = AgentSuggestion(agent=runtime.context.agent_uuid, suggestion=suggestion)
-        item.create()
+    AgentSuggestion.set_by_agent(runtime.context.agent_uuid, suggestions)
     logger.success(
-        "add {} sugguestions for agent: {}",
+        "add {} suggestions for agent: {}",
         len(suggestions),
         runtime.context.agent_uuid,
     )

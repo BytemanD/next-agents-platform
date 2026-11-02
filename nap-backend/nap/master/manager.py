@@ -30,13 +30,13 @@ from nap.db.models import (
     AgentCallback,
     AgentMCP,
     Agents,
+    AgentSuggestion,
     Attachment,
     Knowledge,
     KnowledgeBase,
     KnowledgeBaseShared,
     KnowledgeStatus,
     LLMs,
-    # Session,
 )
 from nap.db.types import AgentConfig
 from nap.master.agent.context import NapRuntimeContext
@@ -474,6 +474,9 @@ class MasterManager(BaseManager):
             if self.shutdown_event.is_set():
                 break
             await self._refresh_agent_suggestions(db_agent)
+
+    def get_agent_suggestions(self, agent_uuid: str):
+        return AgentSuggestion.get_by_agent(agent_uuid)
 
 
 MANAGER = MasterManager()

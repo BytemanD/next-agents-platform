@@ -356,6 +356,13 @@ export class Api {
     const { data } = await axios.get<T>('/api/v1/toolkits')
     return data
   }
+  // ---------- Agent suggestions ----------
+  async fetchAgentSuggestions<T = unknown>(agentId: string) {
+    const { data } = await axios.get<T>('/api/v1/agent-suggestions', {
+      params: { agent: agentId }
+    })
+    return data
+  }
 }
 
 export const API = new Api()
