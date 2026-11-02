@@ -1,13 +1,18 @@
 <template>
-  <img :src="imgUrl" alt="NAP" :style="{ height: props.size }">
+  <a href="" @click.prevent="router.push('/')">
+    <img :src="imgUrl" alt="NAP" :style="{ height: props.size }" @click="">
+  </a>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router';
 
 import { useUIStore } from '@/stores/ui'
 
 const uiStore = useUIStore()
+const router = useRouter()
+
 
 const props = withDefaults(
   defineProps<{

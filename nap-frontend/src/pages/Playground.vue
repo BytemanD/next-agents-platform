@@ -71,7 +71,6 @@
             </t-space>
           </template>
         </t-chatbot>
-
         <div v-if="agentStore.selectedAgentId && !hasMessages"
           class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none welcome">
           <div class="flex flex-col items-center gap-4 relative">
@@ -370,9 +369,14 @@ function newConversation() {
   restoreKeyDisplay(currentKey.value)
 }
 
+function fillPrompt(text: string) {
+  // 输入框由 senderProps.value 受控，addPrompt 只改内部值不会显示，需同步到草稿
+  chatStore.setDraft(currentKey.value, text)
+  chatRef.value?.addPrompt?.(text, true)
+}
+
 async function useSuggestion(text: string) {
-  if (!chatRef.value?.addPrompt) return
-  chatRef.value.addPrompt(text, true)
+  fillPrompt(text)
 }
 
 async function selectConversation(id: string) {

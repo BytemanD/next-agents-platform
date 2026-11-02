@@ -20,7 +20,9 @@ class SessionResponse(BaseModel):
 
 @router.get("")
 async def list_sessions(agent: str):
-    sessions = await MANAGER.list_agent_sessions(agent)
+    sessions = sorted(
+        await MANAGER.list_agent_sessions(agent), key=lambda x: x.id, reverse=True
+    )
     return {"sessions": sessions}
 
 
