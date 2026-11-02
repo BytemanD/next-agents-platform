@@ -5,6 +5,12 @@ import { getToken } from '@/api'
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/',
+    name: 'Landing',
+    component: () => import('@/pages/Landing.vue'),
+    meta: { title: '把任务交给 NAP，安心去打个盹', public: true }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/pages/Login.vue'),
@@ -107,12 +113,14 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   document.title = `${to.meta.title || '打包'} - NAP 下一代智能体平台`
-  const token = await getToken()
-  if (!token && to.name !== 'Login' && to.name !== 'Register') {
-    return { name: 'Login' }
+  const isPublic = to.meta.public || to.name === 'Login' || to.name === 'Register'
+  if (!isPublic) {
+    const token = await getToken()
+    if (!token) return { name: 'Login' }
   }
-  if (token && (to.name === 'Login' || to.name === 'Register')) {
-    return { name: 'Dashboard' }
+  if (to.name === 'Login' || to.name === 'Register') {
+    const token = await getToken()
+    if (token) return { name: 'Dashboard' }
   }
 })
 
