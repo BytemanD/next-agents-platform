@@ -14,7 +14,7 @@ dependencies = [
     "onnxruntime==1.20.1",
     "pydantic>=2.13.5",
     "pymilvus>=3.0.2",
-    "pystonic[orm,asgi,agent]>=2.0.4",
+    "pystonic[orm,asgi,agent]>=2.0.5",
     "redis>=8.1.0",
     "sse-starlette>=3.4.11",
 ]
@@ -22,8 +22,14 @@ dependencies = [
 nap = "nap.cmd.root:main"
 
 [[tool.uv.index]]
-name = "tencent"
-url = "http://mirrors.cloud.tencent.com/pypi/simple"
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[[tool.uv.index]]
+name = "official"
+url = "https://pypi.org/simple"
+explicit = true
+
 
 # [tool.uv.sources]
 # pystonic = { git = "https://github.com/BytemanD/pystonic.git" }

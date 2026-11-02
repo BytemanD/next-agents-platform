@@ -21,3 +21,12 @@ build-backend = "uv_build"
 
 [tool.ruff.lint.isort]
 known-first-party = ["nap_client"]
+
+[[tool.uv.index]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[[tool.uv.index]]
+name = "official"
+url = "https://pypi.org/simple"
+explicit = true
