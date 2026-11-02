@@ -1,0 +1,23 @@
+[project]
+name = "nap-client"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "BytemanD", email = "byteman.e@outlook.com" }]
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.5.0",
+    "httpx>=0.28.1",
+    "pystonic>=2.0.4",
+    "rich>=15.0.0",
+]
+
+[project.scripts]
+nap-client = "nap_client.cmd.main:main"
+
+[build-system]
+requires = ["uv_build>=0.12.24,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.ruff.lint.isort]
+known-first-party = ["nap_client"]

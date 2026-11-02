@@ -47,6 +47,7 @@ def version():
 @click.option(
     "-m",
     "--message",
+    required=True,
     help="whether or not to autogenerate the script from the database",
 )
 def revision(autogenerate: bool = False, message: str | None = None):

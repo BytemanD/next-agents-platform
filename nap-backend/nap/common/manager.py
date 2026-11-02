@@ -48,23 +48,5 @@ class BaseManager:
             max_instances=1,
         )
 
-    def run_background_job_now(
-        self,
-        func: Callable,
-        args: tuple | None = None,
-        kwargs: dict | None = None,
-        id: str | None = None,
-        name: str | None = None,
-    ):
-        logger.info("run background job: {}", func)
-        self.backgroup_scheduler.add_job(
-            func,
-            args=args,
-            kwargs=kwargs,
-            id=id,
-            name=name,
-            next_run_time=datetime.now(UTC) + timedelta(seconds=1),
-        )
-
     def get_request_account(self):
         return context.getvar("account") or "guest"

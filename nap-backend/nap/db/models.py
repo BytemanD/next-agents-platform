@@ -263,28 +263,6 @@ class KnowledgeTodo(DBModel, table=True):
         self.set_status("completed")
 
 
-# class Session(DBModel, table=True):
-#     __tablename__ = "sessions"  # type: ignore
-
-#     user: str = Field(nullable=False, default="guest", description="所属用户")
-#     agent: str = Field(nullable=False, description="智能体 UUID")
-#     title: str = Field(nullable=True, default="", description="会话标题")
-
-#     @classmethod
-#     def get_recent(cls, agent_uuid: str):
-#         stm = (
-#             select(cls)
-#             .where(
-#                 cls.user == _get_account(),
-#                 cls.agent == agent_uuid,
-#             )
-#             .order_by(desc(cls.created_at))
-#         )
-
-#         with get_session() as session:
-#             return session.exec(stm).all()
-
-
 class AgentCallback(DBModel, table=True):
     __tablename__ = "agent_callbacks"  # type: ignore
     creator: str = Field(nullable=False, description="User UUID")

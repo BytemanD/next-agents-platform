@@ -87,4 +87,4 @@ class MysqlToolkit(Toolkit):
                 conn.rollback()
                 raise RuntimeError(f"SQL execution failed: {e}") from e
 
-        return []
+        return [execute_sql]

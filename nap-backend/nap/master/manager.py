@@ -40,22 +40,6 @@ from nap.master.agent.context import NapRuntimeContext
 from nap.master.agent.tools import base, knowledge, mysql, web_search
 from nap.services.storage import STORE_SERVICE
 
-# def _resolve_attachments(file_keys: list[str]) -> list[dict]:
-#     """将 file_key 解析为 agent 可用的附件元数据"""
-#     resolved = []
-#     for key in file_keys:
-#         if not STORE_SERVICE.has_attachment(key):
-#             logger.warning("attachment {} not found, skip", key)
-#             continue
-#         resolved.append(
-#             {
-#                 "file_key": key,
-#                 "name": STORE_SERVICE.get_attachment_name(key),
-#                 "filename": STORE_SERVICE.get_attachment_name(key),
-#             }
-#         )
-#     return resolved
-
 
 class Message(BaseModel):
     id: str
@@ -77,7 +61,7 @@ class MasterManager(BaseManager):
         )
         self._agent: AsyncAgent | None = None
         self.messaging_driver = RedisMessaingQueue()
-        self.toolkits = [web_search.Toolkit, mysql.Toolkit]
+        self.toolkits = [web_search.WebSearchToolkit, mysql.MysqlToolkit]
         self.builtin_tools = (
             builtin.WorkToolkit(
                 enable_read=False,
