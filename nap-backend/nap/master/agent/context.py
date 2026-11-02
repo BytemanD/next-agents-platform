@@ -11,3 +11,5 @@ class NapRuntimeContext(RuntimeContext):
     knowledge_bases: Sequence[KnowledgeBase] = []
     attachments: list[str] | None = None
     selected_model: str = ""
+
+    agent_uuid: str = ""

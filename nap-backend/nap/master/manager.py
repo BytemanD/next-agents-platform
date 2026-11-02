@@ -1,7 +1,10 @@
+from collections.abc import Sequence
 from pathlib import Path
 
 import httpx
+from apscheduler.triggers.cron import CronTrigger
 from langchain.messages import AIMessage
+from langchain_core.tools.base import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from loguru import logger
 from pydantic import BaseModel, SecretStr
@@ -37,7 +40,7 @@ from nap.db.models import (
 )
 from nap.db.types import AgentConfig
 from nap.master.agent.context import NapRuntimeContext
-from nap.master.agent.tools import base, knowledge, mysql, web_search
+from nap.master.agent.tools import base, job, knowledge, mysql, web_search
 from nap.services.storage import STORE_SERVICE
 
 
@@ -80,6 +83,10 @@ class MasterManager(BaseManager):
     async def start(self):
         await super().start()
         # self._agent = AsyncAgent()
+        self.add_async_job(
+            CronTrigger.from_crontab(CONF.master.job_create_agent_suggestions_cron),
+            self.job_create_agent_suggestions,
+        )
 
     @property
     def agent(self):
@@ -257,16 +264,13 @@ class MasterManager(BaseManager):
         db_agent: Agents,
         query: str,
         session_id: str | None = None,
-        model: str | None = None,
-        custom_tools: list[str] | None = None,
+        custom_tools: Sequence[str | BaseTool] | None = None,
         knowledge_bases: list[str] | None = None,
         attachments: list[str] | None = None,
         mcp_uuids: list[str] | None = None,
     ):
-        if attachments is None:
-            attachments = []
-        if custom_tools is None:
-            custom_tools = []
+        attachments = attachments or []
+        custom_tools = custom_tools or []
         llm = LLMs.get_by_uuid(db_agent.llm)
         if not llm.models:
             raise LLMIsInvalid(llm.uuid)
@@ -302,7 +306,6 @@ class MasterManager(BaseManager):
             yield data
             # return
 
-        logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
         kb_uuids = knowledge_bases or db_agent.knowledge_bases
         # 动态设置tools
         user_tools = []
@@ -318,6 +321,8 @@ class MasterManager(BaseManager):
                     db_agent.tools.get("mysql", {})
                 ).get_tools()
             )
+        user_tools.extend([x for x in custom_tools if isinstance(x, BaseTool)])
+        logger.debug("mcp tools: {}", [t.name for t in mcp_tools])
 
         ctx = NapRuntimeContext(
             providers={
@@ -333,7 +338,7 @@ class MasterManager(BaseManager):
             tools=self.builtin_tools + user_tools + mcp_tools,
             workspace=Path(CONF.store, "agent_workspace", context.getvar("account")),
             username=context.getvar("account") or "guest",
-            # agent_uuid=db_agent.uuid,
+            agent_uuid=db_agent.uuid,
             # agent_config=db_agent.config,
             knowledge_bases=KnowledgeBase.get_by_uuids(kb_uuids) if kb_uuids else [],
             attachments=attachments,
@@ -452,6 +457,23 @@ class MasterManager(BaseManager):
         if not items:
             return None
         return items[0]
+
+    async def _refresh_agent_suggestions(self, db_agent: Agents):
+        logger.info("start to refresh suggestions for agent: {}", db_agent.uuid)
+        async for _ in self.chat(
+            db_agent,
+            "根据知识库文档生成3个简短的建议, 并使用工具保存到数据库",
+            custom_tools=job.TOOLKIT.get_tools(),
+        ):
+            pass
+        logger.success("refresh suggestions success for agent: {}", db_agent.uuid)
+
+    async def job_create_agent_suggestions(self):
+        context.set_account("MASTER")
+        for db_agent in Agents.query():
+            if self.shutdown_event.is_set():
+                break
+            await self._refresh_agent_suggestions(db_agent)
 
 
 MANAGER = MasterManager()

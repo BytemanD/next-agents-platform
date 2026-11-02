@@ -24,6 +24,8 @@ class MasterConfig(FrozenBaseModel):
     knowledge_base_url: str = "http://localhost:18001"
     agent_checkpoint_driver: Literal["auto", "mysql", "sqlite"] = "auto"
 
+    job_create_agent_suggestions_cron: str = "0 2 * * *"
+
 
 class AppConfig(BaseAppConfig):
     vector: VectorConfig = VectorConfig()

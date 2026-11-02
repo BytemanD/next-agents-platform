@@ -205,7 +205,7 @@ async def chat(agent_uuid: str, body: ChatRequest):
                 Agents.get_by_uuid(agent_uuid),
                 body.query,
                 session_id=body.session,
-                model=body.model,
+                # model=body.model,
                 custom_tools=body.tools or [],
                 knowledge_bases=body.knowledge_bases or [],
                 attachments=body.attachments,

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pystonic.common import context
 from pystonic.orm.models import DBModel, get_session, utcnow
-from sqlmodel import JSON, Column, Field, Text, col, func, select, update
+from sqlmodel import JSON, Column, Field, Text, col, delete, func, select, update
 
 from nap.common.exceptions import AgentNotExists
 from nap.db.types import AgentConfig, PydanticType
@@ -394,3 +394,17 @@ class KnowledgeBaseShared(DBModel, table=True):
         return [
             x.knowledge_base_uuid for x in cls.query(cls.shared_with == shared_with)
         ]
+
+
+class AgentSuggestion(DBModel, table=True):
+    __tablename__ = "agent_suggestions"  # type: ignore
+
+    agent: str = Field(nullable=False, description="Agent UUID", index=True)
+    suggestion: str = Field(nullable=False, description="Agent UUID", index=True)
+
+    @classmethod
+    def remove_by_agent(cls, agent_uuid: str):
+        stm = delete(cls).where(col(cls.agent) == agent_uuid)
+        with get_session() as session:
+            session.exec(stm)
+            session.commit()
